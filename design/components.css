@@ -463,3 +463,263 @@
   pointer-events: none;
   color: var(--color-text-muted);
 }
+
+/* Extension pages (options, history): a page opened in a full tab. ------
+ * <body class="vz-page"><header class="vz-page-head">…</header>
+ *   <section class="vz-section"><h2 class="vz-section-title">…</h2>
+ *     <div class="vz-fields">…rows…</div></section></body> */
+
+.vz-page {
+  box-sizing: border-box;
+  max-width: calc(var(--size-prose) + var(--space-10));
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-9);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--text-md);
+  line-height: var(--text-md-lh);
+}
+
+.vz-page-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-7);
+}
+
+.vz-page-head .vz-popup-mark {
+  width: var(--size-hit);
+  height: var(--size-hit);
+}
+
+.vz-page-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: var(--text-lg-lh);
+  font-weight: var(--weight-heavy);
+  font-stretch: var(--stretch-wide);
+  letter-spacing: var(--tracking-tight);
+}
+
+.vz-page-nav {
+  display: flex;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.vz-section {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.vz-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.vz-section-title {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: var(--text-md-lh);
+  font-weight: var(--weight-heavy);
+  font-stretch: var(--stretch-wide);
+}
+
+/* Settings: rows on one surface, separated by hairlines. ---------------- */
+
+.vz-fields {
+  background: var(--color-surface);
+  border: var(--size-hairline) solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.vz-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  align-items: center;
+  gap: var(--space-2) var(--space-6);
+  padding: var(--space-4) var(--space-5);
+}
+
+.vz-field + .vz-field {
+  border-top: var(--size-hairline) solid var(--color-border);
+}
+
+.vz-field-text {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.vz-field-label {
+  font-weight: var(--weight-bold);
+}
+
+.vz-field-help {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm-lh);
+}
+
+.vz-field-help code {
+  font: inherit;
+  font-weight: var(--weight-bold);
+  font-stretch: var(--stretch-condensed);
+  color: var(--color-accent);
+}
+
+/* A wide control (a text template) takes the full row under its label. */
+.vz-field--wide {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.vz-field .vz-input {
+  font-size: var(--text-md);
+  line-height: var(--text-md-lh);
+}
+
+.vz-field .vz-input--short {
+  width: calc(var(--space-10) - var(--space-6));
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 560px) {
+  .vz-field {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* A toggle stays beside its label at every width. */
+  .vz-field:has(> .vz-toggle) {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .vz-field .vz-input--short {
+    text-align: left;
+  }
+}
+
+/* Toggle: a checkbox drawn as a gate with one sprocket that slides open. --
+ * <input class="vz-toggle" type="checkbox" role="switch"> */
+
+.vz-toggle {
+  position: relative;
+  flex: none;
+  width: calc(var(--space-7) - var(--space-2));
+  height: var(--space-5);
+  margin: 0;
+  border: var(--size-hairline) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  appearance: none;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-spring),
+    border-color var(--duration-fast) var(--ease-spring);
+}
+
+.vz-toggle::after {
+  content: "";
+  position: absolute;
+  top: calc(var(--space-1) - var(--size-hairline));
+  left: calc(var(--space-1) - var(--size-hairline));
+  width: var(--space-4);
+  height: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-text-muted);
+  transition:
+    transform var(--duration-base) var(--ease-spring),
+    background-color var(--duration-fast) var(--ease-spring);
+}
+
+.vz-toggle:checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.vz-toggle:checked::after {
+  background: var(--color-on-primary);
+  transform: translateX(var(--space-4));
+}
+
+.vz-toggle:focus-visible {
+  outline: var(--size-focus) solid var(--color-primary);
+  outline-offset: var(--size-focus);
+}
+
+.vz-toggle:disabled {
+  cursor: default;
+  opacity: var(--opacity-disabled);
+}
+
+/* History: saved files as a contact sheet. ------------------------------
+ * <ol class="vz-history"><li class="vz-history-row">
+ *   <div class="vz-thumb"></div>
+ *   <div class="vz-history-body"><p class="vz-history-title"></p>
+ *     <p class="vz-history-file"></p><p class="vz-history-meta vz-edge"></p></div>
+ *   <div class="vz-frame-actions">icon buttons</div></li></ol> */
+
+.vz-history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--color-surface);
+  border: var(--size-hairline) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.vz-history-row {
+  display: grid;
+  grid-template-columns: var(--size-thumb-w) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm-lh);
+}
+
+.vz-history-row + .vz-history-row {
+  border-top: var(--size-hairline) solid var(--color-border);
+}
+
+.vz-history-body {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.vz-history-body > * {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vz-history-title {
+  font-weight: var(--weight-bold);
+}
+
+.vz-history-file {
+  color: var(--color-text-muted);
+}
+
+.vz-history-row.is-missing .vz-thumb,
+.vz-history-row.is-missing .vz-history-file {
+  opacity: var(--opacity-fogged);
+}
+
+@media (max-width: 480px) {
+  .vz-history-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .vz-history-row .vz-thumb {
+    display: none;
+  }
+}
