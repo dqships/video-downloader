@@ -68,9 +68,10 @@ function renderHistory(entries: HistoryEntry[], missing: Set<number>): void {
       const thumb = row.querySelector<HTMLElement>(".vz-thumb")!;
       if (e.thumbnail) thumb.style.backgroundImage = `url(${JSON.stringify(e.thumbnail)})`;
       else thumb.innerHTML = /\.(m4a|mp3|ogg|opus|flac|wav|aac|weba)$/i.test(e.filename) ? icons.waveform : icons.film;
-      const name = row.querySelector<HTMLElement>(".vz-history-name")!;
-      name.textContent = e.filename.split("/").at(-1) ?? e.filename;
-      name.title = e.savedPath ?? e.filename;
+      const file = row.querySelector<HTMLElement>(".vz-history-file")!;
+      file.textContent = e.filename;
+      file.title = e.savedPath ?? e.filename;
+      row.querySelector(".vz-history-title")!.textContent = e.title || (e.filename.split("/").at(-1) ?? e.filename);
       const date = new Date(e.savedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
       row.querySelector(".vz-history-meta")!.textContent = [hostOf(e.pageUrl), e.quality, e.bytes ? formatBytes(e.bytes) : "", date]
         .filter(Boolean)
@@ -119,7 +120,9 @@ async function init(): Promise<void> {
   form.addEventListener("input", () => showExample(readForm()));
   form.addEventListener("change", () => void save());
   form.addEventListener("submit", (e) => e.preventDefault());
-  document.querySelector("#clear")!.addEventListener("click", () => void removeHistory());
+  const clear = document.querySelector<HTMLButtonElement>("#clear")!;
+  clear.innerHTML = `${icons.trash}<span>Clear history</span>`;
+  clear.addEventListener("click", () => void removeHistory());
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === "local" && changes[storageKeys.history]) void refreshHistory();
   });

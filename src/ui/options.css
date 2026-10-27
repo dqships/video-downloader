@@ -1,6 +1,5 @@
-/* Options page layout only. Inputs, buttons and thumbnails come from
-   design/components.css; the field, toggle and history row live here until
-   the design system has its own. */
+/* Options page layout only. The page, sections, fields, toggle and history
+   rows come from design/components.css. */
 
 *,
 *::before,
@@ -8,155 +7,14 @@
   box-sizing: border-box;
 }
 
-body.vz-options {
-  margin: 0 auto;
-  max-width: var(--size-prose);
-  padding: var(--space-6) var(--space-4);
-  background: var(--color-bg);
+#saved {
+  margin: 0;
+}
+
+.vz-field-help output {
   color: var(--color-text);
-  font-family: var(--font-family);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm-lh);
-}
-
-section + section {
-  margin-top: var(--space-7);
-}
-
-.vz-options-heading {
-  margin: 0 0 var(--space-4);
-  font-size: var(--text-md);
-  line-height: var(--text-md-lh);
-  font-weight: var(--weight-bold);
-  font-stretch: var(--stretch-wide);
-}
-
-.vz-options-heading-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.vz-options-form {
-  display: grid;
-  gap: var(--space-5);
-}
-
-.vz-field {
-  display: grid;
-  gap: var(--space-1);
-}
-
-.vz-field--inline {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.vz-field-label {
-  color: var(--color-text-muted);
-}
-
-.vz-field-hint {
-  margin: 0;
-  color: var(--color-text-muted);
-}
-
-.vz-field-hint output {
-  color: var(--color-text);
-  font-variant-numeric: tabular-nums;
-}
-
-/* A switch drawn from the film palette: a hairline track, a square-cornered
-   frame that slides over and fills vermilion when on. */
-.vz-toggle {
-  appearance: none;
-  flex: none;
-  position: relative;
-  width: 36px;
-  height: 20px;
-  margin: 0;
-  border: var(--size-hairline) solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-sunken);
-  cursor: pointer;
-  transition: background var(--duration-fast), border-color var(--duration-fast);
-}
-
-.vz-toggle::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 12px;
-  height: 12px;
-  border-radius: var(--radius-sm);
-  background: var(--color-text-muted);
-  transition: transform var(--duration-base) var(--ease-spring), background var(--duration-fast);
-}
-
-.vz-toggle:checked {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
-}
-
-.vz-toggle:checked::after {
-  transform: translateX(16px);
-  background: var(--color-primary);
-}
-
-.vz-toggle:focus-visible {
-  outline: var(--size-focus) solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-.vz-history {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-top: var(--size-hairline) solid var(--color-border);
-}
-
-.vz-history-row {
-  display: grid;
-  grid-template-columns: var(--size-thumb-w) minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) 0;
-  border-bottom: var(--size-hairline) solid var(--color-border);
-}
-
-.vz-history-body {
-  min-width: 0;
-}
-
-.vz-history-name,
-.vz-history-meta {
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.vz-history-meta {
-  color: var(--color-text-muted);
-}
-
-.vz-history-row.is-missing .vz-history-name {
-  color: var(--color-text-muted);
-  text-decoration: line-through;
 }
 
 [hidden] {
   display: none !important;
-}
-
-@media (max-width: 480px) {
-  .vz-history-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .vz-history-row .vz-thumb {
-    display: none;
-  }
 }

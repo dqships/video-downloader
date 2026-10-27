@@ -303,7 +303,7 @@ async function load(): Promise<void> {
 
 async function main(): Promise<void> {
   const options = document.querySelector<HTMLButtonElement>("#open-options")!;
-  options.innerHTML = icons.folder;
+  options.innerHTML = icons.gear;
   options.addEventListener("click", () => void chrome.runtime.openOptionsPage());
   [tabId, settings] = await Promise.all([resolveTabId(), loadSettings()]);
   chrome.storage.session.onChanged.addListener((changes) => {
