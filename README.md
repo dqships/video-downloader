@@ -13,15 +13,16 @@ downloaded.
 | Milestone | State |
 | --- | --- |
 | 1. Detection and direct files (mp4, webm, mp3...) | Done |
-| 2. HLS (m3u8), AES-128, remux to MP4 | Next |
-| 3. DASH (mpd), audio-only | Planned |
+| 2. HLS (m3u8), AES-128, quality picker, remux to MP4 | Done |
+| 3. DASH (mpd), audio-only | Next |
 | 4. Live recording, subtitles, DRM detection everywhere | Planned |
 | 5. Site extractors (Vimeo, Facebook, Instagram, Kick, ...) | Planned |
 | 6. MSE fallback, settings, history | Planned |
 | 7. YouTube (optional) | Planned |
 
-HLS and DASH streams are already detected and listed, but can't be downloaded
-until milestones 2 and 3.
+DASH streams are already detected and listed, but can't be downloaded until
+milestone 3. Live HLS streams are listed and marked live; recording them comes
+in milestone 4.
 
 ## Try it
 
@@ -50,6 +51,14 @@ extension's reload button.
   the worker fetches the file into the origin-private file system (OPFS). It
   resumes with Range requests after network errors, then hands back a `blob:`
   URL that `chrome.downloads` saves under the chosen filename.
+- **HLS** (`src/shared/hls.ts`, `src/sw/hls-probe.ts`, `src/worker/remux-hls.ts`):
+  when a page loads a playlist, the service worker reads it to list the
+  qualities, the length, and whether it is live or DRM-protected. Quality and
+  audio playlists of a listed master are hidden. A download builds a
+  one-quality master for the picked variant, adds header replay for every
+  directory its segments live in, and the worker remuxes it to MP4 with
+  [Mediabunny](https://mediabunny.dev) (AES-128, fMP4 and separate audio
+  included, no re-encoding), writing straight to OPFS.
 - **Popup** (`src/ui/`): reads storage and sends commands. It holds no state of
   its own. It is built from the shared Vidzilla design system (`design/`,
   `brand/`, see `DESIGN.md`), the same tokens and components the website uses,
@@ -64,6 +73,7 @@ pnpm test:e2e    # loads dist/ in Chromium via Playwright against a local test s
 node scripts/screenshots.mjs out/   # popup in light and dark mode
 ```
 
-The end-to-end tests check three things: detection, a real download (verified
-with ffprobe), and Referer replay against a server that refuses requests
-without it.
+The end-to-end tests cover detection, real downloads verified with ffprobe
+(direct MP4; HLS plain, AES-128, fMP4 and two-quality with separate audio),
+Referer replay for a file and for every segment of a stream, and that live and
+DRM streams stay unavailable.

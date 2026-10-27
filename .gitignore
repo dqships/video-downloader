@@ -2,3 +2,4 @@ node_modules/
 dist/
 tests/fixtures/media/
 *.log
+site-dist/
