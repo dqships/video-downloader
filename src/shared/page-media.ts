@@ -134,3 +134,15 @@ export function pageCandidates(scan: PageScan): PageCandidate[] {
   }
   return [...found.values()];
 }
+
+/** Dailymotion video pages and embeds: /video/x8abc, /embed/video/x8abc, or ?video=x8abc on the player. */
+export function dailymotionId(pageUrl: string): string | undefined {
+  try {
+    const u = new URL(pageUrl);
+    if (u.hostname !== "dailymotion.com" && !u.hostname.endsWith(".dailymotion.com")) return undefined;
+    const id = /^\/(?:embed\/)?video\/(x[a-z0-9]+)/i.exec(u.pathname)?.[1] ?? u.searchParams.get("video") ?? undefined;
+    return id && /^x[a-z0-9]+$/i.test(id) ? id : undefined;
+  } catch {
+    return undefined;
+  }
+}

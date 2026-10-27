@@ -35,6 +35,20 @@ function isMirror(a: MediaItem, b: MediaItem): boolean {
   }
 }
 
+/**
+ * One stream under two URLs: the address a page declares before play and the
+ * one its player loads, which often differ only in a token or a redirect flag.
+ */
+function isSameStream(a: MediaItem, b: MediaItem): boolean {
+  if (a.type !== b.type || (a.type !== "hls" && a.type !== "dash")) return false;
+  try {
+    const [ua, ub] = [new URL(a.url), new URL(b.url)];
+    return ua.host === ub.host && ua.pathname === ub.pathname && ua.pathname.split("/").filter(Boolean).length > 1;
+  } catch {
+    return false;
+  }
+}
+
 /** What the page's player fetched; a player recording or the page's markup doesn't count. */
 const isPlayback = (m: MediaItem) => m.sourceKind === "sniffer" && m.type !== "mse";
 
@@ -85,6 +99,28 @@ export function mergeMedia(list: MediaItem[], item: MediaItem, busy: ReadonlySet
   const isStream = (m: MediaItem) => (m.type === "hls" || m.type === "dash") && m.variants?.length !== 0;
   if (item.type === "mse" && !item.recording && list.some(isStream)) return { list, changed: false };
   if (isStream(item)) list = list.filter((m) => m.type !== "mse" || m.recording);
+
+  // A stream listed before play and the same stream loaded by the player: keep
+  // the player's copy (fresh token, the page's cookies) under the page's name.
+  if (item.sourceKind === "page") {
+    const played = list.findIndex((m) => m.sourceKind === "sniffer" && isSameStream(m, item));
+    if (played >= 0) {
+      const old = list[played]!;
+      const named = { ...old, title: old.title ?? item.title, thumbnail: old.thumbnail ?? item.thumbnail };
+      for (const key of ["title", "thumbnail"] as const) if (named[key] === undefined) delete named[key];
+      if (JSON.stringify(named) === JSON.stringify(old)) return { list, changed: false };
+      const next = list.slice();
+      next[played] = named;
+      return { list: next, changed: true };
+    }
+  } else {
+    const declared = list.find((m) => m.sourceKind === "page" && !busy.has(m.id) && isSameStream(m, item));
+    if (declared) {
+      list = list.filter((m) => m !== declared);
+      item = { ...item, title: item.title ?? declared.title, thumbnail: item.thumbnail ?? declared.thumbnail };
+      for (const key of ["title", "thumbnail"] as const) if (item[key] === undefined) delete item[key];
+    }
+  }
 
   if (list.some((m) => isMirror(m, item))) return { list, changed: false };
 

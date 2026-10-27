@@ -155,6 +155,12 @@ const pages = {
       document.querySelector("main").innerHTML = '<video src="/media/clip.mp4" preload="none" controls></video>';
     }, 300);
   </script>`,
+  "/late-player.html": `<title>Late Player</title><div id="slot"></div><script>
+    // The player shows up well after the load event, and nothing plays.
+    setTimeout(() => {
+      document.querySelector("#slot").innerHTML = '<video src="/media/clip.mp4" preload="none" controls></video>';
+    }, 6000);
+  </script>`,
   "/dash-tail.html": `<title>Dash Short Tail</title>${player("/media/dash/tail.mpd")}`,
   "/page-only.html": `<title>Page Only</title>${player("/page-only/index.m3u8")}`,
   "/flaky.html": `<title>Busy Server</title>${player("/flaky/index.m3u8")}`,
