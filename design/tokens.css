@@ -35,6 +35,7 @@
   --color-film-frame: #241e19;
   --color-film-edge: #e9a63e;
   --color-film-text: #f2eadd;
+  --color-film-muted: #a89c8c;
 
   /* Type: one family, Archivo, with a width axis. */
   --font-family: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -75,6 +76,7 @@
   --radius-sm: 2px;
   --radius-md: 6px;
   --radius-lg: 10px;
+  --radius-full: 50%;
   --shadow-strip: 0 1px 0 rgb(27 23 19 / 0.06), 0 12px 32px -12px rgb(27 23 19 / 0.28);
 
   /* Motion: one spring (k 210, c 22, overshoot 2.6%). Only durations vary. */

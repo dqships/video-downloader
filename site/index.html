@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vidzilla: save the video you're watching</title>
+    <meta
+      name="description"
+      content="Vidzilla is a Chrome extension that finds the video playing on a page and saves it to your computer as a file, at the quality the site sent."
+    />
+    <link rel="icon" href="../brand/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="../design/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="../design/tokens.css" />
+    <link rel="stylesheet" href="../design/components.css" />
+    <link rel="stylesheet" href="site.css" />
+    <script>
+      // Apply a saved theme before first paint. Falls back to the system theme.
+      try {
+        const t = localStorage.getItem("vz-theme");
+        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="top">
+      <a class="top-logo" href="#" aria-label="Vidzilla home">
+        <svg class="top-mark" aria-hidden="true"><use href="../brand/symbols.svg#vz-mark" /></svg>
+        <svg class="top-word" aria-hidden="true"><use href="../brand/symbols.svg#vz-wordmark" /></svg>
+      </a>
+      <nav class="top-nav" aria-label="Sections">
+        <a href="#demo">Try it</a>
+        <a href="#formats">Formats</a>
+        <a href="#how">How it works</a>
+        <a href="#install">Install</a>
+      </nav>
+      <button class="vz-icon-btn theme-toggle" type="button" aria-label="Switch to the darkroom (dark mode)" data-theme-toggle>
+        <svg class="when-light" aria-hidden="true"><use href="../design/icons.svg#i-moon" /></svg>
+        <svg class="when-dark" aria-hidden="true"><use href="../design/icons.svg#i-sun.max" /></svg>
+      </button>
+    </header>
+
+    <main id="main">
+      <!-- Hero: centred. The rhombus drops out of the V on load. -->
+      <section class="hero" aria-labelledby="hero-title">
+        <svg class="hero-mark" viewBox="4 14 88 76.21" aria-hidden="true">
+          <path class="hero-mark-v" d="M4 14H92L62.89 64.43L48 38.64L33.11 64.43Z" />
+          <path class="hero-mark-drop" d="M48 48.64L60 69.43L48 90.21L36 69.43Z" />
+        </svg>
+        <h1 id="hero-title" class="hero-title">Save the video you're watching.</h1>
+        <p class="hero-lede">
+          Vidzilla is a Chrome extension that finds the video playing on a page and saves it to your computer as a
+          file, at the quality the site sent. Nothing is re-encoded and nothing leaves your machine.
+        </p>
+        <div class="hero-actions">
+          <a class="vz-btn" href="#install">
+            <svg aria-hidden="true"><use href="../design/icons.svg#i-arrow.down.circle" /></svg>
+            Install in Chrome
+          </a>
+          <a class="vz-btn vz-btn--quiet" href="#demo">Try it on this page</a>
+        </div>
+        <p class="hero-edge vz-edge">Chrome 116+ · Manifest V3 · No account · No tracking</p>
+      </section>
+
+      <!-- Demo: a page playing a video, and the real popup UI catching it. -->
+      <section id="demo" class="demo" aria-labelledby="demo-title">
+        <div class="section-head section-head--center">
+          <h2 id="demo-title" class="section-title">Press play. Vidzilla catches it.</h2>
+          <p class="section-lede">
+            This is the extension's popup, built from the same components. Play the clip, then save it.
+          </p>
+        </div>
+
+        <div class="scene" data-scene>
+          <div class="browser">
+            <div class="browser-bar">
+              <span class="browser-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="browser-url">harbourcam.example/night-stomp</span>
+              <button class="browser-ext" type="button" aria-label="Open Vidzilla" aria-expanded="true" data-ext>
+                <svg aria-hidden="true"><use href="../brand/symbols.svg#vz-mark" /></svg>
+                <span class="browser-ext-count" data-count hidden>0</span>
+              </button>
+            </div>
+            <div class="page">
+              <div class="player">
+                <canvas class="player-canvas" data-canvas width="640" height="360" aria-label="Clip: a kaiju walking past a harbour skyline at night" role="img"></canvas>
+                <button class="player-play" type="button" data-play aria-label="Play the clip">
+                  <svg class="when-paused" aria-hidden="true"><use href="../design/icons.svg#i-play.fill" /></svg>
+                  <svg class="when-playing" aria-hidden="true"><use href="../design/icons.svg#i-pause.fill" /></svg>
+                </button>
+                <span class="player-tc vz-edge" data-timecode>00:00:00:00</span>
+              </div>
+              <div class="page-copy">
+                <p class="page-title">Night stomp over the harbour</p>
+                <p class="page-meta">Harbour Cam · 2 min 41 s</p>
+              </div>
+            </div>
+            <div class="shelf" data-shelf hidden>
+              <svg aria-hidden="true"><use href="../design/icons.svg#i-folder" /></svg>
+              <span class="shelf-name" data-shelf-name></span>
+              <span class="vz-edge">Downloads</span>
+            </div>
+          </div>
+
+          <!-- The popup. Markup mirrors the extension's popup.html. -->
+          <div class="vz-popup scene-popup" data-popup>
+            <header class="vz-popup-head">
+              <svg class="vz-popup-mark" aria-hidden="true"><use href="../brand/symbols.svg#vz-mark" /></svg>
+              <p class="vz-popup-title">vidzilla</p>
+              <p class="vz-popup-host vz-edge">harbourcam.example</p>
+            </header>
+            <div class="vz-strip" data-strip aria-live="polite">
+              <div class="vz-empty" data-empty>
+                <svg aria-hidden="true"><use href="../design/icons.svg#i-film" /></svg>
+                <p class="vz-empty-title">No videos found yet</p>
+                <p>Start playing the video on this page, then open this again.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <ol class="demo-steps vz-edge" aria-label="Steps">
+          <li data-step="play">1 Play the clip</li>
+          <li data-step="caught">2 Vidzilla lists what it found</li>
+          <li data-step="saved">3 Rename it if you like, then save</li>
+        </ol>
+      </section>
+
+      <!-- Formats: a strip of film, one frame per format, edge print says where it stands. -->
+      <section id="formats" class="formats" aria-labelledby="formats-title">
+        <div class="section-head">
+          <h2 id="formats-title" class="section-title">What it saves</h2>
+          <p class="section-lede">
+            Direct video files work today. Streams come next, in the order below. Protected video stays protected.
+          </p>
+        </div>
+        <div class="reel" tabindex="0" aria-label="Formats, scrollable">
+          <ol class="reel-strip">
+            <li class="reel-frame is-now">
+              <span class="reel-edge vz-edge"><span>VZ 01</span><span>Saves now</span></span>
+              <span class="reel-label">MP4<br />WEBM<br />MOV</span>
+              <span class="reel-text">Video files a page loads directly, at full size.</span>
+            </li>
+            <li class="reel-frame">
+              <span class="reel-edge vz-edge"><span>VZ 02</span><span>Next</span></span>
+              <span class="reel-label">HLS</span>
+              <span class="reel-text">.m3u8 streams, joined from their segments. You pick the quality.</span>
+            </li>
+            <li class="reel-frame">
+              <span class="reel-edge vz-edge"><span>VZ 03</span><span>Planned</span></span>
+              <span class="reel-label">DASH</span>
+              <span class="reel-text">.mpd streams, with the separate audio track put back in.</span>
+            </li>
+            <li class="reel-frame">
+              <span class="reel-edge vz-edge"><span>VZ 04</span><span>Planned</span></span>
+              <span class="reel-label">M4A<br />MP3</span>
+              <span class="reel-text">Just the audio, when that's all you want.</span>
+            </li>
+            <li class="reel-frame">
+              <span class="reel-edge vz-edge"><span>VZ 05</span><span>Planned</span></span>
+              <span class="reel-label">VTT<br />SRT</span>
+              <span class="reel-text">Subtitles, saved next to the video.</span>
+            </li>
+            <li class="reel-frame">
+              <span class="reel-edge vz-edge"><span>VZ 06</span><span>Planned</span></span>
+              <span class="reel-label">LIVE</span>
+              <span class="reel-text">Live streams, recorded from the moment you press save.</span>
+            </li>
+            <li class="reel-frame is-fogged">
+              <span class="reel-edge vz-edge"><span>VZ 07</span><span>Never</span></span>
+              <span class="reel-label">DRM</span>
+              <span class="reel-text">
+                <svg aria-hidden="true"><use href="../design/icons.svg#i-lock" /></svg>
+                Netflix, Disney+ and other protected video. Vidzilla shows it and leaves it alone.
+              </span>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- How it works: a vertical run of film, one frame per step, with the log line it writes. -->
+      <section id="how" class="how" aria-labelledby="how-title">
+        <div class="how-head">
+          <h2 id="how-title" class="section-title">What happens when you press save</h2>
+          <p class="section-lede">
+            Everything runs inside Chrome. There is no server, no companion app, and no account.
+          </p>
+        </div>
+        <ol class="how-strip">
+          <li class="how-frame">
+            <span class="how-no vz-edge">01</span>
+            <div>
+              <h3 class="how-title">It watches</h3>
+              <p>While a page plays, Vidzilla reads the requests Chrome is already making and keeps the ones that are video: files, HLS playlists and DASH manifests.</p>
+              <code class="how-log vz-edge">GET harbour_1080.mp4 · video/mp4 · 148 MB</code>
+            </div>
+          </li>
+          <li class="how-frame">
+            <span class="how-no vz-edge">02</span>
+            <div>
+              <h3 class="how-title">It remembers how you got in</h3>
+              <p>It keeps the cookies, referrer and origin the page sent, so when you save, the site sees the same request it already allowed.</p>
+              <code class="how-log vz-edge">Headers kept · cookie · referer · origin</code>
+            </div>
+          </li>
+          <li class="how-frame">
+            <span class="how-no vz-edge">03</span>
+            <div>
+              <h3 class="how-title">It fetches</h3>
+              <p>A background worker downloads the file in ranges and picks up where it stopped if the connection drops.</p>
+              <code class="how-log vz-edge">Range 0–52 MB · dropped · resumed at 52 MB</code>
+            </div>
+          </li>
+          <li class="how-frame">
+            <span class="how-no vz-edge">04</span>
+            <div>
+              <h3 class="how-title">It joins</h3>
+              <p>Streamed pieces are joined in the browser without re-encoding, so the picture is exactly what the site sent. Arrives with HLS support.</p>
+              <code class="how-log vz-edge">214 segments → one MP4 · no re-encode</code>
+            </div>
+          </li>
+          <li class="how-frame">
+            <span class="how-no vz-edge">05</span>
+            <div>
+              <h3 class="how-title">It saves</h3>
+              <p>The file lands in your Downloads folder, named after the page title. Rename it in the popup first if you want.</p>
+              <code class="how-log vz-edge">Saved · Downloads/Night stomp over the harbour.mp4</code>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <!-- Install: a countdown leader. -->
+      <section id="install" class="install" aria-labelledby="install-title">
+        <div class="section-head section-head--center">
+          <h2 id="install-title" class="section-title">Install</h2>
+          <p class="section-lede">Vidzilla isn't in the Chrome Web Store. You load it yourself, which takes a minute.</p>
+        </div>
+        <ol class="leader">
+          <li class="leader-step">
+            <span class="leader-count" aria-hidden="true">
+              <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" /><circle cx="50" cy="50" r="38" /><path d="M50 0v100M0 50h100" /></svg>
+              <span>3</span>
+            </span>
+            <div class="leader-body">
+              <h3 class="leader-title">Build it</h3>
+              <p>You need Node 22 and pnpm.</p>
+              <pre class="leader-code"><code>git clone https://github.com/dqships/video-downloader
+cd video-downloader
+pnpm install &amp;&amp; pnpm build</code></pre>
+            </div>
+          </li>
+          <li class="leader-step">
+            <span class="leader-count" aria-hidden="true">
+              <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" /><circle cx="50" cy="50" r="38" /><path d="M50 0v100M0 50h100" /></svg>
+              <span>2</span>
+            </span>
+            <div class="leader-body">
+              <h3 class="leader-title">Turn on Developer mode</h3>
+              <p>Open <code>chrome://extensions</code> and switch on Developer mode, top right.</p>
+            </div>
+          </li>
+          <li class="leader-step">
+            <span class="leader-count" aria-hidden="true">
+              <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" /><circle cx="50" cy="50" r="38" /><path d="M50 0v100M0 50h100" /></svg>
+              <span>1</span>
+            </span>
+            <div class="leader-body">
+              <h3 class="leader-title">Load it</h3>
+              <p>Click Load unpacked, choose the <code>dist</code> folder, then pin Vidzilla to the toolbar.</p>
+            </div>
+          </li>
+        </ol>
+        <p class="leader-start vz-edge">Picture start</p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <a class="foot-logo" href="#" aria-label="Vidzilla home">
+        <svg class="top-mark" aria-hidden="true"><use href="../brand/symbols.svg#vz-mark" /></svg>
+        <svg class="top-word" aria-hidden="true"><use href="../brand/symbols.svg#vz-wordmark" /></svg>
+      </a>
+      <p class="foot-note">
+        A personal tool. It saves what your browser already plays; respect the sites you save from.
+      </p>
+      <p class="foot-links">
+        <a href="https://github.com/dqships/video-downloader">Source <svg aria-hidden="true"><use href="../design/icons.svg#i-arrow.up.right" /></svg></a>
+        <a href="https://github.com/dqships/video-downloader/blob/main/DESIGN.md">Design system <svg aria-hidden="true"><use href="../design/icons.svg#i-arrow.up.right" /></svg></a>
+      </p>
+    </footer>
+
+    <script type="module" src="site.js"></script>
+  </body>
+</html>

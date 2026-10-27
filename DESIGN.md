@@ -87,6 +87,7 @@ A logo-modernism mark: constructed from two geometric figures, no drawing.
 | `--color-film-frame` | `#241E19` | `#15110E` | A frame's image area on film |
 | `--color-film-edge` | `#E9A63E` | `#E9A63E` | Edge print on film |
 | `--color-film-text` | `#F2EADD` | `#F2EADD` | Text on film |
+| `--color-film-muted` | `#A89C8C` | `#A89C8C` | Secondary text on film |
 
 All text pairs meet WCAG AA (body text 4.5:1). Pages follow the system theme;
 setting `data-theme="light"` or `"dark"` on `<html>` overrides it. Masks use
@@ -125,7 +126,8 @@ only: `--space-7` 48 · `--space-8` 64 · `--space-9` 96 · `--space-10` 128 px.
 
 - Radius: `--radius-sm` 2 px (sprockets, badges, thumbnails: film corners are
   nearly square), `--radius-md` 6 px (buttons, icon buttons),
-  `--radius-lg` 10 px (the strip, the popup body).
+  `--radius-lg` 10 px (the strip, the popup body), `--radius-full` 50 % (dots
+  only, such as browser window dots in the site demo).
 - Shadow: `--shadow-strip` only, under a strip lying on the lightbox. Nothing
   else casts a shadow; separation comes from hairlines (`--size-hairline`).
 - Sizes: hit target `--size-hit` 32 px (popup), control height
