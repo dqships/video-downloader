@@ -102,3 +102,33 @@ mpd = f"""<?xml version="1.0" encoding="utf-8"?>
 """
 open(f"{folder}/manifest.mpd", "w").write(mpd)
 PY
+
+# A 20 s stream cut into 2 s segments, which the test server reveals a few at a
+# time as a live broadcast (see /live-rec/ in tests/e2e/server.mjs).
+rm -rf "$out/live"
+mkdir -p "$out/live"
+ff -f lavfi -i testsrc2=size=320x180:rate=30 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 20 \
+  -c:v libx264 -preset veryfast -g 60 -keyint_min 60 -sc_threshold 0 -b:v 300k -c:a aac -b:a 64k \
+  -f hls -hls_time 2 -hls_playlist_type vod -hls_segment_filename "$out/live/seg%03d.ts" "$out/live/all.m3u8"
+
+# Subtitles: an HLS master whose WebVTT track is cut into two segments (one cue
+# repeats across the cut, as packagers do), a DASH manifest with a TTML track,
+# and a sidecar WebVTT file for a page's <track>.
+rm -rf "$out/subs"
+mkdir -p "$out/subs"
+printf 'WEBVTT\nX-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000\n\n00:00:00.500 --> 00:00:02.000\nHello <b>there</b>\n\n00:00:01.500 --> 00:00:03.000\nAcross the cut\n' > "$out/subs/en0.vtt"
+printf 'WEBVTT\nX-TIMESTAMP-MAP=MPEGTS:900000,LOCAL:00:00:00.000\n\n00:00:01.500 --> 00:00:03.000\nAcross the cut\n\n00:00:04.000 --> 00:00:05.500\nSecond line\n' > "$out/subs/en1.vtt"
+printf '#EXTM3U\n#EXT-X-TARGETDURATION:3\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXTINF:3,\nen0.vtt\n#EXTINF:3,\nen1.vtt\n#EXT-X-ENDLIST\n' > "$out/subs/en.m3u8"
+printf '#EXTM3U\n#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="English",LANGUAGE="en",DEFAULT=NO,AUTOSELECT=YES,URI="en.m3u8"\n#EXT-X-STREAM-INF:BANDWIDTH=2700000,RESOLUTION=640x360,CODECS="avc1.64001e,mp4a.40.2",SUBTITLES="subs"\n../hls/index.m3u8\n' > "$out/subs/master.m3u8"
+cat > "$out/subs/de.ttml" <<'TTML'
+<?xml version="1.0" encoding="utf-8"?>
+<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttp="http://www.w3.org/ns/ttml#parameter" ttp:tickRate="10000000" xml:lang="de">
+  <body><div>
+    <p begin="5000000t" end="20000000t">Hallo<br/>zusammen</p>
+    <p begin="00:00:04.000" end="00:00:05.500"><span>Zweite</span> Zeile</p>
+  </div></body>
+</tt>
+TTML
+sed 's#</Period>#<AdaptationSet contentType="text" mimeType="application/ttml+xml" lang="de"><Label>Deutsch</Label><Representation id="ttml" bandwidth="1000"><BaseURL>../subs/de.ttml</BaseURL></Representation></AdaptationSet></Period>#' \
+  "$out/dash/manifest.mpd" > "$out/dash/subs.mpd"
+printf 'WEBVTT\n\n00:00:01.000 --> 00:00:02.500\nBonjour\n' > "$out/subs/page.vtt"

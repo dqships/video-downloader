@@ -23,6 +23,8 @@ const edited = new Map<string, string>();
 const pendingErrors = new Map<string, string>();
 /** Quality picked per stream, by media id; the best one otherwise. */
 const chosenVariant = new Map<string, string>();
+/** Subtitle track picked per item, by media id; none by default. */
+const chosenSubtitle = new Map<string, string>();
 
 const TYPE_ORDER: Record<MediaItem["type"], number> = { dash: 0, hls: 1, http: 2 };
 
@@ -86,9 +88,11 @@ function createFrame(item: MediaItem): HTMLElement {
   const name = frame.querySelector<HTMLInputElement>(".vz-frame-name")!;
   name.addEventListener("input", () => edited.set(item.id, name.value));
 
-  frame.querySelector(".vz-select")!.insertAdjacentHTML("beforeend", icons.chevronDown);
-  const quality = frame.querySelector<HTMLSelectElement>(".vz-select select")!;
+  for (const wrap of frame.querySelectorAll(".vz-select")) wrap.insertAdjacentHTML("beforeend", icons.chevronDown);
+  const quality = frame.querySelector<HTMLSelectElement>(".quality select")!;
   quality.addEventListener("change", () => chosenVariant.set(item.id, quality.value));
+  const subtitles = frame.querySelector<HTMLSelectElement>(".subtitles select")!;
+  subtitles.addEventListener("change", () => chosenSubtitle.set(item.id, subtitles.value));
 
   frame.querySelector(".copy")!.addEventListener("click", async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
@@ -101,12 +105,13 @@ function createFrame(item: MediaItem): HTMLElement {
     pendingErrors.delete(item.id);
     const job = latestJob(item.id);
     if (job?.state === "running") {
-      await sendCommand({ kind: "cancel", payload: { jobId: job.jobId } });
+      // A live recording stops and saves; anything else is cancelled.
+      await sendCommand({ kind: job.recording ? "stop" : "cancel", payload: { jobId: job.jobId } });
       return;
     }
     const res = await sendCommand({
       kind: "download",
-      payload: { tabId, mediaId: item.id, filename: edited.get(item.id), variantId: chosenVariant.get(item.id) },
+      payload: { tabId, mediaId: item.id, filename: edited.get(item.id), variantId: chosenVariant.get(item.id), subtitleId: chosenSubtitle.get(item.id) || undefined },
     });
     if (!res.ok) pendingErrors.set(item.id, res.error);
     render();
@@ -136,17 +141,26 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
   ].filter(Boolean);
   frame.querySelector(".meta-text")!.textContent = details.join(" · ");
   updateQuality(frame, item);
+  updateSubtitles(frame, item);
 
   const note = frame.querySelector<HTMLElement>(".vz-frame-note")!;
   const download = frame.querySelector<HTMLButtonElement>(".download")!;
   const progress = frame.querySelector<HTMLElement>(".vz-perf")!;
   const job = latestJob(item.id);
   const isRunning = job?.state === "running";
-  if (download.dataset.mode !== (isRunning ? "cancel" : "download")) {
-    download.dataset.mode = isRunning ? "cancel" : "download";
-    download.innerHTML = isRunning ? icons.close : icons.download;
-    download.title = isRunning ? "Cancel" : "Download";
-    download.classList.toggle("vz-icon-btn--primary", !isRunning);
+  const mode = isRunning ? (job.recording ? "stop" : "cancel") : item.isLive ? "record" : "download";
+  if (download.dataset.mode !== mode) {
+    download.dataset.mode = mode;
+    const look = {
+      download: [icons.download, "Download"],
+      record: [icons.record, "Record"],
+      cancel: [icons.close, "Cancel"],
+      stop: [icons.stop, "Stop and save"],
+    } as const;
+    [download.innerHTML, download.title] = look[mode];
+    download.setAttribute("aria-label", download.title);
+    // Vermilion marks an action; cancel is the only one that isn't.
+    download.classList.toggle("vz-icon-btn--primary", mode !== "cancel");
   }
   frame.classList.toggle("is-fogged", item.hasDrm);
   note.className = "vz-frame-note";
@@ -161,12 +175,17 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
   } else if (item.variants?.length === 0) {
     download.disabled = true;
     note.textContent = "No quality in this stream can be saved yet (WebM streams arrive later).";
-  } else if (item.isLive) {
+  } else if (item.isLive && item.type === "dash") {
     download.disabled = true;
-    note.textContent = "Recording live streams arrives in a later update.";
+    note.textContent = "Recording live DASH streams arrives in a later update.";
   } else if (pendingErrors.has(item.id)) {
     note.classList.add("is-error");
     note.textContent = pendingErrors.get(item.id)!;
+  } else if (job?.state === "running" && job.recording) {
+    note.textContent =
+      job.phase === "saving"
+        ? "Saving the recording to your Downloads folder"
+        : `Recording ${formatDuration(job.recordedSec) || "0:00"}${job.bytesReceived ? ` · ${formatBytes(job.bytesReceived)}` : ""}`;
   } else if (job?.state === "running") {
     progress.hidden = false;
     frame.classList.add("has-progress");
@@ -181,20 +200,51 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
         ? `Downloading ${formatBytes(job.bytesReceived)} of ${formatBytes(job.totalBytes)}`
         : `Downloading ${formatBytes(job.bytesReceived)}`;
   } else if (job?.state === "complete") {
-    note.classList.add("is-done");
-    note.textContent = `Saved as ${job.filename}`;
+    note.classList.add(job.subtitleError ? "is-error" : "is-done");
+    note.textContent = job.subtitleError
+      ? `Saved as ${job.filename}, but the subtitles failed: ${job.subtitleError}`
+      : `Saved as ${job.filename}${job.subtitleFile ? " with subtitles" : ""}`;
     note.title = job.savedPath ?? job.filename;
   } else if (job?.state === "failed") {
     note.classList.add("is-error");
     note.textContent = `Download failed: ${job.error ?? "unknown error"}`;
+  } else if (tab?.drmKeySystem && item.type !== "http") {
+    // EME on the page: the stream may be encrypted even if its manifest didn't say so.
+    note.innerHTML = `${icons.warning}<span></span>`;
+    note.querySelector("span")!.textContent = `This page plays ${drmName(tab.drmKeySystem)}-protected video. If this is that stream, the saved file won't play.`;
+  } else if (item.isLive) {
+    note.textContent = "Live. Records until the stream ends or you press stop.";
   } else {
     note.hidden = true;
   }
 }
 
+function drmName(keySystem: string): string {
+  if (keySystem.includes("widevine")) return "Widevine";
+  if (keySystem.includes("playready")) return "PlayReady";
+  if (keySystem.includes("fps") || keySystem.includes("fairplay")) return "FairPlay";
+  return "DRM";
+}
+
+/** The subtitle picker, shown when the stream or the page has captions. */
+function updateSubtitles(frame: HTMLElement, item: MediaItem): void {
+  const wrap = frame.querySelector<HTMLElement>(".subtitles")!;
+  const select = wrap.querySelector("select")!;
+  const tracks = [...(item.subtitles ?? []), ...(tab?.subtitles ?? [])];
+  wrap.hidden = tracks.length === 0;
+  if (wrap.hidden) return;
+  const signature = tracks.map((t) => `${t.id}:${t.label}`).join("|");
+  if (select.dataset.signature !== signature) {
+    select.dataset.signature = signature;
+    select.replaceChildren(new Option("No subtitles", ""), ...tracks.map((t) => new Option(`CC ${t.label}`, t.id)));
+  }
+  select.value = chosenSubtitle.get(item.id) ?? "";
+  select.disabled = latestJob(item.id)?.state === "running" || item.hasDrm;
+}
+
 /** The quality picker, shown when a stream offers more than one. */
 function updateQuality(frame: HTMLElement, item: MediaItem): void {
-  const wrap = frame.querySelector<HTMLElement>(".vz-select")!;
+  const wrap = frame.querySelector<HTMLElement>(".quality")!;
   const select = wrap.querySelector("select")!;
   const variants = item.variants ?? [];
   wrap.hidden = variants.length < 2;
@@ -205,7 +255,7 @@ function updateQuality(frame: HTMLElement, item: MediaItem): void {
     select.replaceChildren(...variants.map((v) => new Option(v.label, v.id)));
   }
   select.value = chosenVariant.get(item.id) ?? variants[0]!.id;
-  select.disabled = latestJob(item.id)?.state === "running" || item.hasDrm || !!item.isLive;
+  select.disabled = latestJob(item.id)?.state === "running" || item.hasDrm;
 }
 
 function render(): void {

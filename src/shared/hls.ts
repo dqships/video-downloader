@@ -1,7 +1,7 @@
 // A small M3U8 reader: just what listing, choosing and DRM checks need.
 // Segment-level work (decryption, demuxing) is left to Mediabunny.
 
-import type { StreamVariant } from "./types";
+import type { StreamVariant, SubtitleTrack } from "./types";
 
 export type Attributes = Record<string, string>;
 
@@ -320,4 +320,11 @@ export function dataUrl(playlist: string): string {
   let bin = "";
   for (const b of bytes) bin += String.fromCharCode(b);
   return `data:application/vnd.apple.mpegurl;base64,${btoa(bin)}`;
+}
+
+/** Subtitle renditions (WebVTT playlists) a master offers. */
+export function listHlsSubtitles(master: HlsMaster): SubtitleTrack[] {
+  return master.renditions
+    .filter((r) => r.type === "SUBTITLES" && r.uri)
+    .map((r, i) => ({ id: `hls-${i}`, label: r.name || r.language || `Subtitles ${i + 1}`, lang: r.language, source: { kind: "hls", url: r.uri! } }));
 }

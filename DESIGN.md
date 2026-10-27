@@ -149,7 +149,8 @@ only: `--space-7` 48 · `--space-8` 64 · `--space-9` 96 · `--space-10` 128 px.
   rest, muted on hover, vermilion on focus.
 - **Select** (`.vz-select` wrapping a native `<select>` and a `chevron.down`
   icon): edge-print type, hairline box at `--radius-sm`, sits in a frame's meta
-  row next to the badge. Options read like `1080p · 4.0 Mbps`.
+  row next to the badge. Options read like `1080p · 4.0 Mbps`. A frame can
+  carry two: quality, then subtitles.
 - **Focus**: a 2 px vermilion outline offset 2 px on every interactive element.
 - **Disabled**: 40 % opacity, no motion.
 
@@ -161,7 +162,7 @@ joins, filled shapes only for `*.fill` symbols. Files are named after the SF
 Symbol they stand in for (`arrow.down.circle`, `doc.on.doc`, `checkmark`,
 `xmark`, `lock`, `film`, `waveform`, `play.fill`, `pause.fill`,
 `arrow.up.right`, `chevron.right`, `chevron.down`, `sun.max`, `moon`, `folder`,
-`exclamationmark.triangle`). Icons use `currentColor`. Add a new icon by drawing
+`exclamationmark.triangle`, `stop.fill`, `record.circle`). Icons use `currentColor`. Add a new icon by drawing
 it to the same rules; never mix in another library, and never use a sparkles
 icon. Import them as text (esbuild `loader: { ".svg": "text" }`) or inline them.
 

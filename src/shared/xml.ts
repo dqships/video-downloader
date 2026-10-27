@@ -7,6 +7,8 @@ export interface XmlElement {
   attrs: Record<string, string>;
   children: XmlElement[];
   text: string;
+  /** Text and child elements in document order (for mixed content like TTML). */
+  content: (string | XmlElement)[];
 }
 
 const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
@@ -25,13 +27,18 @@ const localName = (qname: string) => qname.slice(qname.indexOf(":") + 1);
 
 /** Parses a document and returns its root element. Throws on broken markup. */
 export function parseXml(xml: string): XmlElement {
-  const root: XmlElement = { name: "#document", attrs: {}, children: [], text: "" };
+  const root: XmlElement = { name: "#document", attrs: {}, children: [], text: "", content: [] };
+  const addText = (t: string) => {
+    const top = stack[stack.length - 1]!;
+    top.text += t;
+    top.content.push(t);
+  };
   const stack: XmlElement[] = [root];
   let i = 0;
   while (i < xml.length) {
     const lt = xml.indexOf("<", i);
     const textEnd = lt < 0 ? xml.length : lt;
-    if (textEnd > i) stack[stack.length - 1]!.text += decode(xml.slice(i, textEnd));
+    if (textEnd > i) addText(decode(xml.slice(i, textEnd)));
     if (lt < 0) break;
 
     if (xml.startsWith("<!--", lt)) {
@@ -41,7 +48,7 @@ export function parseXml(xml: string): XmlElement {
     } else if (xml.startsWith("<![CDATA[", lt)) {
       const end = xml.indexOf("]]>", lt + 9);
       if (end < 0) throw new Error("Unclosed CDATA section");
-      stack[stack.length - 1]!.text += xml.slice(lt + 9, end);
+      addText(xml.slice(lt + 9, end));
       i = end + 3;
     } else if (xml[lt + 1] === "?" || xml[lt + 1] === "!") {
       const end = xml.indexOf(">", lt);
@@ -58,7 +65,7 @@ export function parseXml(xml: string): XmlElement {
       // Start tag: name, then attributes up to > or />, honouring quotes.
       const tag = /^<([^\s/>]+)/.exec(xml.slice(lt, lt + 256));
       if (!tag) throw new Error("Broken start tag");
-      const el: XmlElement = { name: localName(tag[1]!), attrs: {}, children: [], text: "" };
+      const el: XmlElement = { name: localName(tag[1]!), attrs: {}, children: [], text: "", content: [] };
       const attrRe = /\s*([^\s=/>]+)\s*=\s*("([^"]*)"|'([^']*)')|\s*(\/?)>/y;
       attrRe.lastIndex = lt + tag[0].length;
       let closed = false;
@@ -76,6 +83,7 @@ export function parseXml(xml: string): XmlElement {
       }
       i = attrRe.lastIndex;
       stack[stack.length - 1]!.children.push(el);
+      stack[stack.length - 1]!.content.push(el);
       if (!selfClosing) stack.push(el);
     }
   }

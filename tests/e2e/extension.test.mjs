@@ -4,7 +4,7 @@
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -241,22 +241,129 @@ test("replays the page's Referer for every file of a stream", async () => {
   assert.ok(site.protectedLog.every((r) => r.referer.endsWith("/hls-protected.html")), JSON.stringify(site.protectedLog));
 });
 
-test("marks live and DRM streams and keeps their download off", async () => {
-  for (const [path, check] of [
-    ["/live.html", (m) => assert.equal(m.isLive, true)],
-    ["/drm.html", (m) => assert.equal(m.hasDrm, true)],
-  ]) {
-    const { tabId, tab, page } = await visit(path);
-    check(tab.media[0]);
-    const popup = await context.newPage();
-    await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
-    assert.equal(await popup.locator(".vz-frame .download").first().isDisabled(), true, path);
-    const res = await popup.evaluate(
-      ([tabId, mediaId]) => chrome.runtime.sendMessage({ kind: "download", payload: { tabId, mediaId } }),
-      [tabId, tab.media[0].id],
-    );
-    assert.equal(res.ok, false, path);
-    await popup.close();
-    await page.close();
-  }
+/** Downloads the page's first item with the given subtitle track; returns the job and the .srt text. */
+async function downloadWithSubtitles(path, label) {
+  const { tabId, page } = await visit(path);
+  const { job } = await downloadFromPopup(tabId, async (popup) => {
+    const select = popup.locator(".vz-frame .subtitles select").first();
+    await select.waitFor();
+    await select.selectOption({ label });
+  });
+  assert.equal(job.state, "complete", job.error);
+  const saved = await waitFor(
+    () =>
+      sw.evaluate(async (tabId) => {
+        const jobs = Object.values((await chrome.storage.session.get("jobs")).jobs ?? {});
+        const j = jobs.find((j) => j.tabId === tabId);
+        if (!j?.subtitleFile && !j?.subtitleError) return undefined;
+        const [item] = await chrome.downloads.search({ urlRegex: "^data:application/x-subrip", orderBy: ["-startTime"], state: "complete" });
+        return { job: j, path: item?.filename };
+      }, tabId),
+    "subtitles to be saved",
+  );
+  assert.equal(saved.job.subtitleError, undefined);
+  await page.close();
+  return { job: saved.job, srt: readFileSync(saved.path, "utf8") };
+}
+
+test("saves an HLS stream's WebVTT subtitles as .srt next to the video", async () => {
+  const { job, srt } = await downloadWithSubtitles("/subs-hls.html", "CC English");
+  assert.equal(job.subtitleFile, job.filename.replace(/\.mp4$/, ".en.srt"));
+  assert.equal(
+    srt,
+    "1\n00:00:00,500 --> 00:00:02,000\nHello there\n\n2\n00:00:01,500 --> 00:00:03,000\nAcross the cut\n\n3\n00:00:04,000 --> 00:00:05,500\nSecond line\n",
+  );
+});
+
+test("saves a DASH stream's TTML subtitles as .srt", async () => {
+  const { job, srt } = await downloadWithSubtitles("/subs-dash.html", "CC Deutsch");
+  assert.match(job.subtitleFile, /\.de\.srt$/);
+  assert.match(srt, /^1\n00:00:00,500 --> 00:00:02,000\nHallo\nzusammen\n/);
+});
+
+test("saves a page's <track> captions with a direct file", async () => {
+  const { job, srt } = await downloadWithSubtitles("/track.html", "CC Français");
+  assert.match(job.subtitleFile, /\.fr\.srt$/);
+  assert.equal(srt, "1\n00:00:01,000 --> 00:00:02,500\nBonjour\n");
+});
+
+test("keeps DRM streams unavailable", async () => {
+  const { tabId, tab, page } = await visit("/drm.html");
+  assert.equal(tab.media[0].hasDrm, true);
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
+  assert.equal(await popup.locator(".vz-frame .download").first().isDisabled(), true);
+  const res = await popup.evaluate(
+    ([tabId, mediaId]) => chrome.runtime.sendMessage({ kind: "download", payload: { tabId, mediaId } }),
+    [tabId, tab.media[0].id],
+  );
+  assert.equal(res.ok, false);
+  await popup.close();
+  await page.close();
+});
+
+test("warns when the page plays DRM-protected video (EME)", async () => {
+  const { tabId, page } = await visit("/eme.html");
+  const tab = await waitFor(
+    () => sw.evaluate(async (key) => (await chrome.storage.session.get(key))[key]?.drmKeySystem && (await chrome.storage.session.get(key))[key], `tab:${tabId}`),
+    "DRM to be noticed",
+  );
+  assert.equal(tab.drmKeySystem, "com.widevine.alpha");
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
+  assert.match(await popup.locator(".vz-frame-note").first().textContent(), /Widevine-protected/);
+  await popup.close();
+  await page.close();
+});
+
+/** Starts recording a live page from the popup; returns what's needed to stop and check it. */
+async function startRecording(run) {
+  const { tabId, tab, page } = await visit(`/live-page/${run}.html`);
+  assert.equal(tab.media[0].isLive, true);
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
+  const button = popup.locator(".vz-frame .download").first();
+  assert.equal(await button.getAttribute("title"), "Record");
+  await button.click();
+  await waitFor(async () => (await button.getAttribute("title")) === "Stop and save", "recording to start");
+  return { tabId, page, popup, button };
+}
+
+async function finishedJob(tabId, timeout) {
+  return waitFor(
+    () =>
+      sw.evaluate(async (tabId) => {
+        const jobs = Object.values((await chrome.storage.session.get("jobs")).jobs ?? {});
+        return jobs.find((j) => j.tabId === tabId && j.state !== "running");
+      }, tabId),
+    "recording to be saved",
+    timeout,
+  );
+}
+
+test("records a live stream until stopped and keeps what was recorded", async () => {
+  const { tabId, page, popup, button } = await startRecording("stopped");
+  await waitFor(async () => /Recording 0:0[4-9]/.test(await popup.locator(".vz-frame-note").first().textContent()), "4 s recorded", 20000);
+  await button.click();
+  const job = await finishedJob(tabId, 30000);
+  assert.equal(job.state, "complete", job.error);
+  const [item] = await sw.evaluate((id) => chrome.downloads.search({ id }), job.chromeDownloadId);
+  const file = probe(item.filename);
+  assert.ok(file.duration >= 4 && file.duration < 20, `duration ${file.duration}`);
+  assert.equal(file.video?.codec_name, "h264");
+  assert.equal(file.audio?.codec_name, "aac");
+  await popup.close();
+  await page.close();
+});
+
+test("records a live stream to its end on its own", async () => {
+  const { tabId, page, popup } = await startRecording("to-end");
+  const job = await finishedJob(tabId, 60000);
+  assert.equal(job.state, "complete", job.error);
+  const [item] = await sw.evaluate((id) => chrome.downloads.search({ id }), job.chromeDownloadId);
+  const file = probe(item.filename);
+  // The broadcast runs 20 s; the recording starts at the window offered when it began.
+  assert.ok(file.duration >= 12 && file.duration <= 20.5, `duration ${file.duration}`);
+  await popup.close();
+  await page.close();
 });
