@@ -8,6 +8,7 @@ import {
   ALL_FORMATS,
   BlobSource,
   EncodedAudioPacketSource,
+  EncodedPacket,
   EncodedPacketSink,
   EncodedVideoPacketSource,
   Input,
@@ -15,7 +16,6 @@ import {
   Output,
   StreamTarget,
   WebMOutputFormat,
-  type EncodedPacket,
   type InputAudioTrack,
   type InputTrack,
   type InputVideoTrack,
@@ -319,6 +319,42 @@ interface Planned {
   end: number;
 }
 
+/**
+ * Silent frames that need no encoder: AAC-LC (from hls.js, by channel count)
+ * and a 20 ms Opus packet, which any Opus decoder plays in mono or stereo.
+ */
+const SILENCE: Record<string, (channels: number, sampleRate: number) => { data: Uint8Array; duration: number } | undefined> = {
+  aac: (channels, sampleRate) => {
+    const frame = { 1: [0x00, 0xc8, 0x00, 0x80, 0x23, 0x80], 2: [0x21, 0x00, 0x49, 0x90, 0x02, 0x19, 0x00, 0x23, 0x80] }[channels];
+    return frame && { data: new Uint8Array(frame), duration: 1024 / sampleRate };
+  },
+  opus: () => ({ data: new Uint8Array([0xf8, 0xff, 0xfe]), duration: 0.02 }),
+};
+
+/** A late start this short is left as it is. */
+const MIN_PAD_SEC = 0.1;
+
+/**
+ * Sound that begins after the picture (a player that loaded audio late) gets
+ * silence in front, so the file's audio starts with its video in every player,
+ * also ones that ignore an MP4 edit list.
+ */
+function padAudio(run: Run, planned: Planned, from: number): Planned {
+  const config = run.config as AudioDecoderConfig;
+  if (run.track.isVideoTrack() || planned.start - from < MIN_PAD_SEC || !config.codec.match(/^(mp4a\.40\.2|opus)$/)) return planned;
+  const frame = SILENCE[run.codec]?.(config.numberOfChannels, config.sampleRate);
+  if (!frame) return planned;
+  const count = Math.floor((planned.start - from) / frame.duration);
+  const first = planned.start - count * frame.duration;
+  const packets = Array.from({ length: count }, (_, i) => new EncodedPacket(frame.data, "key", first + i * frame.duration, frame.duration));
+  const rest = planned.gops;
+  async function* gops() {
+    yield { start: first, end: planned.start, packets };
+    yield* rest;
+  }
+  return { gops: gops(), start: first, end: planned.end };
+}
+
 async function plan(runs: Run[]): Promise<Planned> {
   if (runs.length === 1) {
     // One run (a downloaded track) is written as it is read, without holding it.
@@ -356,7 +392,9 @@ export async function joinTracks(tracks: CapturedRun[][], target: StreamTarget, 
     if (picked.length === 0) throw new Error("The player hadn't loaded any audio or video yet");
     const webm = picked.some((runs) => WEBM_ONLY.has(runs[0]!.codec));
     const hasVideo = picked.some(isVideo);
-    const plans = await Promise.all(picked.map(plan));
+    const planned = await Promise.all(picked.map(plan));
+    const videoStart = planned.find((_, i) => isVideo(picked[i]!))?.start;
+    const plans = videoStart === undefined ? planned : planned.map((p, i) => padAudio(picked[i]![0]!, p, videoStart));
 
     const output = new Output({ format: webm ? new WebMOutputFormat() : new Mp4OutputFormat({ fastStart: false }), target });
     const base = Math.min(...plans.map((p) => p.start));

@@ -1,10 +1,21 @@
-import { readFileSync, existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { readFileSync, existsSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ALL_FORMATS, BlobSource, EncodedPacketSink, Input } from "mediabunny";
 import { describe, expect, it } from "vitest";
 import { avcParameterSets, blankWebmIndexes, muxCaptured } from "../../src/capture/mux";
 
 const dash = join(__dirname, "../fixtures/media/dash");
+const webm = join(__dirname, "../fixtures/media/dash-webm");
+const hasFfmpeg = (() => {
+  try {
+    execFileSync("ffmpeg", ["-version"], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+})();
 const run = (blob: Blob, offset = 0) => ({ blob, offset });
 const chunk = (rep: number, n: number) => readFileSync(join(dash, `chunk-${rep}-0000${n}.m4s`));
 const stream = (rep: number, count: number) => new Blob([readFileSync(join(dash, `init-${rep}.m4s`)), ...Array.from({ length: count }, (_, i) => chunk(rep, i + 1))]);
@@ -74,6 +85,37 @@ describe.skipIf(!existsSync(dash))("muxCaptured", () => {
     const { blob } = await muxCaptured([[run(stream(2, 1)), run(new Blob([readFileSync(join(dash, "init-2.m4s")), chunk(2, 1)]), 2)]]);
     const audio = (await new Input({ source: new BlobSource(blob), formats: ALL_FORMATS }).getPrimaryAudioTrack())!;
     expect(await audio.computeDuration()).toBeGreaterThan(3.9);
+  });
+
+  /** ffmpeg's complaints while decoding the whole file; none means it plays. */
+  const decodeErrors = async (blob: Blob, ext: string) => {
+    const file = join(tmpdir(), `vidzilla-pad-${process.pid}.${ext}`);
+    writeFileSync(file, new Uint8Array(await blob.arrayBuffer()));
+    try {
+      return execFileSync("ffmpeg", ["-v", "error", "-i", file, "-f", "null", "-"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    } finally {
+      rmSync(file);
+    }
+  };
+  const firstAudio = async (blob: Blob) => {
+    const audio = (await new Input({ source: new BlobSource(blob), formats: ALL_FORMATS }).getPrimaryAudioTrack())!;
+    for await (const p of new EncodedPacketSink(audio).packets()) return p.timestamp;
+  };
+
+  it.skipIf(!hasFfmpeg)("puts silence in front of AAC that starts after the video", async () => {
+    // Video from 0, sound only from the second segment on.
+    const late = new Blob([readFileSync(join(dash, "init-2.m4s")), chunk(2, 2), chunk(2, 3), chunk(2, 4)]);
+    const { blob } = await muxCaptured([[run(stream(0, 3))], [run(late)]]);
+    expect(await firstAudio(blob)).toBeLessThan(0.03);
+    expect(await decodeErrors(blob, "mp4")).toBe("");
+  });
+
+  it.skipIf(!hasFfmpeg || !existsSync(webm))("puts silence in front of Opus that starts after the video", async () => {
+    const video = new Blob([readFileSync(join(webm, "init-0.webm")), ...[1, 2, 3].map((n) => readFileSync(join(webm, `chunk-0-0000${n}.webm`)))]);
+    const late = new Blob([readFileSync(join(webm, "init-1.webm")), ...[2, 3, 4].map((n) => readFileSync(join(webm, `chunk-1-0000${n}.webm`)))]);
+    const { blob, ext } = await muxCaptured([[run(video)], [run(late)]]);
+    expect(await firstAudio(blob)).toBeLessThan(0.03);
+    expect(await decodeErrors(blob, ext)).toBe("");
   });
 });
 
