@@ -1,5 +1,7 @@
 // Filename templates and a sanitiser that is safe on Windows, macOS and Linux.
 
+import type { MediaItem, StreamVariant } from "./types";
+
 export interface NamingInput {
   template: string;
   maxLength: number;
@@ -9,6 +11,11 @@ export interface NamingInput {
   serverFilename?: string;
   ext: string;
   now?: Date;
+}
+
+/** The extension a download is saved with: sound-only streams as .m4a, Vorbis only fits in WebM. */
+export function savedExt(item: Pick<MediaItem, "ext">, variant?: Pick<StreamVariant, "webm" | "audioOnly">): string {
+  return variant?.webm ? "webm" : variant?.audioOnly ? "m4a" : item.ext;
 }
 
 const RESERVED_WINDOWS = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;

@@ -27,13 +27,14 @@ body.vz-popup {
   flex: none;
 }
 
-/* An ask waits behind the settings view. */
-.vz-popup.is-settings .vz-ask {
+/* An ask waits behind the settings and saved files views. */
+.vz-popup.has-view .vz-ask {
   display: none;
 }
 
-/* Settings open in place of the strip and scroll the same way. */
-.vz-popup-settings {
+/* Settings and saved files open in place of the strip and scroll the same way. */
+.vz-popup-settings,
+.vz-popup-saved {
   flex: 0 1 auto;
   min-height: 0;
   display: grid;
@@ -45,7 +46,8 @@ body.vz-popup {
   scrollbar-color: var(--color-border) transparent;
 }
 
-.vz-popup-settings .vz-section-head {
+.vz-popup-settings .vz-section-head,
+.vz-popup-saved .vz-section-head {
   padding: 0 var(--space-1);
 }
 
@@ -95,7 +97,9 @@ body.vz-popup.wide {
 /* These set their own display, which would beat the hidden attribute. */
 .vz-select[hidden],
 .vz-icon-btn[hidden],
+.vz-btn[hidden],
 .vz-popup-foot[hidden],
-.vz-popup-settings[hidden] {
+.vz-popup-settings[hidden],
+.vz-popup-saved[hidden] {
   display: none;
 }

@@ -25,7 +25,9 @@ to be before it was a stream.
 - **Metadata is edge print.** Film stock carries tiny condensed codes along its
   edge (stock, roll, frame number). Format, resolution, size and status use the
   same treatment: condensed caps, amber, tabular numbers (`.vz-edge`,
-  `.vz-badge`).
+  `.vz-badge`). A frame's badge names the file it saves (MP4,
+  M4A, WEBM), never the stream protocol: an HLS or DASH stream is saved as one
+  MP4.
 - **Progress is perforation.** A download fills a row of perforations with
   safelight (`.vz-perf`), not a smooth bar.
 - **Protected video is fogged film.** DRM frames are dimmed with a lock and a
@@ -166,8 +168,9 @@ only: `--space-7` 48 · `--space-8` 64 · `--space-9` 96 · `--space-10` 128 px.
 
 ## Extension pages
 
-The options page opens in a full tab and is built from the same parts as the
-popup, laid out like a lab's log book.
+The options page (Chrome's "Extension options") opens in a full tab and holds
+the settings only, built from the same parts as the popup and laid out like a
+lab's log book. Saved files are listed in the popup and side panel, never here.
 
 - **Page** (`.vz-page` on `<body>`): one column, `--size-prose` + 128 px wide,
   centred. `.vz-page-head` holds the mark (`.vz-popup-mark`), the
@@ -182,14 +185,15 @@ popup, laid out like a lab's log book.
   Template variables in help text are `<code>` and print as amber edge type.
   `.vz-field--wide` puts the control under the label (the filename template);
   `.vz-input--short` is for numbers (max length). Rows stack under 560 px.
-- **History** (`.vz-history` list of `.vz-history-row`): a contact sheet.
+- **History** (`.vz-history` list of `.vz-history-row`, shown in the popup's
+  saved files view): a contact sheet.
   Thumbnail (`.vz-thumb`), then `.vz-history-title`, `.vz-history-file` and a
   `.vz-history-meta.vz-edge` line (site · date · size), then
   `.vz-frame-actions` with icon buttons: `folder` (Show in folder) and
   `arrow.up.right` (Open page). `.is-missing` fogs a row whose file was
   moved or deleted. Thumbnails hide under 480 px.
-- **Entry point**: a `gearshape` `.vz-icon-btn` at the right end of
-  `.vz-popup-head` opens the options page.
+- **Entry point**: Chrome's "Extension options" menu item. The popup's
+  `gearshape` opens the same settings in place instead.
 
 ## Popup and side panel
 
@@ -200,17 +204,21 @@ One page, two shells. `popup.html` is the popup; the build writes
   then icon buttons: the mode switch (`sidebar.right` "Switch to the side
   panel" in the popup, `rectangle.inset.topright.filled` "Switch to the popup"
   in the panel) and `gearshape` (settings, which turns into `xmark` while
-  they are open).
+  they are open, or while saved files are).
 - **Settings view** (`.vz-popup-settings`): the gear swaps the strip and foot
   for the same `.vz-fields` rows as the options page, in place, never in a new
   tab. The rows live once in `src/ui/settings-fields.html` and the build puts
   them in both pages.
+- **Saved files view** (`.vz-popup-saved`): the foot's Saved files button
+  swaps the strip and foot for a `.vz-section-head` ("Saved files", with a
+  quiet small "Clear history" button) and the `.vz-history` contact sheet, in
+  place, never in a new tab. The head's `xmark` leads back to the videos.
 - **Strip**: the only part that scrolls. The head and foot never move, so every
   control stays in view however many videos a page has.
 - **Foot** (`.vz-popup-foot`): the tail of the roll, a grid of two equal
   columns and a narrow one. First row: quiet small buttons `folder`
-  **Downloads** (opens the Downloads folder) and `clock` **Saved files** (the
-  options page's history), then a `trash` icon button that clears the list for
+  **Downloads** (opens the Downloads folder) and `clock` **Saved files** (opens
+  the saved files view), then a `trash` icon button that clears the list for
   this tab. Second row: `star` **Rate** (opens Vidzilla's review page on the
   Chrome Web Store) and `square.and.arrow.up` **Share** (copies the store
   link, then reads "Copied" for a moment).
@@ -220,7 +228,8 @@ One page, two shells. `popup.html` is the popup; the build writes
   that show the page through them, amber edge print counting the files saved,
   a `.vz-ask-title`, one `.vz-ask-text` sentence and `.vz-ask-actions`: a
   primary small button and quiet small ones. It is always skippable ("Not
-  now"), never blocks the strip, and waits behind the settings view.
+  now"), never blocks the strip, and waits behind the settings and saved files
+  views.
 - **House ad** (`.vz-ad`): one frame of film projected in place of the strip
   and foot, for the maker's other apps (list in `site/ads.json`, rules in
   `src/shared/ads.ts`, see `docs/house-ads.md`). The film tile (`.vz-ad-film`,
@@ -235,7 +244,7 @@ One page, two shells. `popup.html` is the popup; the build writes
   "Remove ads" text button (only when an upgrade page is set) and a quiet small
   Close button that reads "Close in 12" and is disabled until the time is up.
   The countdown only runs while the ad is on screen, waits behind the settings
-  view, and never shows on the same download as an ask.
+  and saved files views, and never shows on the same download as an ask.
 - **Sizing**: the popup is `--size-popup-width` wide and at most
   `--size-popup-max-height` tall. Never size it with `vw` or `vh`: Chrome opens
   a popup tiny and grows it to fit the page, so viewport units collapse it and
@@ -265,7 +274,9 @@ One spring everywhere: `--ease-spring`, a `linear()` sampling of a damped spring
 (stiffness 210, damping 22, mass 1; 2.6 % overshoot, settles in 540 ms).
 Durations: `--duration-base` 540 ms for movement (frames arriving, progress),
 `--duration-fast` 240 ms for hover and press. With
-`prefers-reduced-motion`, both durations drop to 0.
+`prefers-reduced-motion`, both durations drop to 0. A frame plays its arrival
+once, when it first appears: progress and status updates change it in place
+and never move or re-insert it, so nothing flashes while a download runs.
 
 ## Illustration and image style
 
