@@ -194,3 +194,13 @@ with its real headers and CSP. `tests/e2e/site-launch.test.mjs` checks the
 launch setup: every page's head, the security headers, `robots.txt`,
 `sitemap.xml` and `llms.txt` (every link resolves), markdown negotiation, real
 404s in HTML and markdown, and no console errors on any page.
+
+## License
+
+The code is under the [MIT License](LICENSE). The Vidzilla name, logo, icons
+and store images are not: they stay all rights reserved, so a fork needs its
+own name and artwork. [TRADEMARKS.md](TRADEMARKS.md) lists what that covers.
+
+Bundled third-party code keeps its own licence: Mediabunny (MPL-2.0) and the
+Archivo font (SIL OFL 1.1). See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
