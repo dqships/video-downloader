@@ -12,6 +12,7 @@ import type { FromWorker, ToOffscreenEnvelope, ToWorker } from "../shared/worker
 import { planDash } from "./dash-probe";
 import { variantUrls } from "./hls-probe";
 import { installReplay, removeReplay, replayScopes } from "./replay";
+import { saveSubtitles } from "./subtitles";
 
 const OFFSCREEN_URL = "offscreen.html";
 const KEEP_FINISHED_JOBS = 50;
@@ -67,10 +68,10 @@ export class Downloads {
     });
   }
 
-  async start(tab: TabMedia, item: MediaItem, filenameOverride?: string, variantId?: string): Promise<string> {
+  async start(tab: TabMedia, item: MediaItem, filenameOverride?: string, variantId?: string, subtitleId?: string): Promise<string> {
     await this.loaded;
     if (item.hasDrm) throw new Error("This video is protected by DRM and can't be downloaded.");
-    if (item.isLive) throw new Error("Recording live streams arrives in a later version.");
+    if (item.isLive && item.type === "dash") throw new Error("Recording live DASH streams arrives in a later version.");
     let variant: StreamVariant | undefined;
     if (item.type !== "http") {
       variant = item.variants?.find((v) => v.id === variantId) ?? item.variants?.[0];
@@ -106,7 +107,9 @@ export class Downloads {
       phase: "fetching",
       bytesReceived: 0,
       totalBytes: variant ? undefined : item.sizeBytes,
-      progress: variant ? 0 : undefined,
+      progress: variant && !item.isLive ? 0 : undefined,
+      recording: item.isLive || undefined,
+      recordedSec: item.isLive ? 0 : undefined,
       variantLabel: variant && item.variants!.length > 1 ? variant.label : undefined,
       saveAs: settings.saveAs,
       ruleIds: variant ? [] : await installReplay([item.url], item.sentHeaders),
@@ -128,7 +131,7 @@ export class Downloads {
         }
         // Replay the page's headers on every directory the stream lives in.
         job.ruleIds = await installReplay(replayScopes([item.url, ...urls]), item.sentHeaders);
-        await toWorker({ type: "fetch-hls", jobId: job.jobId, url, audioOnly: variant.audioOnly });
+        await toWorker({ type: item.isLive ? "record-live" : "fetch-hls", jobId: job.jobId, url, audioOnly: variant.audioOnly });
       } else {
         await toWorker({
           type: "fetch-file",
@@ -142,6 +145,14 @@ export class Downloads {
       await this.fail(job, err instanceof Error ? err.message : String(err));
       throw err;
     }
+    const track = subtitleId ? [...(item.subtitles ?? []), ...(tab.subtitles ?? [])].find((t) => t.id === subtitleId) : undefined;
+    if (track) {
+      // Subtitles save on their own; a failure there doesn't stop the video.
+      saveSubtitles(track, item.sentHeaders, job.filename).then(
+        (file) => (job.subtitleFile = file),
+        (err) => (job.subtitleError = err instanceof Error ? err.message : String(err)),
+      ).finally(() => this.persist());
+    }
     return job.jobId;
   }
 
@@ -151,6 +162,13 @@ export class Downloads {
     if (!job || job.state !== "running") return;
     if (job.chromeDownloadId !== undefined) await chrome.downloads.cancel(job.chromeDownloadId).catch(() => {});
     else await toWorker({ type: "cancel", jobId });
+  }
+
+  /** Ends a live recording; the worker then saves what it has. */
+  async stop(jobId: string): Promise<void> {
+    await this.loaded;
+    const job = this.jobs.get(jobId);
+    if (job?.state === "running" && job.recording && job.phase === "fetching") await toWorker({ type: "stop", jobId });
   }
 
   /** Messages relayed from the download worker. */
@@ -163,6 +181,7 @@ export class Downloads {
         job.bytesReceived = msg.bytes;
         if (msg.totalBytes) job.totalBytes = msg.totalBytes;
         if (msg.fraction !== undefined) job.progress = msg.fraction;
+        if (msg.seconds !== undefined) job.recordedSec = msg.seconds;
         this.persist();
         break;
       case "error":

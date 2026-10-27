@@ -2,9 +2,13 @@
 // state from chrome.storage and never waits on the service worker for data.
 
 export type Command =
-  | { kind: "download"; payload: { tabId: number; mediaId: string; filename?: string; variantId?: string } }
+  | { kind: "download"; payload: { tabId: number; mediaId: string; filename?: string; variantId?: string; subtitleId?: string } }
   | { kind: "cancel"; payload: { jobId: string } }
-  | { kind: "clear-tab"; payload: { tabId: number } };
+  /** Ends a live recording and saves it. */
+  | { kind: "stop"; payload: { jobId: string } }
+  | { kind: "clear-tab"; payload: { tabId: number } }
+  /** From the content script: the page gave a media element DRM keys. */
+  | { kind: "page-drm"; payload: { keySystem: string } };
 
 export type CommandResult = { ok: true; jobId?: string } | { ok: false; error: string };
 

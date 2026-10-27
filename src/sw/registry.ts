@@ -30,9 +30,10 @@ export function mergeMedia(list: MediaItem[], item: MediaItem): { list: MediaIte
       childUrls: old.childUrls ?? item.childUrls,
       durationSec: old.durationSec ?? item.durationSec,
       isLive: old.isLive ?? item.isLive,
+      subtitles: old.subtitles ?? item.subtitles,
       hasDrm: old.hasDrm || item.hasDrm,
     };
-    for (const key of ["variants", "childUrls", "durationSec", "isLive"] as const) {
+    for (const key of ["variants", "childUrls", "durationSec", "isLive", "subtitles"] as const) {
       if (merged[key] === undefined) delete merged[key];
     }
     const changed = JSON.stringify(merged) !== JSON.stringify(old);
@@ -87,7 +88,7 @@ export class Registry {
     return true;
   }
 
-  async update(tabId: number, patch: Partial<Pick<TabMedia, "title" | "thumbnail" | "pageUrl">>): Promise<void> {
+  async update(tabId: number, patch: Partial<Pick<TabMedia, "title" | "thumbnail" | "pageUrl" | "subtitles" | "drmKeySystem">>): Promise<void> {
     const tab = await this.get(tabId);
     if (tab) this.put({ ...tab, ...patch });
   }

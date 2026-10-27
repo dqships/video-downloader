@@ -3,7 +3,7 @@
 
 import { hash53 } from "../shared/hash";
 import type { Command, CommandResult } from "../shared/messages";
-import type { MediaItem, TabMedia } from "../shared/types";
+import type { MediaItem, SubtitleTrack, TabMedia } from "../shared/types";
 import type { FromOffscreenEnvelope } from "../shared/worker-protocol";
 import { classify } from "./classify";
 import { Downloads } from "./downloads";
@@ -20,6 +20,8 @@ const headerCache = new HeaderCache();
 const registry = new Registry(updateBadge);
 const downloads = new Downloads();
 const metaRequested = new Set<number>();
+/** DRM seen on a tab before any media was listed there. */
+const pendingDrm = new Map<number, string>();
 /** Detected responses still being read and listed, per tab. */
 const handling = new Map<number, Set<Promise<unknown>>>();
 
@@ -103,6 +105,11 @@ async function handleResponse(
     ...streamDetails,
   };
   const added = await registry.add(item);
+  const drm = pendingDrm.get(details.tabId);
+  if (added && drm) {
+    pendingDrm.delete(details.tabId);
+    await registry.update(details.tabId, { drmKeySystem: drm });
+  }
   if (added && !metaRequested.has(details.tabId)) {
     metaRequested.add(details.tabId);
     void readPageMeta(details.tabId);
@@ -131,10 +138,24 @@ async function readPageMeta(tabId: number): Promise<void> {
             abs(meta('meta[name="twitter:image"]')) ??
             abs(document.querySelector('link[rel="image_src"]')?.getAttribute("href")),
           pageUrl: location.href,
+          // Captions the page attaches to its videos with <track>.
+          tracks: [...document.querySelectorAll<HTMLTrackElement>("video track[src]")]
+            .filter((t) => !t.kind || t.kind === "subtitles" || t.kind === "captions")
+            .map((t) => ({ url: abs(t.getAttribute("src"))!, label: t.label, lang: t.srclang }))
+            .filter((t) => t.url),
         };
       },
     });
-    if (res?.result) await registry.update(tabId, res.result);
+    if (res?.result) {
+      const { tracks, ...meta } = res.result;
+      const subtitles: SubtitleTrack[] = tracks.map((t, i) => ({
+        id: `page-${i}`,
+        label: t.label || t.lang || `Subtitles ${i + 1}`,
+        lang: t.lang || undefined,
+        source: { kind: "file", url: t.url },
+      }));
+      await registry.update(tabId, { ...meta, ...(subtitles.length ? { subtitles } : {}) });
+    }
   } catch {
     // Restricted pages (chrome://, the Web Store) refuse scripts; keep going.
   }
@@ -143,11 +164,13 @@ async function readPageMeta(tabId: number): Promise<void> {
 chrome.webNavigation.onBeforeNavigate.addListener((d) => {
   if (d.frameId !== 0) return;
   metaRequested.delete(d.tabId);
+  pendingDrm.delete(d.tabId);
   registry.clear(d.tabId);
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   metaRequested.delete(tabId);
+  pendingDrm.delete(tabId);
   registry.clear(tabId);
 });
 
@@ -155,27 +178,39 @@ chrome.tabs.onUpdated.addListener((tabId, change) => {
   if (change.title) void registry.get(tabId).then((t) => t && registry.update(tabId, { title: change.title }));
 });
 
-chrome.runtime.onMessage.addListener((msg: Command | FromOffscreenEnvelope, _sender, respond) => {
+chrome.runtime.onMessage.addListener((msg: Command | FromOffscreenEnvelope, sender, respond) => {
   if ("target" in msg) {
     if (msg.target !== "service-worker") return;
     downloads.onWorkerMessage(msg.message).finally(() => respond(true));
     return true;
   }
-  handle(msg).then(respond, (err) => respond({ ok: false, error: err instanceof Error ? err.message : String(err) }));
+  handle(msg, sender).then(respond, (err) => respond({ ok: false, error: err instanceof Error ? err.message : String(err) }));
   return true; // respond asynchronously
 });
 
-async function handle(cmd: Command): Promise<CommandResult> {
+async function handle(cmd: Command, sender: chrome.runtime.MessageSender): Promise<CommandResult> {
   switch (cmd.kind) {
     case "download": {
       const found = await registry.findMedia(cmd.payload.tabId, cmd.payload.mediaId);
       if (!found) return { ok: false, error: "That video is no longer on this page. Reload and try again." };
-      const jobId = await downloads.start(found.tab, found.item, cmd.payload.filename, cmd.payload.variantId);
+      const jobId = await downloads.start(found.tab, found.item, cmd.payload.filename, cmd.payload.variantId, cmd.payload.subtitleId);
       return { ok: true, jobId };
     }
     case "cancel":
       await downloads.cancel(cmd.payload.jobId);
       return { ok: true };
+    case "stop":
+      await downloads.stop(cmd.payload.jobId);
+      return { ok: true };
+    case "page-drm": {
+      const tabId = sender.tab?.id;
+      if (tabId === undefined) return { ok: false, error: "Not from a tab" };
+      // The list may not exist yet; keep the flag so media found later sees it.
+      const tab = await registry.get(tabId);
+      if (tab) await registry.update(tabId, { drmKeySystem: cmd.payload.keySystem });
+      else pendingDrm.set(tabId, cmd.payload.keySystem);
+      return { ok: true };
+    }
     case "clear-tab":
       registry.clear(cmd.payload.tabId);
       return { ok: true };

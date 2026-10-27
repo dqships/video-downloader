@@ -13,8 +13,8 @@ export const release = {
     hls: "ready",
     dash: "ready",
     audio: "ready",
-    subtitles: "coming",
-    live: "next",
+    subtitles: "ready",
+    live: "ready",
   },
 };
 

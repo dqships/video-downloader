@@ -41,5 +41,21 @@ const options = {
   plugins: [{ name: "static", setup: (b) => b.onEnd(copyStatic) }],
 };
 
-if (watch) await (await esbuild.context(options)).watch();
-else await esbuild.build(options);
+// Content scripts can't be modules.
+const contentOptions = {
+  ...options,
+  entryPoints: {
+    "eme-main": join(root, "src/content/eme-main.ts"),
+    "eme-bridge": join(root, "src/content/eme-bridge.ts"),
+  },
+  format: "iife",
+  plugins: [],
+};
+
+if (watch) {
+  await (await esbuild.context(options)).watch();
+  await (await esbuild.context(contentOptions)).watch();
+} else {
+  await esbuild.build(options);
+  await esbuild.build(contentOptions);
+}

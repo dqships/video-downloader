@@ -4,7 +4,7 @@
 // Mediabunny HLS reader that handles HLS remuxes DASH too.
 
 import { labelVariants } from "./hls";
-import type { StreamVariant } from "./types";
+import type { StreamVariant, SubtitleTrack } from "./types";
 import { child, childrenNamed, parseXml, type XmlElement } from "./xml";
 
 /** Inclusive byte range, as DASH writes them ("0-833"). */
@@ -40,6 +40,8 @@ export interface DashRepresentation {
   lang?: string;
   /** The adaptation set is marked as the main one (Role main). */
   isMain: boolean;
+  /** A <Label> the manifest gives the track, if any. */
+  label?: string;
   hasDrm: boolean;
   segments: DashSegments;
 }
@@ -248,6 +250,7 @@ export function parseMpd(text: string, mpdUrl: string): DashManifest {
         height: num(rep.attrs.height ?? set.attrs.height),
         lang: rep.attrs.lang ?? set.attrs.lang,
         isMain,
+        label: (child(rep, "Label") ?? child(set, "Label"))?.text.trim() || undefined,
         hasDrm: setDrm || childrenNamed(rep, "ContentProtection").length > 0,
         segments,
       });
@@ -401,4 +404,21 @@ export function hlsMediaPlaylist(init: SegmentRef | undefined, segments: Segment
   }
   lines.push("#EXT-X-ENDLIST", "");
   return lines.join("\n");
+}
+
+/** Text tracks saved as plain WebVTT or TTML (not wrapped in MP4 segments). */
+export function listDashSubtitles(m: DashManifest): SubtitleTrack[] {
+  const out: SubtitleTrack[] = [];
+  for (const r of m.representations) {
+    if (r.kind !== "text" || !/^(text\/vtt|application\/ttml\+xml)$/.test(r.mime)) continue;
+    const seg = r.segments;
+    const source: SubtitleTrack["source"] | undefined =
+      seg.kind === "file"
+        ? { kind: "file", url: seg.url }
+        : seg.kind === "list" && seg.segments.length && seg.segments.every((s) => !s.range)
+          ? { kind: "segments", urls: seg.segments.map((s) => s.url) }
+          : undefined;
+    if (source) out.push({ id: `dash-${r.key}`, label: r.label ?? r.lang ?? `Subtitles ${out.length + 1}`, lang: r.lang, source });
+  }
+  return out;
 }
