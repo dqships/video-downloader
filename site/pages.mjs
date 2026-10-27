@@ -11,7 +11,9 @@ export const pages = [
   { path: "/about", file: "about" },
   { path: "/pricing", file: "pricing" },
   { path: "/contact", file: "contact" },
+  { path: "/support", file: "support" },
   { path: "/privacy", file: "privacy" },
+  { path: "/terms", file: "terms" },
 ];
 
 export const repoUrl = "https://github.com/dqships/video-downloader";
@@ -30,6 +32,8 @@ Vidzilla is a free Chrome extension that finds the video playing on a page and s
 - [About](${origin}/about): who makes Vidzilla and why
 - [Pricing](${origin}/pricing): Vidzilla is free
 - [Contact](${origin}/contact): bug reports and questions
+- [Support](${origin}/support): answers and fixes for common problems
 - [Privacy policy](${origin}/privacy): what the extension reads and keeps
+- [Terms of use](${origin}/terms): the rules for using Vidzilla
 - [llms.txt](${origin}/llms.txt): an index of the site for language models
 `;
