@@ -6,9 +6,11 @@
 import { storageKeys } from "../shared/messages";
 import { buildFilename, sanitizeFilename } from "../shared/naming";
 import { loadSettings } from "../shared/settings";
-import type { DownloadJob, MediaItem, TabMedia } from "../shared/types";
+import { dataUrl, singleVariantMaster } from "../shared/hls";
+import type { DownloadJob, MediaItem, StreamVariant, TabMedia } from "../shared/types";
 import type { FromWorker, ToOffscreenEnvelope, ToWorker } from "../shared/worker-protocol";
-import { installReplay, removeReplay } from "./replay";
+import { variantUrls } from "./hls-probe";
+import { installReplay, removeReplay, replayScopes } from "./replay";
 
 const OFFSCREEN_URL = "offscreen.html";
 
@@ -63,10 +65,16 @@ export class Downloads {
     });
   }
 
-  async start(tab: TabMedia, item: MediaItem, filenameOverride?: string): Promise<string> {
+  async start(tab: TabMedia, item: MediaItem, filenameOverride?: string, variantId?: string): Promise<string> {
     await this.loaded;
     if (item.hasDrm) throw new Error("This video is protected by DRM and can't be downloaded.");
-    if (item.type !== "http") throw new Error("Stream downloads (HLS and DASH) arrive in the next version.");
+    if (item.type === "dash") throw new Error("DASH downloads arrive in the next version.");
+    if (item.isLive) throw new Error("Recording live streams arrives in a later version.");
+    let variant: StreamVariant | undefined;
+    if (item.type === "hls") {
+      variant = item.variants?.find((v) => v.id === variantId) ?? item.variants?.[0];
+      if (!variant) throw new Error("Couldn't read this stream's playlist. Reload the page and try again.");
+    }
 
     const settings = await loadSettings();
     const name = filenameOverride
@@ -94,21 +102,32 @@ export class Downloads {
       state: "running",
       phase: "fetching",
       bytesReceived: 0,
-      totalBytes: item.sizeBytes,
+      totalBytes: variant ? undefined : item.sizeBytes,
+      progress: variant ? 0 : undefined,
+      variantLabel: variant && item.variants!.length > 1 ? variant.label : undefined,
       saveAs: settings.saveAs,
-      ruleIds: await installReplay([item.url], item.sentHeaders),
+      ruleIds: variant ? [] : await installReplay([item.url], item.sentHeaders),
       startedAt: Date.now(),
     };
     this.jobs.set(job.jobId, job);
     this.persist();
     try {
-      await toWorker({
-        type: "fetch-file",
-        jobId: job.jobId,
-        url: item.url,
-        expectedBytes: item.sizeBytes,
-        supportsRanges: item.supportsRanges,
-      });
+      if (variant) {
+        // Replay the page's headers on every directory the stream lives in.
+        const urls = await variantUrls(variant, item.sentHeaders);
+        job.ruleIds = await installReplay(replayScopes([item.url, ...urls]), item.sentHeaders);
+        // A media playlist is read as is; a master is narrowed to the chosen quality.
+        const url = variant.url === item.url ? item.url : dataUrl(singleVariantMaster(variant));
+        await toWorker({ type: "fetch-hls", jobId: job.jobId, url });
+      } else {
+        await toWorker({
+          type: "fetch-file",
+          jobId: job.jobId,
+          url: item.url,
+          expectedBytes: item.sizeBytes,
+          supportsRanges: item.supportsRanges,
+        });
+      }
     } catch (err) {
       await this.fail(job, err instanceof Error ? err.message : String(err));
       throw err;
@@ -133,6 +152,7 @@ export class Downloads {
       case "progress":
         job.bytesReceived = msg.bytes;
         if (msg.totalBytes) job.totalBytes = msg.totalBytes;
+        if (msg.fraction !== undefined) job.progress = msg.fraction;
         this.persist();
         break;
       case "error":
