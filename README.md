@@ -17,7 +17,7 @@ downloaded.
 | 3. DASH (mpd), audio-only | Done |
 | 4. Live recording, subtitles, DRM detection everywhere | Done |
 | 5. Media declared in page markup; site extractors (Twitch clips, X) | Done |
-| 6. Settings, history; MSE fallback | In progress |
+| 6. Settings, history, player recording (MSE) | Done |
 | 7. YouTube | Not planned (Chrome Web Store policy) |
 
 Live HLS streams record until they end or you press stop; live DASH recording
@@ -87,6 +87,14 @@ extension's reload button.
   detection, never replacing it. Twitch clips offer every height the CDN
   has; X names each video after its own post and lists the page's main post
   first. Titles drop the site's name (`src/shared/titles.ts`).
+- **Player recording** (`src/content/mse-*.ts`, `src/capture/`): a last
+  resort for players whose stream can't be fetched (custom transports,
+  hidden manifests). A page-world script notes Media Source Extensions use
+  and, only while the user records, copies each buffer the player appends to
+  an invisible extension frame, which joins the tracks into one file
+  (Mediabunny, no re-encoding) and saves it. The frame gets its job id
+  privately and claims it from the service worker once, so a page can't
+  make it save anything. Listed only when no HLS/DASH stream is on the page.
 - **Settings and history** (`src/ui/options.*`, `src/shared/history.ts`):
   the gear in the popup opens a page for the filename template, length,
   folder and save dialog, and a list of saved files (show in folder, open

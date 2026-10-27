@@ -1,7 +1,8 @@
 // Shared data shapes. Every detector produces a MediaItem; the downloader and
 // the UI only ever consume MediaItems, so new detectors never touch them.
 
-export type MediaType = "http" | "hls" | "dash";
+/** "mse": no URL to fetch; what the page's player is fed is recorded instead. */
+export type MediaType = "http" | "hls" | "dash" | "mse";
 
 export interface MediaItem {
   /** Stable id: a hash of the URL (http) or of the manifest (hls/dash). */
@@ -28,6 +29,8 @@ export interface MediaItem {
   /** The page's own name for this video, when it has several (JSON-LD). */
   title?: string;
   thumbnail?: string;
+  /** MSE recordings: the frame whose player is recorded. */
+  frameId?: number;
   /** Listing order a site extractor chose (0 first); unset items follow. */
   rank?: number;
   /** Streams only: the qualities on offer, best first. */
@@ -127,6 +130,8 @@ export interface DownloadJob {
   pageUrl?: string;
   title?: string;
   thumbnail?: string;
+  /** Player recordings: the frame recorded, and whether its capture frame has claimed the job. */
+  player?: { frameId: number; claimed?: boolean };
 }
 
 /** One saved file, kept in chrome.storage.local for the history list. */

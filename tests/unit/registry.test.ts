@@ -79,3 +79,13 @@ describe("mergeMedia with page-declared media", () => {
     expect(list[0]).toMatchObject({ sourceKind: "sniffer", title: "Storm", sizeBytes: 9 * MB, sentHeaders: { cookie: "s=1" } });
   });
 });
+
+describe("mergeMedia with player recordings", () => {
+  it("lists a player recording only while no stream is found, and drops it when one is", () => {
+    const player = item({ id: "p", type: "mse" });
+    const hls = item({ id: "h", type: "hls", url: "https://cdn.x/master.m3u8" });
+    expect(mergeMedia([hls], player).changed).toBe(false);
+    const { list } = mergeMedia([player], hls);
+    expect(list.map((m) => m.type)).toEqual(["hls"]);
+  });
+});

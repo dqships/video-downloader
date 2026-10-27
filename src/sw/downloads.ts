@@ -73,6 +73,7 @@ export class Downloads {
     await this.loaded;
     if (item.hasDrm) throw new Error("This video is protected by DRM and can't be downloaded.");
     if (item.isLive && item.type === "dash") throw new Error("Recording live DASH streams arrives in a later version.");
+    if (item.type === "mse") return this.recordPlayer(tab, item, filenameOverride);
     let variant: StreamVariant | undefined;
     // A direct file may come in several sizes (a site extractor found them).
     const file = item.type === "http" ? (item.variants?.find((v) => v.id === variantId) ?? item.variants?.[0]) : undefined;
@@ -164,19 +165,66 @@ export class Downloads {
     return job.jobId;
   }
 
+  /** Player recording: the page's own buffers, collected by the capture frame. */
+  private async recordPlayer(tab: TabMedia, item: MediaItem, filenameOverride?: string): Promise<string> {
+    const settings = await loadSettings();
+    const name = filenameOverride
+      ? `${sanitizeFilename(filenameOverride.replace(/\.[a-z0-9]{1,5}$/i, ""), settings.maxLength)}.mp4`
+      : buildFilename({ template: settings.template, maxLength: settings.maxLength, title: item.title ?? tab.title, pageUrl: tab.pageUrl, mediaUrl: item.url, ext: "mp4" });
+    const folder = settings.subfolder.split(/[\\/]+/).filter(Boolean).map((part) => sanitizeFilename(part, 64)).join("/");
+    const job: DownloadJob = {
+      jobId: crypto.randomUUID(),
+      mediaId: item.id,
+      tabId: tab.tabId,
+      filename: folder ? `${folder}/${name}` : name,
+      state: "running",
+      phase: "fetching",
+      bytesReceived: 0,
+      recording: true,
+      saveAs: settings.saveAs,
+      startedAt: Date.now(),
+      pageUrl: tab.pageUrl,
+      title: item.title ?? tab.title,
+      thumbnail: item.thumbnail ?? tab.thumbnail,
+      player: { frameId: item.frameId ?? 0 },
+    };
+    this.jobs.set(job.jobId, job);
+    this.persist();
+    try {
+      await chrome.tabs.sendMessage(tab.tabId, { kind: "mse-start", jobId: job.jobId }, { frameId: item.frameId ?? 0 });
+    } catch {
+      await this.fail(job, "The page isn't reachable any more. Reload it and try again.");
+    }
+    return job.jobId;
+  }
+
+  /** The capture frame asks for its job; each recording is handed out once. */
+  async claimCapture(jobId: string): Promise<DownloadJob | undefined> {
+    await this.loaded;
+    const job = this.jobs.get(jobId);
+    if (!job?.player || job.player.claimed || job.state !== "running") return undefined;
+    job.player.claimed = true;
+    return job;
+  }
+
   async cancel(jobId: string): Promise<void> {
     await this.loaded;
     const job = this.jobs.get(jobId);
     if (!job || job.state !== "running") return;
     if (job.chromeDownloadId !== undefined) await chrome.downloads.cancel(job.chromeDownloadId).catch(() => {});
-    else await toWorker({ type: "cancel", jobId });
+    else if (job.player) {
+      await chrome.tabs.sendMessage(job.tabId, { kind: "mse-cancel", jobId }, { frameId: job.player.frameId }).catch(() => {});
+      await this.fail(job, "Cancelled");
+    } else await toWorker({ type: "cancel", jobId });
   }
 
   /** Ends a live recording; the worker then saves what it has. */
   async stop(jobId: string): Promise<void> {
     await this.loaded;
     const job = this.jobs.get(jobId);
-    if (job?.state === "running" && job.recording && job.phase === "fetching") await toWorker({ type: "stop", jobId });
+    if (job?.state !== "running" || !job.recording || job.phase !== "fetching") return;
+    if (job.player) await chrome.tabs.sendMessage(job.tabId, { kind: "mse-stop", jobId }, { frameId: job.player.frameId }).catch(() => {});
+    else await toWorker({ type: "stop", jobId });
   }
 
   /** Messages relayed from the download worker. */
@@ -194,6 +242,13 @@ export class Downloads {
         break;
       case "error":
         await this.fail(job, msg.message);
+        break;
+      case "saved":
+        job.chromeDownloadId = msg.downloadId;
+        job.filename = msg.filename;
+        job.bytesReceived = job.totalBytes = msg.bytes;
+        job.phase = "saving";
+        this.persist();
         break;
       case "done":
         job.bytesReceived = msg.bytes;

@@ -29,7 +29,8 @@
         "<all_urls>"
       ],
       "js": [
-        "eme-main.js"
+        "eme-main.js",
+        "mse-main.js"
       ],
       "run_at": "document_start",
       "all_frames": true,
@@ -40,7 +41,8 @@
         "<all_urls>"
       ],
       "js": [
-        "eme-bridge.js"
+        "eme-bridge.js",
+        "mse-bridge.js"
       ],
       "run_at": "document_start",
       "all_frames": true
@@ -66,5 +68,17 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "capture.html",
+        "capture.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ],
+      "use_dynamic_url": true
+    }
+  ]
 }

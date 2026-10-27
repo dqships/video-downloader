@@ -26,7 +26,7 @@ const chosenVariant = new Map<string, string>();
 /** Subtitle track picked per item, by media id; none by default. */
 const chosenSubtitle = new Map<string, string>();
 
-const TYPE_ORDER: Record<MediaItem["type"], number> = { dash: 0, hls: 1, http: 2 };
+const TYPE_ORDER: Record<MediaItem["type"], number> = { dash: 0, hls: 1, http: 2, mse: 3 };
 
 async function resolveTabId(): Promise<number> {
   // ?tabId= opens the popup as a full page for a given tab (tests, debugging).
@@ -69,6 +69,7 @@ function latestJob(mediaId: string): DownloadJob | undefined {
 function typeLabel(item: MediaItem): string {
   if (item.type === "hls") return "HLS";
   if (item.type === "dash") return "DASH";
+  if (item.type === "mse") return "PLAYER";
   return item.ext.toUpperCase();
 }
 
@@ -151,7 +152,7 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
   const progress = frame.querySelector<HTMLElement>(".vz-perf")!;
   const job = latestJob(item.id);
   const isRunning = job?.state === "running";
-  const mode = isRunning ? (job.recording ? "stop" : "cancel") : item.isLive ? "record" : "download";
+  const mode = isRunning ? (job.recording ? "stop" : "cancel") : item.isLive || item.type === "mse" ? "record" : "download";
   if (download.dataset.mode !== mode) {
     download.dataset.mode = mode;
     const look = {
@@ -188,7 +189,9 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
     note.textContent =
       job.phase === "saving"
         ? "Saving the recording to your Downloads folder"
-        : `Recording ${formatDuration(job.recordedSec) || "0:00"}${job.bytesReceived ? ` · ${formatBytes(job.bytesReceived)}` : ""}`;
+        : item.type === "mse"
+          ? `Recording what the player plays${job.bytesReceived ? ` · ${formatBytes(job.bytesReceived)}` : ""}. Stops when the video ends.`
+          : `Recording ${formatDuration(job.recordedSec) || "0:00"}${job.bytesReceived ? ` · ${formatBytes(job.bytesReceived)}` : ""}`;
   } else if (job?.state === "running") {
     progress.hidden = false;
     frame.classList.add("has-progress");
@@ -217,6 +220,8 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
     note.querySelector("span")!.textContent = `This page plays ${drmName(tab.drmKeySystem)}-protected video. If this is that stream, the saved file won't play.`;
   } else if (item.isLive) {
     note.textContent = "Live. Records until the stream ends or you press stop.";
+  } else if (item.type === "mse") {
+    note.textContent = "No file to fetch here. Press record, then play the video from the start: Vidzilla keeps what the player loads.";
   } else {
     note.hidden = true;
   }
