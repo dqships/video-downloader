@@ -16,7 +16,9 @@ export type ToWorker =
 export type FromWorker =
   | { type: "progress"; jobId: string; bytes: number; totalBytes?: number; fraction?: number; seconds?: number }
   | { type: "done"; jobId: string; blobUrl: string; bytes: number }
-  | { type: "error"; jobId: string; message: string };
+  | { type: "error"; jobId: string; message: string }
+  /** The capture page saved a player recording itself (it has the blob). */
+  | { type: "saved"; jobId: string; downloadId: number; filename: string; bytes: number };
 
 /** Runtime-message envelopes, so pages can tell relay traffic from commands. */
 export interface ToOffscreenEnvelope {

@@ -8,9 +8,13 @@ export type Command =
   | { kind: "stop"; payload: { jobId: string } }
   | { kind: "clear-tab"; payload: { tabId: number } }
   /** From the content script: the page gave a media element DRM keys. */
-  | { kind: "page-drm"; payload: { keySystem: string } };
+  | { kind: "page-drm"; payload: { keySystem: string } }
+  /** From the content script: the page's player is fed through Media Source Extensions. */
+  | { kind: "page-mse"; payload: { mime: string } }
+  /** From the capture page: claim a player recording (once) and learn where to save it. */
+  | { kind: "capture-job"; payload: { jobId: string } };
 
-export type CommandResult = { ok: true; jobId?: string } | { ok: false; error: string };
+export type CommandResult = { ok: true; jobId?: string; filename?: string; saveAs?: boolean } | { ok: false; error: string };
 
 export const storageKeys = {
   tab: (tabId: number) => `tab:${tabId}`,

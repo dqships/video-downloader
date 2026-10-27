@@ -478,3 +478,84 @@ test("settings change the saved name, and saved files are listed in history", as
   await options.close();
   await page.close();
 });
+
+test("records a player that hides its stream (Media Source Extensions)", async () => {
+  const { tabId, tab, page } = await visit("/mse.html");
+  assert.deepEqual(tab.media.map((m) => m.type), ["mse"]);
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
+  const button = popup.locator(".vz-frame .download").first();
+  assert.equal(await button.getAttribute("title"), "Record");
+  // The video has already played through; Record reloads the page to catch it all.
+  const reloaded = page.waitForEvent("load");
+  await button.click();
+  await reloaded;
+  const job = await finishedJob(tabId, 30000);
+  assert.equal(job.state, "complete", job.error);
+  assert.equal(job.filename, "Hidden Stream Player.mp4");
+  const [item] = await sw.evaluate((id) => chrome.downloads.search({ id }), job.chromeDownloadId);
+  const streams = execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type", "-of", "csv=p=0", item.filename]).toString().trim().split("\n");
+  assert.deepEqual(streams.sort(), ["audio", "video"]);
+  const duration = Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", item.filename]).toString());
+  assert.ok(duration > 5, `duration ${duration}`);
+  await page.waitForSelector('iframe[src^="chrome-extension://"]', { state: "detached" });
+  await popup.close();
+  await page.close();
+});
+
+test("records a player through a probe player and a quality switch, from the start", async () => {
+  const { tabId, tab, page } = await visit("/mse-switch.html");
+  assert.deepEqual(tab.media.map((m) => m.type), ["mse"]);
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
+  const reloaded = page.waitForEvent("load");
+  await popup.locator(".vz-frame .download").first().click();
+  await reloaded;
+  const job = await finishedJob(tabId, 30000);
+  assert.equal(job.state, "complete", job.error);
+  const [item] = await sw.evaluate((id) => chrome.downloads.search({ id }), job.chromeDownloadId);
+  const probe = (entries) => execFileSync("ffprobe", ["-v", "error", ...entries, "-of", "csv=p=0", item.filename]).toString().trim().split("\n");
+  // Both tracks run the whole six seconds; the picture switches size at 2 s.
+  for (const line of probe(["-show_entries", "stream=codec_type,start_time,duration"])) {
+    const [type, start, duration] = line.split(",");
+    assert.ok(Number(start) < 0.1 && Number(duration) > 5.5, `${type} ${start} ${duration}`);
+  }
+  const sizes = new Set(probe(["-select_streams", "v", "-show_entries", "frame=width"]).map((w) => w.replace(/,/g, "")));
+  assert.deepEqual([...sizes].sort(), ["320", "640"]);
+  assert.equal(execFileSync("ffmpeg", ["-v", "error", "-i", item.filename, "-f", "null", "-"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }), "");
+  await popup.close();
+  await page.close();
+});
+
+test("a player that would run Media Source in a worker stays on the page and is listed", async () => {
+  const { tab, page } = await visit("/mse-worker.html");
+  assert.deepEqual(tab.media.map((m) => m.type), ["mse"]);
+  assert.equal(await page.evaluate(() => document.querySelector("video").srcObject), null);
+  await page.close();
+});
+
+test("a page can't start a recording through the capture frame", async () => {
+  const before = new Date().toISOString();
+  const page = await context.newPage();
+  await page.goto(`${site.origin}/page.html`);
+  const answer = await page.evaluate(async (src) => {
+    const frame = document.createElement("iframe");
+    frame.src = src;
+    document.body.append(frame);
+    await new Promise((r) => frame.addEventListener("load", r, { once: true }));
+    const channel = new MessageChannel();
+    const reply = new Promise((r) => {
+      channel.port1.onmessage = (e) => r(e.data);
+      setTimeout(() => r("no reply"), 1500);
+    });
+    frame.contentWindow.postMessage({ vidzillaCapture: "made-up-job" }, "*", [channel.port2]);
+    channel.port1.postMessage({ type: "data", track: 1, init: true, bytes: new ArrayBuffer(8) });
+    channel.port1.postMessage({ type: "stop" });
+    return reply;
+  }, `chrome-extension://${extensionId}/capture.html`);
+  assert.equal(answer, "no reply");
+  const recent = await sw.evaluate((startedAfter) => chrome.downloads.search({ startedAfter }), before);
+  assert.equal(recent.length, 0);
+  await page.close();
+});
+

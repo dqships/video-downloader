@@ -22,6 +22,7 @@ const copyStatic = () => {
     cpSync(join(root, "brand", f), join(out, "brand", f));
   }
   cpSync(join(root, "src/offscreen/offscreen.html"), join(out, "offscreen.html"));
+  cpSync(join(root, "src/capture/capture.html"), join(out, "capture.html"));
 };
 
 const options = {
@@ -31,6 +32,7 @@ const options = {
     options: join(root, "src/ui/options.ts"),
     offscreen: join(root, "src/offscreen/offscreen.ts"),
     worker: join(root, "src/worker/main.ts"),
+    capture: join(root, "src/capture/capture.ts"),
   },
   outdir: out,
   bundle: true,
@@ -48,6 +50,8 @@ const contentOptions = {
   entryPoints: {
     "eme-main": join(root, "src/content/eme-main.ts"),
     "eme-bridge": join(root, "src/content/eme-bridge.ts"),
+    "mse-main": join(root, "src/content/mse-main.ts"),
+    "mse-bridge": join(root, "src/content/mse-bridge.ts"),
   },
   format: "iife",
   plugins: [],
