@@ -86,6 +86,34 @@ const pages = {
       ms.endOfStream();
     });
   </script>`,
+  // Like BBC, Facebook and vkvideo together: a probe MediaSource that ends at
+  // once, then a player that switches quality after the first segment and
+  // sends a second audio init segment.
+  "/mse-switch.html": `<title>Switching Player</title><video muted></video><script>
+    const video = document.querySelector("video");
+    const get = (p) => fetch("/media/dash/" + p).then((r) => r.arrayBuffer());
+    const append = (sb, data) => new Promise((r) => { sb.addEventListener("updateend", r, { once: true }); sb.appendBuffer(data); });
+    const open = () => { const ms = new MediaSource(); video.src = URL.createObjectURL(ms); return new Promise((r) => ms.addEventListener("sourceopen", () => r(ms), { once: true })); };
+    (async () => {
+      const probe = await open();
+      const p = probe.addSourceBuffer('video/mp4; codecs="avc1.64001e"');
+      try { await append(p, new Uint8Array(100)); } catch {}
+      if (probe.readyState === "open") probe.endOfStream();
+      await new Promise((r) => setTimeout(r, 1000));
+      const ms = await open();
+      const v = ms.addSourceBuffer('video/mp4; codecs="avc1.64001e"');
+      const a = ms.addSourceBuffer('audio/mp4; codecs="mp4a.40.2"');
+      await append(v, await get("init-1.m4s"));
+      await append(v, await get("chunk-1-00001.m4s"));
+      await append(a, await get("init-2.m4s"));
+      await append(a, await get("chunk-2-00001.m4s"));
+      await append(a, await get("init-2.m4s"));
+      for (const n of [2, 3, 4]) await append(a, await get("chunk-2-0000" + n + ".m4s"));
+      await append(v, await get("init-0.m4s"));
+      for (const n of [2, 3]) await append(v, await get("chunk-0-0000" + n + ".m4s"));
+      ms.endOfStream();
+    })();
+  </script>`,
   // Like Facebook: Media Source runs in a worker when the browser allows it.
   "/mse-worker.html": `<title>Worker Player</title><video muted></video><script>
     const video = document.querySelector("video");

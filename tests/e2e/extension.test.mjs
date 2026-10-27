@@ -503,6 +503,30 @@ test("records a player that hides its stream (Media Source Extensions)", async (
   await page.close();
 });
 
+test("records a player through a probe player and a quality switch, from the start", async () => {
+  const { tabId, tab, page } = await visit("/mse-switch.html");
+  assert.deepEqual(tab.media.map((m) => m.type), ["mse"]);
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
+  const reloaded = page.waitForEvent("load");
+  await popup.locator(".vz-frame .download").first().click();
+  await reloaded;
+  const job = await finishedJob(tabId, 30000);
+  assert.equal(job.state, "complete", job.error);
+  const [item] = await sw.evaluate((id) => chrome.downloads.search({ id }), job.chromeDownloadId);
+  const probe = (entries) => execFileSync("ffprobe", ["-v", "error", ...entries, "-of", "csv=p=0", item.filename]).toString().trim().split("\n");
+  // Both tracks run the whole six seconds; the picture switches size at 2 s.
+  for (const line of probe(["-show_entries", "stream=codec_type,start_time,duration"])) {
+    const [type, start, duration] = line.split(",");
+    assert.ok(Number(start) < 0.1 && Number(duration) > 5.5, `${type} ${start} ${duration}`);
+  }
+  const sizes = new Set(probe(["-select_streams", "v", "-show_entries", "frame=width"]).map((w) => w.replace(/,/g, "")));
+  assert.deepEqual([...sizes].sort(), ["320", "640"]);
+  assert.equal(execFileSync("ffmpeg", ["-v", "error", "-i", item.filename, "-f", "null", "-"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }), "");
+  await popup.close();
+  await page.close();
+});
+
 test("a player that would run Media Source in a worker stays on the page and is listed", async () => {
   const { tab, page } = await visit("/mse-worker.html");
   assert.deepEqual(tab.media.map((m) => m.type), ["mse"]);

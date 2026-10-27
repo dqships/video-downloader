@@ -4,7 +4,7 @@
 // the video ends, joins them into one file and saves it.
 //
 // A track that changes quality mid-way starts a new run (a new init segment);
-// the longest run of each track is kept, since runs can't be joined as is.
+// the runs are joined where the codec allows it (mux.ts).
 
 import type { FromOffscreenEnvelope, FromWorker } from "../shared/worker-protocol";
 import { muxCaptured } from "./mux";
@@ -61,9 +61,7 @@ async function finish(): Promise<void> {
   if (finishing) return;
   finishing = true;
   try {
-    const streams = [...tracks.values()]
-      .map((runs) => runs.filter((r) => r.media > 0).sort((a, b) => b.bytes - a.bytes)[0])
-      .flatMap((run) => (run ? [new Blob(run.parts)] : []));
+    const streams = [...tracks.values()].map((runs) => runs.filter((r) => r.media > 0).map((r) => new Blob(r.parts))).filter((runs) => runs.length > 0);
     if (streams.length === 0) throw new Error("Nothing was recorded. Play the video while recording.");
     const claim = await job;
     if (!claim.ok) throw new Error(claim.error);

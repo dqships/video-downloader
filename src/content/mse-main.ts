@@ -12,6 +12,36 @@ interface Track {
   mime: string;
   /** The latest init segment, replayed when recording starts mid-stream. */
   init?: ArrayBuffer;
+  source: MediaSource;
+}
+
+/**
+ * Pages may open a MediaSource only to probe the browser (BBC: one tiny
+ * append, then endOfStream) or play an ad in one before the video; the
+ * recording ends once every MediaSource that got media has ended, and none
+ * starts within a few seconds.
+ */
+const sources = new WeakMap<MediaSource, { media: boolean; ended: boolean }>();
+const fed: WeakRef<MediaSource>[] = [];
+const END_SETTLE_MS = 4000;
+let endTimer: ReturnType<typeof setTimeout> | undefined;
+
+function allEnded(): boolean {
+  const live = fed.flatMap((r) => {
+    const ms = r.deref();
+    return ms ? [sources.get(ms)!] : [];
+  });
+  return live.length > 0 && live.every((s) => s.ended);
+}
+
+function checkEnded(): void {
+  clearTimeout(endTimer);
+  if (!allEnded()) return;
+  endTimer = setTimeout(() => {
+    if (!allEnded()) return;
+    if (recording()) post({ type: "mse-ended" });
+    else if (state === "undecided") endedEarly = true;
+  }, END_SETTLE_MS);
 }
 
 const TAG = "__vidzilla_mse";
@@ -69,17 +99,22 @@ if (ms) {
   ms.prototype.addSourceBuffer = function (this: MediaSource, mime: string) {
     const sb = addSourceBuffer.call(this, mime);
     try {
-      tracks.set(sb, { id: nextId++, mime });
       buffers.push(new WeakRef(sb));
       if (!announced) {
         announced = true;
         post({ type: "mse-used", mime });
         setTimeout(() => state === "undecided" && idle(), DECIDE_WITHIN_MS);
       }
-      this.addEventListener("sourceended", () => {
-        if (recording()) post({ type: "mse-ended" });
-        else if (state === "undecided") endedEarly = true;
-      });
+      tracks.set(sb, { id: nextId++, mime, source: this });
+      if (!sources.has(this)) {
+        sources.set(this, { media: false, ended: false });
+        this.addEventListener("sourceended", () => {
+          sources.get(this)!.ended = true;
+          checkEnded();
+        });
+        // A player that reopens its stream (a seek, an error) isn't done yet.
+        this.addEventListener("sourceopen", () => (sources.get(this)!.ended = false));
+      }
     } catch {
       // Never break the page's player.
     }
@@ -94,6 +129,13 @@ if (ms) {
         const view = data instanceof ArrayBuffer ? new Uint8Array(data) : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
         const init = isInit(view);
         if (init) track.init = copy(data);
+        else if (track.init) {
+          const src = sources.get(track.source);
+          if (src && !src.media) {
+            src.media = true;
+            fed.push(new WeakRef(track.source));
+          }
+        }
         if (state === "recording") {
           const bytes = copy(data);
           post({ type: "mse-data", track: track.id, mime: track.mime, init, bytes }, [bytes]);
@@ -117,7 +159,7 @@ window.addEventListener("message", (e: MessageEvent) => {
     if (state === "undecided") {
       // Armed before the page loaded: everything the player appended so far.
       for (const m of queue) post({ type: "mse-data", ...m }, [m.bytes]);
-      if (endedEarly) setTimeout(() => post({ type: "mse-ended" }));
+      if (endedEarly && allEnded()) setTimeout(() => post({ type: "mse-ended" }));
     } else {
       // Started mid-stream: what's appended from now needs the init segments seen before.
       replayInits();

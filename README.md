@@ -92,7 +92,10 @@ extension's reload button.
   hidden manifests). A page-world script notes Media Source Extensions use
   and, only while the user records, copies each buffer the player appends to
   an invisible extension frame, which joins the tracks into one file
-  (Mediabunny, no re-encoding) and saves it. Record reloads the page with
+  (Mediabunny, no re-encoding) and saves it. Quality switches are joined
+  into one track (H.264 with differing parameter sets is written as avc3,
+  with them in each keyframe). The recording ends once every MediaSource
+  that got media has ended, so probe players and ads don't cut it short. Record reloads the page with
   the recording armed: the script holds the player's first buffers until
   the service worker answers, so the file starts at the beginning. The frame
   gets its job id privately and claims it from the service worker once, so
