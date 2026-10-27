@@ -2,7 +2,7 @@
 // for a download, turns the chosen representations into HLS playlists for
 // the download worker. Fetches replay the page's headers.
 
-import { dashChildUrls, hlsMediaPlaylist, isMp4Family, listDashSubtitles, listDashVariants, parseMpd, resolveSegments, type ByteRange, type DashManifest, type SegmentRef } from "../shared/dash";
+import { dashChildUrls, hlsMediaPlaylist, isMp4Family, liveSegments, listDashSubtitles, listDashVariants, parseMpd, resolveSegments, type ByteRange, type DashManifest, type SegmentRef } from "../shared/dash";
 import { dataUrl, singleVariantMaster } from "../shared/hls";
 import type { StreamVariant } from "../shared/types";
 import type { TrackPart } from "../shared/worker-protocol";
@@ -81,7 +81,9 @@ export type DashPlan =
   /** A data: URL playlist (a one-quality master, or the audio playlist alone) for the HLS reader. */
   | { kind: "hls"; url: string; urls: string[] }
   /** WebM tracks: each one's files, fetched and joined by the worker. */
-  | { kind: "tracks"; tracks: TrackPart[][]; urls: string[] };
+  | { kind: "tracks"; tracks: TrackPart[][]; urls: string[] }
+  /** A live stream: the worker reads the manifest itself as it updates. */
+  | { kind: "live"; reps: string[]; urls: string[] };
 
 /**
  * What the worker should read for this variant, and every URL it will fetch,
@@ -89,7 +91,6 @@ export type DashPlan =
  */
 export async function planDash(manifestUrl: string, variant: StreamVariant, sent: Record<string, string>): Promise<DashPlan> {
   const m = await readManifest(manifestUrl, sent);
-  if (m.isLive) throw new Error("Recording live streams arrives in a later version.");
   const urls: string[] = [manifestUrl];
   const rep = (key: string | undefined) => {
     if (!key) return undefined;
@@ -104,15 +105,25 @@ export async function planDash(manifestUrl: string, variant: StreamVariant, sent
   if (!variant.audioOnly && !videoRep) throw new Error("This quality is no longer in the stream's manifest. Reload the page and try again.");
   const reps = [videoRep, audioRep].filter((r) => r !== undefined);
 
+  if (m.isLive) {
+    // Where its files live, for the header replay; the worker follows the manifest from here.
+    for (const r of reps) {
+      const { init, segments } = liveSegments(m, r, Date.now());
+      urls.push(...(init ? [init.url] : []), ...segments.slice(-1).map((s) => s.url));
+    }
+    return { kind: "live", reps: reps.map((r) => r.key), urls };
+  }
+
   if (reps.some((r) => !isMp4Family(r))) {
     const tracks: TrackPart[][] = [];
     for (const r of reps) {
       // A single-file representation is a whole WebM file: no index needed.
-      if (r.segments.kind !== "list") {
+      if (r.segments.kind === "file" || r.segments.kind === "indexed") {
         urls.push(r.segments.url);
         tracks.push([{ url: r.segments.url }]);
         continue;
       }
+      if (r.segments.kind !== "list") throw new Error("This stream's manifest lists no segments.");
       const segments = await dropMissingTail(r.segments.segments, sent);
       if (!segments.length) throw new Error("This stream's manifest lists no segments.");
       const parts = [...(r.segments.init ? [r.segments.init] : []), ...segments].map((s) => ({ url: s.url, range: s.range }));

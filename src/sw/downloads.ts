@@ -82,7 +82,6 @@ export class Downloads {
   async start(tab: TabMedia, item: MediaItem, filenameOverride?: string, variantId?: string, subtitleId?: string): Promise<string> {
     await this.loaded;
     if (item.hasDrm) throw new Error("This video is protected by DRM and can't be downloaded.");
-    if (item.isLive && item.type === "dash") throw new Error("Recording live DASH streams arrives in a later version.");
     if (item.type === "mse") return this.recordPlayer(tab, item, filenameOverride);
     let variant: StreamVariant | undefined;
     // A direct file may come in several sizes (a site extractor found them).
@@ -143,7 +142,8 @@ export class Downloads {
           // tracks, or (WebM) as the tracks' files to join.
           const plan = await planDash(item.url, variant, item.sentHeaders);
           job.ruleIds = await installReplay(replayScopes([item.url, ...plan.urls]), item.sentHeaders);
-          if (plan.kind === "tracks") await toWorker({ type: "fetch-tracks", jobId: job.jobId, tracks: plan.tracks });
+          if (plan.kind === "live") await toWorker({ type: "record-live-dash", jobId: job.jobId, manifestUrl: item.url, reps: plan.reps });
+          else if (plan.kind === "tracks") await toWorker({ type: "fetch-tracks", jobId: job.jobId, tracks: plan.tracks });
           else await toWorker({ type: "fetch-hls", jobId: job.jobId, url: plan.url, audioOnly: variant.audioOnly });
         } else {
           const urls = await variantUrls(variant, item.sentHeaders);

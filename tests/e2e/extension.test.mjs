@@ -479,6 +479,45 @@ test("records a live stream to its end on its own", async () => {
   await page.close();
 });
 
+test("records a live DASH stream until stopped and keeps what was recorded", async () => {
+  const { tabId, page } = await visit("/live-dash-page/stopped.html");
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
+  const button = popup.locator(".vz-frame .download").first();
+  await button.click();
+  await waitFor(async () => (await button.getAttribute("title")) === "Stop and save", "the stop button");
+  await page.waitForTimeout(3000);
+  await button.click();
+  const job = await finishedJob(tabId, 30000);
+  assert.equal(job.state, "complete", job.error);
+  const [item] = await sw.evaluate((id) => chrome.downloads.search({ id }), job.chromeDownloadId);
+  const file = probe(item.filename);
+  assert.ok(file.duration >= 5 && file.duration < 16, `duration ${file.duration}`);
+  await popup.close();
+  await page.close();
+});
+
+test("records a live DASH stream to its end on its own", async () => {
+  const { tabId, page, tab } = await visit("/live-dash-page/to-end.html");
+  assert.equal(tab.media[0].type, "dash");
+  assert.equal(tab.media[0].isLive, true);
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
+  const button = popup.locator(".vz-frame .download").first();
+  assert.equal(await button.getAttribute("title"), "Record");
+  await button.click();
+  const job = await finishedJob(tabId, 60000);
+  assert.equal(job.state, "complete", job.error);
+  const [item] = await sw.evaluate((id) => chrome.downloads.search({ id }), job.chromeDownloadId);
+  const file = probe(item.filename);
+  assert.equal(file.video?.codec_name, "h264");
+  assert.equal(file.audio?.codec_name, "aac");
+  // It joined three segments behind the live edge, 6 s in, and kept going to the end.
+  assert.ok(file.duration > 17 && file.duration < 21, `duration ${file.duration}`);
+  await popup.close();
+  await page.close();
+});
+
 test("settings change the saved name, and saved files are listed in history", async () => {
   const options = await context.newPage();
   await options.goto(`chrome-extension://${extensionId}/options.html`);

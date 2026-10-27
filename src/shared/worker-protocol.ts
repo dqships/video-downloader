@@ -14,6 +14,8 @@ export type ToWorker =
   | { type: "fetch-hls"; jobId: string; url: string; audioOnly?: boolean }
   /** A stream the HLS reader can't take (WebM DASH): each track's parts, in order, joined into one file. */
   | { type: "fetch-tracks"; jobId: string; tracks: TrackPart[][] }
+  /** Records a live DASH stream's representations until it ends or a `stop` arrives. */
+  | { type: "record-live-dash"; jobId: string; manifestUrl: string; reps: string[] }
   /** Records a live HLS stream until it ends or a `stop` arrives. */
   | { type: "record-live"; jobId: string; url: string; audioOnly?: boolean }
   /** Ends a recording and keeps what was recorded. */

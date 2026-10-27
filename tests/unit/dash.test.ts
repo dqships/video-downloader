@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dashChildUrls, expandTemplate, hlsMediaPlaylist, listDashVariants, parseIsoDuration, parseMpd, parseSidx, resolveSegments } from "../../src/shared/dash";
+import { dashChildUrls, expandTemplate, hlsMediaPlaylist, listDashVariants, liveSegments, parseIsoDuration, parseMpd, parseSidx, resolveSegments } from "../../src/shared/dash";
 import { parseM3u8, type HlsMedia } from "../../src/shared/hls";
 import { parseXml } from "../../src/shared/xml";
 
@@ -189,5 +189,28 @@ describe("hlsMediaPlaylist", () => {
     const pl = parseM3u8(text, "data:") as HlsMedia;
     expect(pl.duration).toBeCloseTo(3.5);
     expect(pl.endList).toBe(true);
+  });
+});
+
+describe("live DASH", () => {
+  const live = (extra = "") => `<MPD type="dynamic" availabilityStartTime="2026-01-01T00:00:00Z" minimumUpdatePeriod="PT2S"${extra}><Period start="PT0S">
+    <AdaptationSet mimeType="video/mp4"><Representation id="v" height="180">
+      <SegmentTemplate timescale="1000" duration="2000" initialization="init-$RepresentationID$.m4s" media="chunk-$RepresentationID$-$Number$.m4s" startNumber="1"/>
+    </Representation></AdaptationSet></Period></MPD>`;
+  const at = (seconds: number) => Date.parse("2026-01-01T00:00:00Z") + seconds * 1000;
+
+  it("works out which numbered segments exist from the clock", () => {
+    const m = parseMpd(live(), URL_);
+    expect(m.isLive).toBe(true);
+    expect(m.updatePeriod).toBe(2);
+    const { init, segments } = liveSegments(m, m.representations[0]!, at(7));
+    expect(init?.url).toMatch(/init-v\.m4s$/);
+    // 7 s in: segments 1 to 3 are complete; the fourth is still being made.
+    expect(segments.map((s) => s.url.replace(/^.*\//, ""))).toEqual(["chunk-v-1.m4s", "chunk-v-2.m4s", "chunk-v-3.m4s"]);
+  });
+
+  it("drops segments the time-shift window no longer keeps", () => {
+    const m = parseMpd(live(' timeShiftBufferDepth="PT4S"'), URL_);
+    expect(liveSegments(m, m.representations[0]!, at(21)).segments.map((s) => s.url.replace(/^.*-/, ""))).toEqual(["9.m4s", "10.m4s"]);
   });
 });

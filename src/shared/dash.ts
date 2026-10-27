@@ -23,6 +23,11 @@ export interface SegmentRef {
 export type DashSegments =
   /** Every segment is known (SegmentTemplate or SegmentList). */
   | { kind: "list"; init?: SegmentRef; segments: SegmentRef[] }
+  /**
+   * A live stream's numbered segments (SegmentTemplate with a duration, no
+   * timeline): which exist depends on the clock (liveSegments).
+   */
+  | { kind: "live-template"; init?: SegmentRef; media: string; base: string; vars: Record<string, string | number | undefined>; timescale: number; duration: number; startNumber: number; pto: number }
   /** One file whose segment index (sidx) has to be read first (SegmentBase). */
   | { kind: "indexed"; url: string; init?: ByteRange; index: ByteRange }
   /** One plain file, nothing else known. */
@@ -48,6 +53,12 @@ export interface DashRepresentation {
 
 export interface DashManifest {
   isLive: boolean;
+  /** Live streams: when segment numbering started (ms since epoch) and the period's start (s). */
+  availabilityStart?: number;
+  periodStart?: number;
+  /** Live streams: seconds between manifest updates, and how far back segments are kept. */
+  updatePeriod?: number;
+  timeShiftDepth?: number;
   /** Seconds, of the period we read. */
   duration?: number;
   hasDrm: boolean;
@@ -112,6 +123,7 @@ function templateSegments(
   base: string,
   rep: { id: string; bandwidth?: number },
   periodDuration: number | undefined,
+  isLive = false,
 ): DashSegments {
   const timescale = num(t.attrs.timescale) ?? 1;
   const startNumber = num(t.attrs.startNumber) ?? 1;
@@ -144,6 +156,8 @@ function templateSegments(
     });
   } else {
     const duration = num(t.attrs.duration);
+    if (duration && isLive)
+      return { kind: "live-template", init, media, base, vars, timescale, duration, startNumber, pto: num(t.attrs.presentationTimeOffset) ?? 0 };
     if (duration && periodDuration !== undefined) {
       const count = Math.ceil((periodDuration * timescale) / duration - 1e-6);
       for (let k = 0; k < count; k++) {
@@ -234,7 +248,7 @@ export function parseMpd(text: string, mpdUrl: string): DashManifest {
       const list = inherited("SegmentList", levels);
       const segBase = inherited("SegmentBase", levels);
       let segments: DashSegments;
-      if (template) segments = templateSegments(template, base, { id, bandwidth }, duration);
+      if (template) segments = templateSegments(template, base, { id, bandwidth }, duration, isLive);
       else if (list) segments = listSegments(list, base, duration);
       else if (segBase?.attrs.indexRange) {
         const initEl = segBase.children.find((c) => c.name === "Initialization");
@@ -258,8 +272,13 @@ export function parseMpd(text: string, mpdUrl: string): DashManifest {
   });
 
   const media = representations.filter((r) => r.kind === "video" || r.kind === "audio");
+  const availability = Date.parse(mpd.attrs.availabilityStartTime ?? "");
   return {
     isLive,
+    availabilityStart: isLive && Number.isFinite(availability) ? availability : undefined,
+    periodStart: isLive ? (parseIsoDuration(period?.attrs.start) ?? 0) : undefined,
+    updatePeriod: isLive ? parseIsoDuration(mpd.attrs.minimumUpdatePeriod) : undefined,
+    timeShiftDepth: isLive ? parseIsoDuration(mpd.attrs.timeShiftBufferDepth) : undefined,
     duration,
     hasDrm: media.length > 0 && media.every((r) => r.hasDrm),
     representations,
@@ -336,7 +355,9 @@ export function listDashVariants(m: DashManifest, mpdUrl: string): StreamVariant
 export function dashChildUrls(m: DashManifest): string[] {
   const urls = new Set<string>();
   for (const r of m.representations) {
-    if (r.segments.kind !== "list") urls.add(r.segments.url);
+    if (r.segments.kind === "live-template") {
+      if (r.segments.init) urls.add(r.segments.init.url);
+    } else if (r.segments.kind !== "list") urls.add(r.segments.url);
     else {
       if (r.segments.init) urls.add(r.segments.init.url);
       for (const s of r.segments.segments) if (s.range) urls.add(s.url);
@@ -391,6 +412,32 @@ export function parseSidx(bytes: Uint8Array, offset: number, url: string): Segme
   return refs;
 }
 
+/**
+ * The segments of a live representation that exist at `now` (ms), oldest
+ * first: the manifest's own list (timeline), or for numbered templates, every
+ * whole segment since the stream began that the time-shift window still keeps.
+ */
+export function liveSegments(m: DashManifest, rep: DashRepresentation, now: number): { init?: SegmentRef; segments: SegmentRef[] } {
+  const seg = rep.segments;
+  if (seg.kind === "list") return { init: seg.init, segments: seg.segments };
+  if (seg.kind !== "live-template" || m.availabilityStart === undefined) return { segments: [] };
+  const each = seg.duration / seg.timescale;
+  const elapsed = (now - m.availabilityStart) / 1000 - (m.periodStart ?? 0);
+  // A segment can be fetched once it has been fully produced.
+  const last = Math.floor(elapsed / each) - 1;
+  const depth = m.timeShiftDepth ?? Infinity;
+  // Kept while any of it is still inside the window.
+  const first = Math.max(0, Number.isFinite(depth) ? Math.floor((elapsed - depth) / each) : 0);
+  const segments: SegmentRef[] = [];
+  for (let k = first; k <= last; k++) {
+    segments.push({
+      url: resolve(expandTemplate(seg.media, { ...seg.vars, Number: seg.startNumber + k, Time: seg.pto + k * seg.duration }), seg.base),
+      duration: each,
+    });
+  }
+  return { init: seg.init, segments };
+}
+
 export type RangeFetcher = (url: string, range: ByteRange) => Promise<Uint8Array>;
 
 /** Every segment of a representation, reading its sidx when the manifest only points at one. */
@@ -402,6 +449,7 @@ export async function resolveSegments(
   const seg = rep.segments;
   if (seg.kind === "list") return { init: seg.init, segments: seg.segments };
   if (seg.kind === "file") return { segments: [{ url: seg.url, duration }] };
+  if (seg.kind === "live-template") return { init: seg.init, segments: [] };
   const index = await fetchRange(seg.url, seg.index);
   const segments = parseSidx(index, seg.index.start, seg.url);
   // The init segment runs from the start of the file up to the index, unless stated.

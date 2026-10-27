@@ -217,6 +217,26 @@ export function startServer(port = 0, { cors = false } = {}) {
       res.writeHead(200, { "Content-Type": TYPES[".m3u8"], "Cache-Control": "no-store" }).end(lines.join("\n") + "\n");
       return;
     }
+    // The same as a live DASH broadcast: media/dash-live's 20 s with a clock
+    // that has already run 6 s, numbered segments, until it turns static.
+    const liveDashPage = /^\/live-dash-page\/([\w-]+)\.html$/.exec(url.pathname);
+    if (liveDashPage) {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }).end(`<!doctype html><title>Live Dash Broadcast</title>${player(`/live-dash/${liveDashPage[1]}/manifest.mpd`)}`);
+      return;
+    }
+    const liveDash = /^\/live-dash\/([\w-]+)\/manifest\.mpd$/.exec(url.pathname);
+    if (liveDash) {
+      liveStarts[`dash-${liveDash[1]}`] ??= Date.now();
+      const start = liveStarts[`dash-${liveDash[1]}`] - 6000;
+      let mpd = readFileSync(join(media, "dash-live/manifest.mpd"), "utf8").replace("<Period", '<BaseURL>/media/dash-live/</BaseURL><Period');
+      if (Date.now() - start < 20_000) {
+        mpd = mpd
+          .replace('type="static"', `type="dynamic" availabilityStartTime="${new Date(start).toISOString()}" minimumUpdatePeriod="PT2S" timeShiftBufferDepth="PT30S"`)
+          .replace(/mediaPresentationDuration="[^"]+"/, "");
+      }
+      res.writeHead(200, { "Content-Type": TYPES[".mpd"], "Cache-Control": "no-store" }).end(mpd);
+      return;
+    }
     // The length runs a sliver past the last video segment, so counting
     // segments from it names one more than the server has (as BBC's do).
     if (url.pathname === "/media/dash/tail.mpd") {

@@ -152,3 +152,13 @@ cat > "$out/dash-webm-base/manifest.mpd" <<'MPD'
   </Period>
 </MPD>
 MPD
+
+# A 20 s DASH stream in 2 s numbered segments, which the test server serves
+# as a live broadcast (see /live-dash/ in tests/e2e/server.mjs).
+rm -rf "$out/dash-live"
+mkdir -p "$out/dash-live"
+ff -f lavfi -i testsrc2=size=320x180:rate=30 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 20 \
+  -c:v libx264 -preset veryfast -g 60 -keyint_min 60 -sc_threshold 0 -b:v 300k -c:a aac -b:a 64k \
+  -f dash -seg_duration 2 -use_timeline 0 -use_template 1 -adaptation_sets "id=0,streams=v id=1,streams=a" \
+  -init_seg_name 'init-$RepresentationID$.m4s' -media_seg_name 'chunk-$RepresentationID$-$Number%05d$.m4s' \
+  "$out/dash-live/manifest.mpd"

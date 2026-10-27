@@ -20,8 +20,7 @@ downloaded.
 | 6. Settings, history, player recording (MSE) | Done |
 | 7. YouTube | Not planned (Chrome Web Store policy) |
 
-Live HLS streams record until they end or you press stop; live DASH recording
-comes later.
+Live HLS and DASH streams record until they end or you press stop.
 
 ## Try it
 
@@ -70,6 +69,11 @@ extension's reload button.
   the same joiner as player recording). The file is MP4, or WebM when the
   sound is Vorbis. Where a height comes in both H.264 and VP9/AV1, the
   H.264 one is listed.
+- **Live DASH** (`src/worker/record-live-dash.ts`): the worker follows the
+  manifest itself. Timelines list the segments; numbered templates imply
+  them from `availabilityStartTime` and the clock (`liveSegments`). It joins
+  three segments behind the live edge, appends each new one to its track's
+  file, and on stop (or when the manifest turns static) joins the tracks.
 - **Audio only**: every stream offers it; the picture is dropped and the file
   is saved as `.m4a`.
 - **Live recording** (`src/worker/record-live.ts`): packets are copied from the
@@ -141,7 +145,7 @@ The end-to-end tests cover detection, real downloads verified with ffprobe
 DASH numbered, timeline, byte-range and single indexed file; WebM DASH
 segmented (VP9/Opus to MP4) and one file per track (VP8/Vorbis to WebM);
 audio only; live
-recording stopped by hand and to the end; subtitles from HLS, DASH and a page
+recording (HLS and DASH) stopped by hand and to the end; subtitles from HLS, DASH and a page
 track; the EME warning),
 Referer replay for a file and for every segment of a stream, and that live and
 DRM streams stay unavailable. `tests/e2e/site.test.mjs` does the same for the
