@@ -7,7 +7,7 @@ the website on Vercel. You need Node 22.12 or later and pnpm 10.
 git clone https://github.com/dqships/video-downloader.git
 cd video-downloader
 pnpm install
-pnpm package        # builds and writes release/vidzilla-1.0.0.zip
+pnpm package        # builds and writes release/vidzilla-<version>.zip (1.0.1 now)
 ```
 
 The images in this folder are ready to upload. `pnpm store-assets` makes them
@@ -49,7 +49,7 @@ curl -sI https://vidzilla.followusai.com/no-such-page    # 404
 ## 2. Submit the extension
 
 In the [developer dashboard](https://chrome.google.com/webstore/devconsole),
-press **New item** and upload `release/vidzilla-1.0.0.zip`. Then fill in the
+press **New item** and upload `release/vidzilla-1.0.1.zip` (the version in `src/manifest.json`). Then fill in the
 tabs as below.
 
 ### Store listing
@@ -114,9 +114,9 @@ Please only save media you have the right to keep.
 
 | Permission | Justification |
 | --- | --- |
-| Host permission `<all_urls>` | Video can come from any site. Vidzilla watches media requests in every tab to list them, and fetches the file the user chooses from the site that serves it. |
+| Host permission `<all_urls>` | Video can come from any site. Vidzilla watches media requests in every tab to list them, and fetches the file the user chooses from the site that serves it. A small content script in each page notices when a player uses DRM (so Vidzilla can show it as unsupported) or Media Source, and passes on the player's buffers only while the user records it. |
 | `webRequest` | Recognises video, audio, HLS and DASH responses by their address and content type, and notes the referrer, origin and cookie headers the page sent so the download works the same way. |
-| `declarativeNetRequest` | While a download runs, sets the same referrer and origin headers the page used on Vidzilla's own requests, since many video servers refuse requests without them. Rules are removed when the download ends. |
+| `declarativeNetRequest` | While a download runs, sets the same referrer, origin, cookie and authorization headers the page sent for that media on Vidzilla's own requests (never on the pages' requests), since many video servers refuse requests without them. Rules are scoped to the media's folder and removed when the download ends. |
 | `downloads` | Saves the finished file to the Downloads folder with the name the user chose. |
 | `tabs` | Keeps each tab's list of media separate, shows the count on the toolbar button, and reloads the tab when the user asks to record a player from the start. |
 | `webNavigation` | Clears a tab's media list when it goes to another page, including pages that change address without reloading. |
