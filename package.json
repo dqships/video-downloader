@@ -1,0 +1,31 @@
+{
+  "name": "video-downloader",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Personal Chrome extension that finds and downloads video and audio from web pages.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "pnpm build && node --test tests/e2e/*.test.mjs",
+    "fixtures": "bash tests/fixtures/make-fixtures.sh"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.3.6",
+    "@types/node": "^26.6.5",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "mediabunny": "1.62.1"
+  }
+}
