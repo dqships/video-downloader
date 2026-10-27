@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dailymotionId, pageCandidates, type PageScan } from "../../src/shared/page-media";
+import { dailymotionId, isPrivateHost, pageCandidates, probeCredentials, type PageScan } from "../../src/shared/page-media";
 
 const scan = (over: Partial<PageScan>): PageScan => ({ pageUrl: "https://news.example/story/1", jsonLd: [], metas: [], videoSrcs: [], ...over });
 
@@ -54,5 +54,32 @@ describe("dailymotionId", () => {
     expect(dailymotionId("https://geo.dailymotion.com/player/xtv3w.html?")).toBeUndefined();
     expect(dailymotionId("https://notdailymotion.com/video/xbrjsa2")).toBeUndefined();
     expect(dailymotionId("https://example.com/video/xbrjsa2")).toBeUndefined();
+  });
+});
+
+describe("probeCredentials", () => {
+  it("sends cookies only to the page's own host and its subdomains", () => {
+    expect(probeCredentials("https://www.news.example/v.mp4", "https://www.news.example/story")).toBe("include");
+    expect(probeCredentials("https://media.news.example/v.mp4", "https://www.news.example/story")).toBe("include");
+    expect(probeCredentials("https://cdn.other.example/v.mp4", "https://www.news.example/story")).toBe("omit");
+    expect(probeCredentials("https://bank.example/transfer?to=x", "https://evil.example/")).toBe("omit");
+    expect(probeCredentials("http://news.example/v.mp4", "https://news.example/story")).toBe("omit");
+  });
+
+  it("never reaches into the local network from a page on the internet", () => {
+    for (const url of ["http://192.168.1.1/apply.cgi", "http://10.0.0.5/v.mp4", "http://127.0.0.1:8080/v.mp4", "http://localhost/v.mp4", "http://printer.local/x", "http://[::1]/v.mp4", "http://172.20.1.1/v.mp4"]) {
+      expect(probeCredentials(url, "https://evil.example/")).toBeUndefined();
+    }
+    // A page on the local network may name its own media.
+    expect(probeCredentials("http://192.168.1.20/v.mp4", "http://192.168.1.20/")).toBe("include");
+    expect(probeCredentials("http://192.168.1.20/v.mp4", "http://nas.local/")).toBe("omit");
+  });
+
+  it("knows public addresses from private ones", () => {
+    expect(isPrivateHost("172.32.0.1")).toBe(false);
+    expect(isPrivateHost("8.8.8.8")).toBe(false);
+    expect(isPrivateHost("example.com")).toBe(false);
+    expect(isPrivateHost("169.254.169.254")).toBe(true);
+    expect(isPrivateHost("[fd00::1]")).toBe(true);
   });
 });

@@ -265,12 +265,29 @@ chrome.tabs.onUpdated.addListener((tabId, change) => {
   if (change.title) void registry.get(tabId).then((t) => t && readPageMeta(tabId));
 });
 
+/**
+ * Vidzilla's own pages: the popup, side panel, options, offscreen and capture
+ * pages. Content scripts run inside web pages, so the only commands they may
+ * send are the page's own reports (DRM, a Media Source player).
+ */
+function fromExtensionPage(sender: chrome.runtime.MessageSender): boolean {
+  try {
+    return sender.id === chrome.runtime.id && new URL(sender.url ?? "").protocol === "chrome-extension:";
+  } catch {
+    return false;
+  }
+}
+
+const PAGE_REPORTS = new Set<Command["kind"]>(["page-drm", "page-mse"]);
+
 chrome.runtime.onMessage.addListener((msg: Command | FromOffscreenEnvelope, sender, respond) => {
+  if (!msg || typeof msg !== "object") return;
   if ("target" in msg) {
-    if (msg.target !== "service-worker") return;
+    if (msg.target !== "service-worker" || !fromExtensionPage(sender)) return;
     downloads.onWorkerMessage(msg.message).finally(() => respond(true));
     return true;
   }
+  if (!PAGE_REPORTS.has(msg.kind) && !fromExtensionPage(sender)) return;
   handle(msg, sender).then(respond, (err) => respond({ ok: false, error: err instanceof Error ? err.message : String(err) }));
   return true; // respond asynchronously
 });
