@@ -8,6 +8,7 @@ import { buildFilename } from "../shared/naming";
 import { defaultSettings, loadSettings, type Settings } from "../shared/settings";
 import type { DownloadJob, MediaItem, TabMedia } from "../shared/types";
 import { setOpenMode } from "../shared/open-mode";
+import { bindAd } from "./ads-view";
 import { bindAsk, bindAskButtons } from "./asks-view";
 import { icons } from "./icons";
 import { bindSettingsForm } from "./settings-form";
@@ -370,6 +371,7 @@ function setupControls(): void {
   bindSettingsForm(document);
   bindAskButtons(document);
   bindAsk(document);
+  bindAd(document);
 
   const mode = document.querySelector<HTMLButtonElement>("#switch-mode")!;
   [mode.innerHTML, mode.title] = isPanel ? [icons.popup, "Switch to the popup"] : [icons.sidePanel, "Switch to the side panel"];

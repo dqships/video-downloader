@@ -134,7 +134,8 @@ only: `--space-7` 48 · `--space-8` 64 · `--space-9` 96 · `--space-10` 128 px.
   `--size-control` 44 px (site and touch), icon `--size-icon` 20 px, popup width
   `--size-popup-width` 380 px, popup height cap `--size-popup-max-height` 600 px
   (Chrome's own limit), thumbnail 72 × 44, rail 16 px, sprocket 6 px,
-  perforation 6 px with 4 px gaps, content width 1120 px, prose width 620 px.
+  perforation 6 px with 4 px gaps, content width 1120 px, prose width 620 px,
+  house ad icon `--size-ad-icon` 56 px.
 
 ## Controls
 
@@ -220,6 +221,21 @@ One page, two shells. `popup.html` is the popup; the build writes
   a `.vz-ask-title`, one `.vz-ask-text` sentence and `.vz-ask-actions`: a
   primary small button and quiet small ones. It is always skippable ("Not
   now"), never blocks the strip, and waits behind the settings view.
+- **House ad** (`.vz-ad`): one frame of film projected in place of the strip
+  and foot, for the maker's other apps (list in `site/ads.json`, rules in
+  `src/shared/ads.ts`, see `docs/house-ads.md`). The film tile (`.vz-ad-film`,
+  `--radius-lg`, `--shadow-strip` like a strip on the lightbox) has sprocket
+  holes along its top and bottom edges that show the page through them. Amber
+  edge print reads "Ad · From the maker of Vidzilla" on the left and counts
+  down the seconds on the right. Inside: a `--size-ad-icon` square (the app's
+  icon, or its initial in wide heavy amber type on `--color-film-frame`), the
+  app's name (`.vz-ad-name`, `--text-md` wide heavy), one `.vz-ad-line`
+  sentence in film muted, and a primary button. Under the film, a
+  perforation row fills as the wait runs out; then `.vz-ad-foot` holds a
+  "Remove ads" text button (only when an upgrade page is set) and a quiet small
+  Close button that reads "Close in 12" and is disabled until the time is up.
+  The countdown only runs while the ad is on screen, waits behind the settings
+  view, and never shows on the same download as an ask.
 - **Sizing**: the popup is `--size-popup-width` wide and at most
   `--size-popup-max-height` tall. Never size it with `vw` or `vh`: Chrome opens
   a popup tiny and grows it to fit the page, so viewport units collapse it and
