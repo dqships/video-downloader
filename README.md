@@ -21,7 +21,7 @@ downloaded.
 | 7. WebM DASH, live DASH, silence for late audio | Done |
 | Store listing, screenshots, package, website on Vercel | Ready ([store/README.md](store/README.md)) |
 | House ads for the maker's other apps, edited in `site/ads.json` | Done ([docs/house-ads.md](docs/house-ads.md)) |
-| Paid ad-free upgrade (Stripe) | Planned ([docs/ad-free-upgrade.md](docs/ad-free-upgrade.md)) |
+| Paid ad-free upgrade, $0.99/yr or $9 once (Stripe) | Done ([docs/ad-free-upgrade.md](docs/ad-free-upgrade.md)) |
 
 YouTube isn't supported (Chrome Web Store policy).
 

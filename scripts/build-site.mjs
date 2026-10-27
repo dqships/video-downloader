@@ -150,6 +150,8 @@ for (const page of pages) {
   writeFileSync(new URL(`${page.file}.md`, out), fill(read(`site/md/${page.file}.md`)));
 }
 buildPage("404", null);
+// The page Stripe returns to after a purchase: not listed, not indexed.
+buildPage("upgrade-thanks", null);
 writeFileSync(new URL("404.md", out), notFoundMarkdown);
 if (problems.length) throw new Error(`The site breaks the launch rules:\n  ${problems.join("\n  ")}`);
 
@@ -183,12 +185,12 @@ ${pages
 `,
 );
 const describe = (file) => read(`site/${file}.html`).match(/<meta\s+name="description"\s+content="([^"]*)"/)[1];
-const label = { index: "Home", about: "About", pricing: "Pricing", contact: "Contact", support: "Support", privacy: "Privacy policy", terms: "Terms of use" };
+const label = { index: "Home", about: "About", pricing: "Pricing", upgrade: "Remove the ads", contact: "Contact", support: "Support", privacy: "Privacy policy", terms: "Terms of use" };
 writeFileSync(
   new URL("llms.txt", out),
   `# Vidzilla
 
-> Vidzilla is a free Chrome extension that finds the video playing on a page and saves it to your computer as a file, at the quality the site sent. It saves direct video files, HLS (.m3u8) and DASH (.mpd) streams, audio on its own, subtitles and live streams, and leaves DRM-protected video alone. Everything runs in the browser: no servers, no account, no tracking.
+> Vidzilla is a free Chrome extension that finds the video playing on a page and saves it to your computer as a file, at the quality the site sent. It saves direct video files, HLS (.m3u8) and DASH (.mpd) streams, audio on its own, subtitles and live streams, and leaves DRM-protected video alone. Everything runs in the browser, with no account and no tracking. It shows a short ad for the maker's other apps every few downloads, which $0.99 a year or $9 once removes.
 
 Every page below is also served as markdown: request its URL with \`Accept: text/markdown\`, or add \`.md\` as linked here.
 

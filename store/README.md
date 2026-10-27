@@ -88,13 +88,15 @@ and sound stay exactly as the site sent them.
 
 Private by design
 No accounts, no analytics. Vidzilla talks to the sites that host the media you
-choose to save, and every few hours fetches its short list of ads from
-vidzilla.followusai.com. Nothing about you or your downloads is sent.
+choose to save. It also fetches its short list of ads from
+vidzilla.followusai.com, and once a day checks there whether this copy paid to
+remove them. Nothing about you or your downloads is sent.
 
 Free, with an occasional ad
 Every few downloads, after the file is saved, Vidzilla shows a short ad for
 another app by the same maker, in its own popup. It never interrupts a
-download and never appears on the pages you visit.
+download and never appears on the pages you visit. Settings > Ads turns them
+off for $0.99 a year or $9 once.
 
 Not supported
 • Video protected by DRM (Netflix, Disney+, Prime Video, Spotify and similar).
@@ -123,6 +125,9 @@ Please only save media you have the right to keep.
 | `storage` | Keeps the media list, settings and saved-file history on the user's device. |
 | `unlimitedStorage` | Large videos are assembled in the extension's private storage before saving, which can exceed the default quota. |
 
+- **In-app purchases:** in the item's Store listing settings, mark that it
+  offers in-app purchases (the ad-free upgrade, paid through Stripe on the
+  website).
 - **Remote code:** No, I am not using remote code.
   (The house ad list, `ads.json` on the website, is text and links only;
   see `docs/house-ads.md`. Reviewers may ask.)

@@ -1,6 +1,6 @@
 {
   "schedule": { "firstAfter": 5, "every": 4, "minHours": 6, "seconds": 15 },
-  "upgradeUrl": "",
+  "upgradeUrl": "https://vidzilla.followusai.com/upgrade",
   "ads": [
     {
       "id": "webtomarkdown",
@@ -15,7 +15,7 @@
       "name": "SortDock",
       "line": "A small Mac app that keeps your Downloads folder tidy, moving each file where it belongs.",
       "cta": "See SortDock",
-      "url": "https://sortdock.vercel.app",
+      "url": "https://sortdock.followusai.com",
       "active": true
     },
     {

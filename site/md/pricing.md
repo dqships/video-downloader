@@ -6,7 +6,8 @@ There is one version of Vidzilla and it costs nothing. You get every feature the
 
 | Plan | Price | What you get |
 | --- | --- | --- |
-| Vidzilla | $0, forever | Every feature below |
+| Vidzilla | $0, forever | Every feature below, with a short ad every few downloads |
+| Without ads | $0.99 a year, or $9 once | The same, with the ads turned off. Buy it from Vidzilla's Settings, under Ads ([how it works]({{origin}}/upgrade)) |
 
 ## What's included
 
@@ -18,7 +19,7 @@ There is one version of Vidzilla and it costs nothing. You get every feature the
 
 ## Why it's free
 
-Vidzilla runs entirely in your browser. Files come straight from the site that serves them to your computer, so there are no servers to pay for and no reason to charge you. The occasional ad for our other apps keeps it that way.
+Vidzilla runs entirely in your browser. Files come straight from the site that serves them to your computer, so there's no download server to pay for and no reason to charge you. The occasional ad for our other apps keeps it that way, and the ad-free upgrade is there if you'd rather not see them.
 
 ## Get it
 

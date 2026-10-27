@@ -110,6 +110,8 @@ before(async () => {
   extensionId = new URL(sw.url()).host;
   // House ads would take the strip's place mid-test; the ad test turns them on.
   await sw.evaluate(() => chrome.storage.local.set({ ads: { saved: 0, sinceAd: 0, shownAt: 0, next: 0, adFree: true } }));
+  // The daily ad-free check would go to the real website; count it as done.
+  await sw.evaluate(() => chrome.storage.local.set({ license: { adFree: false, checkedAt: Date.now() } }));
 });
 
 after(async () => {
@@ -721,6 +723,11 @@ test("shows a house ad after a save, for a set time, never on the same save as a
     upgradeUrl: "https://example.com/upgrade",
     ads: [{ id: "test", name: "<b>Bloomin</b>", line: "Grows things.", cta: "Get Bloomin", url: "https://example.com/bloomin" }],
   };
+  // The toolbar popup would open with the ad too and count down beside the test's page.
+  await sw.evaluate(() => {
+    globalThis.realOpenPopup = chrome.action.openPopup;
+    chrome.action.openPopup = async () => {};
+  });
   // Four saves so far and no ask pending: the fifth brings the first ad.
   await sw.evaluate(
     (feed) =>
@@ -747,7 +754,7 @@ test("shows a house ad after a save, for a set time, never on the same save as a
   assert.equal(await popup.locator(".vz-ad-name").textContent(), "<b>Bloomin</b>", "ad text is shown as text");
   assert.match(await popup.locator(".vz-ad-edge").textContent(), /^Ad · From the maker of Vidzilla/);
   assert.equal(await popup.locator(".vz-ad-cta").getAttribute("href"), "https://example.com/bloomin");
-  assert.equal(await popup.locator(".vz-ad-remove").getAttribute("href"), "https://example.com/upgrade");
+  assert.match(await popup.locator(".vz-ad-remove").getAttribute("href"), /^https:\/\/example\.com\/upgrade\?id=[0-9a-f-]{36}$/, "Remove ads carries the install ID");
   assert.equal(await popup.locator("#strip").isVisible(), false, "the ad takes the strip's place");
   assert.equal(await popup.locator(".vz-popup-foot").isVisible(), false);
   assert.ok(await close.isDisabled());
@@ -794,7 +801,33 @@ test("shows a house ad after a save, for a set time, never on the same save as a
   assert.equal((await ads()).due, undefined, "no ad on the same save as the review ask");
 
   await sw.evaluate(() => chrome.storage.local.remove(["asks", "adFeed"]));
+  await sw.evaluate(() => (chrome.action.openPopup = globalThis.realOpenPopup));
   await sw.evaluate(() => chrome.storage.local.set({ ads: { saved: 0, sinceAd: 0, shownAt: 0, next: 0, adFree: true } }));
+  await page.close();
+});
+
+test("Settings show whether ads are on and how to remove them", async () => {
+  const { tabId, page } = await visit("/page.html");
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}&narrow`);
+  await popup.click("#toggle-settings");
+  const status = popup.locator(".vz-ads-status");
+  await waitFor(async () => /Remove them for \$0\.99 a year or \$9 once/.test(await status.textContent()), "ads row");
+  assert.equal(await popup.locator(".vz-ads-action").textContent(), "Remove ads");
+  assert.ok(await popup.locator(".vz-ads-check").isVisible());
+
+  const now = Date.now();
+  await sw.evaluate((now) => chrome.storage.local.set({ license: { adFree: true, plan: "yearly", until: now + 86_400_000 * 30, checkedAt: now } }), now);
+  await waitFor(async () => /^Off until /.test(await status.textContent()), "yearly status");
+  assert.equal(await popup.locator(".vz-ads-action").textContent(), "Manage");
+  assert.equal(await popup.locator(".vz-ads-check").isVisible(), false);
+  await sw.evaluate((now) => chrome.storage.local.set({ license: { adFree: true, plan: "lifetime", until: null, checkedAt: now } }), now);
+  await waitFor(async () => /^Off for good/.test(await status.textContent()), "lifetime status");
+  assert.equal(await popup.locator(".vz-ads-action").isVisible(), false);
+  assert.ok(await popup.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+
+  await sw.evaluate(() => chrome.storage.local.set({ license: { adFree: false, checkedAt: Date.now() } }));
+  await popup.close();
   await page.close();
 });
 
