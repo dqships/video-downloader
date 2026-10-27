@@ -108,6 +108,8 @@ before(async () => {
   });
   sw = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
   extensionId = new URL(sw.url()).host;
+  // House ads would take the strip's place mid-test; the ad test turns them on.
+  await sw.evaluate(() => chrome.storage.local.set({ ads: { saved: 0, sinceAd: 0, shownAt: 0, next: 0, adFree: true } }));
 });
 
 after(async () => {
@@ -666,6 +668,90 @@ test("asks for a rating after a few saves, then to share, and the foot offers bo
   await store.close();
   await popup.close();
   await sw.evaluate(() => chrome.storage.local.remove("asks"));
+  await page.close();
+});
+
+test("shows a house ad after a save, for a set time, never on the same save as an ask", async () => {
+  const ads = () => sw.evaluate(async () => (await chrome.storage.local.get("ads")).ads);
+  const feed = {
+    schedule: { firstAfter: 5, every: 4, minHours: 6, seconds: 3 },
+    upgradeUrl: "https://example.com/upgrade",
+    ads: [{ id: "test", name: "<b>Bloomin</b>", line: "Grows things.", cta: "Get Bloomin", url: "https://example.com/bloomin" }],
+  };
+  // Four saves so far and no ask pending: the fifth brings the first ad.
+  await sw.evaluate(
+    (feed) =>
+      chrome.storage.local.set({
+        adFeed: { feed, fetchedAt: Date.now() },
+        ads: { saved: 4, sinceAd: 4, shownAt: 0, next: 0, adFree: false },
+        asks: { saved: 4, reviewAsks: 1, reviewAt: 99, reviewDone: true, shareAt: 99, shareDone: true },
+      }),
+    feed,
+  );
+  const { tabId, page } = await visit("/page.html");
+  const { job } = await downloadFromPopup(tabId);
+  assert.equal(job.state, "complete", job.error);
+  await waitFor(async () => (await ads())?.due, "ad due");
+
+  const open = async () => {
+    const popup = await context.newPage();
+    await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}&narrow`);
+    await popup.locator("#ad").waitFor();
+    return popup;
+  };
+  let popup = await open();
+  const close = popup.locator(".vz-ad-close");
+  assert.equal(await popup.locator(".vz-ad-name").textContent(), "<b>Bloomin</b>", "ad text is shown as text");
+  assert.match(await popup.locator(".vz-ad-edge").textContent(), /^Ad · From the maker of Vidzilla/);
+  assert.equal(await popup.locator(".vz-ad-cta").getAttribute("href"), "https://example.com/bloomin");
+  assert.equal(await popup.locator(".vz-ad-remove").getAttribute("href"), "https://example.com/upgrade");
+  assert.equal(await popup.locator("#strip").isVisible(), false, "the ad takes the strip's place");
+  assert.equal(await popup.locator(".vz-popup-foot").isVisible(), false);
+  assert.ok(await close.isDisabled());
+  assert.match(await close.textContent(), /^Close in [1-3]$/);
+  assert.ok(await popup.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+
+  // Settings stay reachable; the countdown waits while they're open.
+  await popup.click("#toggle-settings");
+  assert.equal(await popup.locator("#ad").isVisible(), false);
+  await new Promise((r) => setTimeout(r, 1300));
+  const paused = (await ads()).due.remainingMs;
+  await new Promise((r) => setTimeout(r, 1300));
+  assert.equal((await ads()).due.remainingMs, paused, "no countdown behind settings");
+  await popup.click("#toggle-settings");
+  await popup.locator("#ad").waitFor();
+
+  // Closing the popup early keeps the time left for next time.
+  await new Promise((r) => setTimeout(r, 1300));
+  await popup.close();
+  const left = (await ads()).due.remainingMs;
+  assert.ok(left > 0 && left < 3000, `time left is kept (${left})`);
+  popup = await open();
+  await popup.locator(".vz-ad-close:enabled").waitFor({ timeout: 5000 });
+  assert.equal(await popup.locator(".vz-ad-close").textContent(), "Close");
+  await popup.click(".vz-ad-close");
+  await popup.locator("#ad").waitFor({ state: "hidden" });
+  assert.ok(await popup.locator("#strip").isVisible());
+  const after = await ads();
+  assert.equal(after.due, undefined);
+  assert.equal(after.sinceAd, 0);
+  await popup.close();
+
+  // A save that brings up the review ask brings no ad, and drops one that was waiting.
+  await sw.evaluate(() =>
+    chrome.storage.local.set({
+      ads: { saved: 9, sinceAd: 9, shownAt: 1, next: 1, adFree: false },
+      asks: { saved: 2, reviewAsks: 0, reviewAt: 3, reviewDone: false, shareAt: 6, shareDone: false },
+    }),
+  );
+  const second = await downloadFromPopup(tabId);
+  assert.equal(second.job.state, "complete", second.job.error);
+  await waitFor(async () => (await sw.evaluate(async () => (await chrome.storage.local.get("asks")).asks))?.due === "review", "review ask due");
+  await waitFor(async () => (await ads()).saved === 10, "ad counter");
+  assert.equal((await ads()).due, undefined, "no ad on the same save as the review ask");
+
+  await sw.evaluate(() => chrome.storage.local.remove(["asks", "adFeed"]));
+  await sw.evaluate(() => chrome.storage.local.set({ ads: { saved: 0, sinceAd: 0, shownAt: 0, next: 0, adFree: true } }));
   await page.close();
 });
 

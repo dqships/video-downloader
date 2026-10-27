@@ -3,7 +3,7 @@
 Vidzilla is a free Chrome extension that finds the video playing on a page and saves it to your computer as a file, at the quality the site sent. Nothing is re-encoded, and there is nothing to sign up for.
 
 - [Add Vidzilla to Chrome]({{storeUrl}}) (Chrome 116 or later)
-- No account, no tracking, no ads
+- No account, no tracking
 
 ## Or paste a link
 

@@ -66,6 +66,17 @@ body.vz-popup {
   scrollbar-color: var(--color-border) transparent;
 }
 
+/* A house ad stands in for the strip and foot until it's closed. */
+.vz-popup .vz-ad {
+  flex: 0 1 auto;
+}
+
+body.has-ad .vz-strip,
+body.has-ad .vz-ask,
+body.has-ad .vz-popup-foot {
+  display: none;
+}
+
 /* The side panel: the same page, as wide and tall as Chrome makes it. */
 body.vz-popup--panel {
   width: auto;

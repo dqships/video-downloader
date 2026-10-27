@@ -87,8 +87,14 @@ did. Streams are joined into a single file without re-encoding, so quality
 and sound stay exactly as the site sent them.
 
 Private by design
-No accounts, no analytics, no servers. Vidzilla only talks to the sites that
-host the media you choose to save.
+No accounts, no analytics. Vidzilla talks to the sites that host the media you
+choose to save, and every few hours fetches its short list of ads from
+vidzilla.followusai.com. Nothing about you or your downloads is sent.
+
+Free, with an occasional ad
+Every few downloads, after the file is saved, Vidzilla shows a short ad for
+another app by the same maker, in its own popup. It never interrupts a
+download and never appears on the pages you visit.
 
 Not supported
 • Video protected by DRM (Netflix, Disney+, Prime Video, Spotify and similar).
@@ -118,6 +124,8 @@ Please only save media you have the right to keep.
 | `unlimitedStorage` | Large videos are assembled in the extension's private storage before saving, which can exceed the default quota. |
 
 - **Remote code:** No, I am not using remote code.
+  (The house ad list, `ads.json` on the website, is text and links only;
+  see `docs/house-ads.md`. Reviewers may ask.)
 - **Data usage:** tick **Web history** (the addresses of pages and media are
   kept on the device for the media list and history) and **Website content**
   (page titles and thumbnails). Then tick all three certifications: no sale

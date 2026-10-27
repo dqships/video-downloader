@@ -10,7 +10,7 @@
 // Usage: node scripts/build-site.mjs [outDir]   (default site-dist/)
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import * as esbuild from "esbuild";
 import { notFoundMarkdown, origin, pages, repoUrl, supportEmail } from "../site/pages.mjs";
@@ -163,6 +163,9 @@ const styles = [read("design/tokens.css").replaceAll("url(\"fonts/", "url(\"/des
 writeFileSync(new URL("styles.css", out), await minify(styles.join("\n"), "css"));
 for (const dir of ["design", "brand"]) cpSync(new URL(dir, root), new URL(dir, out), { recursive: true });
 rmSync(new URL("brand/source", out), { recursive: true, force: true });
+// The extension's house ad list (docs/house-ads.md), and any icons it uses.
+cpSync(new URL("site/ads.json", root), new URL("ads.json", out));
+if (existsSync(new URL("site/ads/", root))) cpSync(new URL("site/ads/", root), new URL("ads/", out), { recursive: true });
 
 // Files at the root for crawlers and agents.
 writeFileSync(

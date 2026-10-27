@@ -2,7 +2,7 @@
 
 Effective 27 October 2026
 
-Vidzilla is a Chrome extension that finds the video and audio a page plays and saves it to your computer. It has no servers and no accounts. It doesn't collect, sell or share your personal information, and it contains no analytics or advertising code.
+Vidzilla is a Chrome extension that finds the video and audio a page plays and saves it to your computer. It has no accounts. It doesn't collect, sell or share your personal information, and it contains no analytics code or third-party ad code. Every few downloads it shows a short ad for another app by the same maker.
 
 ## What Vidzilla reads
 
@@ -12,11 +12,11 @@ On a page whose video can't be fetched as a file, Vidzilla offers to record the 
 
 ## Where that information stays
 
-On your computer. The list of media found in each tab is kept in Chrome's session storage for the extension and is cleared when the tab closes or Chrome quits. Your settings, such as the filename pattern, are kept in Chrome's local storage for the extension, and so is the history of files you saved: each file's name, page address, title, thumbnail, size and date. You can clear the history from the settings page at any time. Files you save go to your Downloads folder, fetched directly from the site that served them.
+On your computer. The list of media found in each tab is kept in Chrome's session storage for the extension and is cleared when the tab closes or Chrome quits. Your settings, such as the filename pattern, are kept in Chrome's local storage for the extension, and so is the history of files you saved: each file's name, page address, title, thumbnail, size and date. You can clear the history from the settings page at any time. A count of how many files you've saved and when you last saw an ad is kept there too, to space the ads out. Files you save go to your Downloads folder, fetched directly from the site that served them.
 
 ## What Vidzilla sends
 
-Nothing to us or anyone else. The only requests Vidzilla makes are to the sites that host the media you choose to save, the same requests the page itself made.
+Nothing about you or what you save. Vidzilla makes two kinds of requests. Most go to the sites that host the media you choose to save, the same requests the page itself made. The other, every few hours, downloads the list of ads (vidzilla.followusai.com/ads.json, text and links only) from our website. That request carries no cookies and no information about you or your downloads; like any web request it reaches our host, Vercel, from your IP address, which we don't use to identify you. Seeing or clicking an ad isn't reported anywhere.
 
 ## Why it asks for its permissions
 

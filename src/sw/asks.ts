@@ -1,12 +1,15 @@
 // Counts saved files toward the review and share asks (see shared/asks.ts)
-// and, when one comes due, opens the popup to show it. A popup or side panel
-// that is already open shows it on its own.
+// and the house ads (shared/ads.ts) and, when one comes due, opens the popup
+// to show it. A popup or side panel that is already open shows it on its own.
+// One prompt per save: when an ask comes up, no ad comes with it.
 
 import { afterSave, updateAsks } from "../shared/asks";
+import { noteSavedForAds } from "./ads";
 
 export async function noteSaved(): Promise<void> {
   const state = await updateAsks(afterSave);
-  if (!state.due) return;
+  const adDue = await noteSavedForAds(Boolean(state.due)).catch(() => false);
+  if (!state.due && !adDue) return;
   const open = await chrome.runtime.getContexts({
     contextTypes: ["POPUP", "SIDE_PANEL"] as chrome.runtime.ContextType[],
   });

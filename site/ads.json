@@ -1,0 +1,18 @@
+{
+  "schedule": { "firstAfter": 5, "every": 4, "minHours": 6, "seconds": 15 },
+  "upgradeUrl": "",
+  "ads": [
+    {
+      "id": "webtomarkdown",
+      "name": "WebToMarkdown",
+      "line": "Copy any web page as clean Markdown, ready for notes, docs or an AI chat.",
+      "cta": "Get WebToMarkdown",
+      "url": "https://chromewebstore.google.com/detail/gaglchmlnkelnokjkilcbkggfdembeem",
+      "active": true
+    },
+    { "id": "guppy-fitness", "name": "Guppy Fitness", "line": "", "cta": "Get Guppy Fitness", "url": "", "active": false },
+    { "id": "guppy-vegan", "name": "Guppy Vegan", "line": "", "cta": "Get Guppy Vegan", "url": "", "active": false },
+    { "id": "bloomin", "name": "Bloomin", "line": "", "cta": "Get Bloomin", "url": "", "active": false },
+    { "id": "sortdock", "name": "SortDock", "line": "", "cta": "Get SortDock", "url": "", "active": false }
+  ]
+}
