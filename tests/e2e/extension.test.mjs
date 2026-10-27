@@ -504,6 +504,13 @@ test("records a player that hides its stream (Media Source Extensions)", async (
   await page.close();
 });
 
+test("a player that would run Media Source in a worker stays on the page and is listed", async () => {
+  const { tab, page } = await visit("/mse-worker.html");
+  assert.deepEqual(tab.media.map((m) => m.type), ["mse"]);
+  assert.equal(await page.evaluate(() => document.querySelector("video").srcObject), null);
+  await page.close();
+});
+
 test("a page can't start a recording through the capture frame", async () => {
   const before = new Date().toISOString();
   const page = await context.newPage();
