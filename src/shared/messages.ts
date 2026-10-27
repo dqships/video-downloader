@@ -2,7 +2,7 @@
 // state from chrome.storage and never waits on the service worker for data.
 
 export type Command =
-  | { kind: "download"; payload: { tabId: number; mediaId: string; filename?: string } }
+  | { kind: "download"; payload: { tabId: number; mediaId: string; filename?: string; variantId?: string } }
   | { kind: "cancel"; payload: { jobId: string } }
   | { kind: "clear-tab"; payload: { tabId: number } };
 
