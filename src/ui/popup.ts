@@ -50,7 +50,7 @@ function defaultName(item: MediaItem): string {
   return buildFilename({
     template: settings.template,
     maxLength: settings.maxLength,
-    title: tab?.title,
+    title: item.title ?? tab?.title,
     pageUrl: tab?.pageUrl ?? item.pageUrl,
     mediaUrl: item.url,
     serverFilename: item.serverFilename,
@@ -121,8 +121,9 @@ function createFrame(item: MediaItem): HTMLElement {
 
 function updateFrame(frame: HTMLElement, item: MediaItem): void {
   const thumb = frame.querySelector<HTMLElement>(".vz-thumb")!;
-  if (tab?.thumbnail) {
-    thumb.style.backgroundImage = `url(${JSON.stringify(tab.thumbnail)})`;
+  const poster = item.thumbnail ?? tab?.thumbnail;
+  if (poster) {
+    thumb.style.backgroundImage = `url(${JSON.stringify(poster)})`;
     thumb.innerHTML = "";
   } else {
     thumb.style.backgroundImage = "";

@@ -317,6 +317,48 @@ test("warns when the page plays DRM-protected video (EME)", async () => {
 });
 
 /** Starts recording a live page from the popup; returns what's needed to stop and check it. */
+test("lists media a page declares before anything plays", async () => {
+  const { page, tabId } = await visit("/declared.html");
+  const tab = await waitFor(
+    () => sw.evaluate(async (key) => {
+      const t = (await chrome.storage.session.get(key))[key];
+      return t?.media.length >= 2 ? t : undefined;
+    }, `tab:${tabId}`),
+    "both declared media",
+  );
+  assert.equal(tab.media.length, 2, JSON.stringify(tab.media.map((m) => m.url)));
+  const mp4 = tab.media.find((m) => m.type === "http");
+  assert.equal(mp4.sourceKind, "page");
+  assert.equal(mp4.title, "Harbour at Dawn");
+  assert.equal(mp4.sentHeaders.referer, `${site.origin}/declared.html`);
+  const hls = tab.media.find((m) => m.type === "hls");
+  assert.equal(hls.durationSec, 6, "the declared stream was probed");
+
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
+  await popup.locator(".vz-frame").nth(1).waitFor();
+  const names = await popup.locator(".vz-frame .vz-frame-name").evaluateAll((els) => els.map((e) => e.value));
+  assert.ok(names.includes("Harbour at Dawn.mp4"), names.join(", "));
+  await popup.close();
+  await page.close();
+});
+
+test("looks again when a single-page app swaps the video", async () => {
+  const page = await context.newPage();
+  await page.goto(`${site.origin}/spa.html`);
+  const tab = await waitFor(
+    () => sw.evaluate(async (url) => {
+      const [t] = await chrome.tabs.query({ url });
+      if (!t) return undefined;
+      const stored = (await chrome.storage.session.get(`tab:${t.id}`))[`tab:${t.id}`];
+      return stored?.media.length ? stored : undefined;
+    }, `${site.origin}/spa/clip-2`),
+    "media after pushState",
+  );
+  assert.match(tab.media[0].url, /clip\.mp4$/);
+  await page.close();
+});
+
 async function startRecording(run) {
   const { tabId, tab, page } = await visit(`/live-page/${run}.html`);
   assert.equal(tab.media[0].isLive, true);
