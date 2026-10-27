@@ -469,7 +469,7 @@ test("settings change the saved name, and saved files are listed in history", as
 
   const row = options.locator(".vz-history-row").first();
   await row.waitFor();
-  assert.equal(await row.locator(".vz-history-name").textContent(), "127.0.0.1 Test Clip Fixture Site.mp4");
+  assert.equal(await row.locator(".vz-history-file").textContent(), "Vidzilla/127.0.0.1 Test Clip Fixture Site.mp4");
   assert.match(await row.locator(".vz-history-meta").textContent(), /127\.0\.0\.1/);
   await options.locator("#clear").click();
   await options.locator("#history-empty").waitFor();

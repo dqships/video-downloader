@@ -8,55 +8,67 @@
     <link rel="stylesheet" href="design/components.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
-  <body class="vz-options">
-    <header class="vz-popup-head">
+  <body class="vz-page">
+    <header class="vz-page-head">
       <svg class="vz-popup-mark" viewBox="4 14 88 76.21" aria-hidden="true">
         <path fill="currentColor" d="M4 14H92L62.89 64.43L48 38.64L33.11 64.43Z" />
         <path fill="currentColor" d="M48 48.64L60 69.43L48 90.21L36 69.43Z" />
       </svg>
-      <h1 class="vz-popup-title">vidzilla</h1>
+      <h1 class="vz-page-title">vidzilla</h1>
     </header>
 
-    <section aria-labelledby="settings-title">
-      <h2 id="settings-title" class="vz-options-heading">Saving</h2>
-      <form id="settings" class="vz-options-form">
-        <label class="vz-field">
-          <span class="vz-field-label vz-edge">File name</span>
+    <section class="vz-section" aria-labelledby="settings-title">
+      <div class="vz-section-head">
+        <h2 id="settings-title" class="vz-section-title">Saving</h2>
+        <p id="saved" class="vz-field-help" aria-live="polite"></p>
+      </div>
+      <form id="settings" class="vz-fields">
+        <label class="vz-field vz-field--wide">
+          <span class="vz-field-text">
+            <span class="vz-field-label">File name</span>
+            <span class="vz-field-help"><code>%title</code>, <code>%hostname</code> and <code>%date</code> are filled in. Example: <output id="example"></output></span>
+          </span>
           <input class="vz-input" name="template" type="text" spellcheck="false" />
-          <span class="vz-field-hint">%title, %hostname and %date are filled in. Example: <output id="example"></output></span>
         </label>
         <label class="vz-field">
-          <span class="vz-field-label vz-edge">Longest name</span>
-          <input class="vz-input" name="maxLength" type="number" min="20" max="200" step="1" />
-          <span class="vz-field-hint">Characters, before the extension.</span>
+          <span class="vz-field-text">
+            <span class="vz-field-label">Longest name</span>
+            <span class="vz-field-help">Characters, before the extension.</span>
+          </span>
+          <input class="vz-input vz-input--short" name="maxLength" type="number" min="20" max="200" step="1" />
         </label>
         <label class="vz-field">
-          <span class="vz-field-label vz-edge">Folder</span>
-          <input class="vz-input" name="subfolder" type="text" spellcheck="false" placeholder="Downloads" />
-          <span class="vz-field-hint">A folder inside your Downloads folder. Leave empty to save straight into Downloads.</span>
+          <span class="vz-field-text">
+            <span class="vz-field-label">Folder</span>
+            <span class="vz-field-help">Inside your Downloads folder. Empty saves straight into Downloads.</span>
+          </span>
+          <input class="vz-input" name="subfolder" type="text" spellcheck="false" placeholder="None" />
         </label>
-        <label class="vz-field vz-field--inline">
+        <label class="vz-field">
+          <span class="vz-field-text">
+            <span class="vz-field-label">Ask where to save</span>
+            <span class="vz-field-help">Chrome shows its save dialog for every file.</span>
+          </span>
           <input class="vz-toggle" name="saveAs" type="checkbox" role="switch" />
-          <span>Ask where to save each file</span>
         </label>
-        <p id="saved" class="vz-field-hint" aria-live="polite"></p>
       </form>
     </section>
 
-    <section aria-labelledby="history-title">
-      <div class="vz-options-heading-row">
-        <h2 id="history-title" class="vz-options-heading">Saved files</h2>
-        <button id="clear" class="vz-btn vz-btn--quiet vz-btn--small" type="button">Clear list</button>
+    <section class="vz-section" aria-labelledby="history-title">
+      <div class="vz-section-head">
+        <h2 id="history-title" class="vz-section-title">Saved files</h2>
+        <button id="clear" class="vz-btn vz-btn--quiet vz-btn--small" type="button"></button>
       </div>
       <ol id="history" class="vz-history"></ol>
-      <p id="history-empty" class="vz-field-hint" hidden>Nothing saved yet. Files you save with Vidzilla show up here.</p>
+      <p id="history-empty" class="vz-field-help" hidden>Nothing saved yet. Files you save with Vidzilla show up here.</p>
     </section>
 
     <template id="history-row">
       <li class="vz-history-row">
         <div class="vz-thumb"></div>
         <div class="vz-history-body">
-          <p class="vz-history-name"></p>
+          <p class="vz-history-title"></p>
+          <p class="vz-history-file"></p>
           <p class="vz-history-meta vz-edge"></p>
         </div>
         <div class="vz-frame-actions">
