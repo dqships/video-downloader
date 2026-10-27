@@ -114,6 +114,22 @@ export async function checkLicense(stripe, installId, sessionId) {
   return NONE;
 }
 
+/**
+ * A Stripe customer portal session for this install's yearly plan, where the
+ * buyer can cancel it or change the card. The install ID finds the customer
+ * through the subscription's metadata; undefined when it has no plan.
+ */
+export async function portalSession(stripe, installId) {
+  const id = installId.replace(/'/g, "");
+  const subs = await stripe("GET", "/v1/subscriptions/search", { query: `metadata['install_id']:'${id}'` });
+  // The newest plan this install has, live ones first.
+  const [sub] = [...subs.data].sort((a, b) => Number(LIVE_SUBSCRIPTION.has(b.status)) - Number(LIVE_SUBSCRIPTION.has(a.status)) || b.created - a.created);
+  const customer = typeof sub?.customer === "string" ? sub.customer : sub?.customer?.id;
+  if (!customer) return undefined;
+  const session = await stripe("POST", "/v1/billing_portal/sessions", { customer, return_url: ORIGIN });
+  return session.url;
+}
+
 export function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,

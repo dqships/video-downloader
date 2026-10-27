@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 // @ts-expect-error plain JS Vercel function module
-import { checkLicense, checkoutParams, formEncode, isInstallId, stripeClient } from "../../api/_stripe.js";
+import { checkLicense, checkoutParams, formEncode, isInstallId, portalSession, stripeClient } from "../../api/_stripe.js";
 
 const ID = "3f2b8c1e-9a4d-4e2f-8b7a-1c2d3e4f5a6b";
 
@@ -104,5 +104,28 @@ describe("license", () => {
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer sk_test_x");
     expect((init.headers as Record<string, string>)["Stripe-Version"]).toBeTruthy();
     expect(String(init.body)).toBe("mode=payment");
+  });
+});
+
+describe("customer portal", () => {
+  it("opens the portal for the customer of this install's live yearly plan", async () => {
+    const { stripe, calls } = fake({
+      "/v1/subscriptions/search": {
+        data: [
+          { status: "canceled", created: 20, customer: "cus_old" },
+          { status: "active", created: 10, customer: "cus_live" },
+        ],
+      },
+      "/v1/billing_portal/sessions": { url: "https://billing.stripe.com/p/session/x" },
+    });
+    expect(await portalSession(stripe, ID)).toBe("https://billing.stripe.com/p/session/x");
+    expect(calls[0]!.params.query).toBe(`metadata['install_id']:'${ID}'`);
+    expect(calls[1]).toMatchObject({ method: "POST", params: { customer: "cus_live", return_url: "https://vidzilla.followusai.com" } });
+  });
+
+  it("has nothing to open for an install without a yearly plan", async () => {
+    const { stripe, calls } = fake({ "/v1/subscriptions/search": empty });
+    expect(await portalSession(stripe, ID)).toBeUndefined();
+    expect(calls).toHaveLength(1);
   });
 });
