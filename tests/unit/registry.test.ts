@@ -102,4 +102,12 @@ describe("mergeMedia with player recordings", () => {
     expect(mergeMedia([player], hls).list.map((m) => m.type)).toEqual(["mse", "hls"]);
     expect(mergeMedia([hls], player).list.map((m) => m.type)).toEqual(["hls", "mse"]);
   });
+
+  it("lists a manifest once when a player fails over to another CDN with the same path", () => {
+    const a = item({ id: "a", type: "dash", url: "https://vod-dash-ww-live.akamaized.net/usp/auth/vod/piff_abr_full_hd/p0pj5lg2/pc_hd_abr_v2.mpd?s=1" });
+    const b = item({ id: "b", type: "dash", url: "https://vod-dash-ww.live.cf.md.bbci.co.uk/usp/auth/vod/piff_abr_full_hd/p0pj5lg2/pc_hd_abr_v2.mpd?s=2" });
+    expect(mergeMedia([a], b).changed).toBe(false);
+    const other = item({ id: "c", type: "dash", url: "https://cdn.other.net/manifest.mpd" });
+    expect(mergeMedia([item({ id: "d", type: "dash", url: "https://cdn.x.net/manifest.mpd" })], other).changed).toBe(true);
+  });
 });
