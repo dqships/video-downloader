@@ -4,3 +4,4 @@ tests/fixtures/media/
 *.log
 site-dist/
 release/
+.DS_Store

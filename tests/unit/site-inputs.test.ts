@@ -34,6 +34,7 @@ describe("site inputs", () => {
   it("ignores extension-only changes and keeps website ones", () => {
     const changed = [
       "README.md",
+      ".gitignore",
       "store/README.md",
       "tests/unit/hls.test.ts",
       "src/sw/sites.ts",
