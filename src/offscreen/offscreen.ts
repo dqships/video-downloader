@@ -19,8 +19,9 @@ async function relay(message: FromWorker, attempt = 0): Promise<void> {
 
 worker.onmessage = (e: MessageEvent<FromWorker>) => void relay(e.data);
 
-chrome.runtime.onMessage.addListener((msg: ToOffscreenEnvelope, _sender, respond) => {
-  if (msg?.target !== "offscreen") return;
+chrome.runtime.onMessage.addListener((msg: ToOffscreenEnvelope, sender, respond) => {
+  // Jobs come from the service worker only, never from a content script in a web page.
+  if (msg?.target !== "offscreen" || sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL(""))) return;
   worker.postMessage(msg.message);
   respond(true);
 });

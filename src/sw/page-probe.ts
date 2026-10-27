@@ -2,7 +2,7 @@
 // public video-info feeds) without waiting for it to play. Each declared URL is checked with a one-byte request
 // so only real media files and streams are listed.
 
-import { dailymotionId, pageCandidates, type PageCandidate, type PageScan } from "../shared/page-media";
+import { dailymotionId, pageCandidates, probeCredentials, type PageCandidate, type PageScan } from "../shared/page-media";
 import { classify, type Classified } from "./classify";
 import { installReplay, removeReplay } from "./replay";
 
@@ -101,12 +101,14 @@ async function dailymotionStream(id: string): Promise<PageCandidate | undefined>
 
 /** Asks the server what the URL is. Undefined when it isn't media we list. */
 export async function checkCandidate(candidate: PageCandidate, pageUrl: string): Promise<FoundOnPage | undefined> {
+  const credentials = probeCredentials(candidate.url, pageUrl);
+  if (!credentials) return undefined;
   const sent = { referer: pageUrl };
   const rules = await installReplay([candidate.url], sent);
   try {
     const res = await fetch(candidate.url, {
       headers: { range: "bytes=0-0" },
-      credentials: "include",
+      credentials,
       cache: "no-store",
       signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
     });
