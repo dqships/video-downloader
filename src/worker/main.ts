@@ -6,6 +6,7 @@ import type { FromWorker, ToWorker } from "../shared/worker-protocol";
 import { fetchFile } from "./fetch-file";
 import { fetchTracks } from "./fetch-tracks";
 import { recordLive } from "./record-live";
+import { recordLiveDash } from "./record-live-dash";
 import { remuxHls } from "./remux-hls";
 
 declare const self: DedicatedWorkerGlobalScope;
@@ -27,7 +28,7 @@ async function purgeOpfs(): Promise<void> {
   }
 }
 
-type JobMessage = Extract<ToWorker, { type: "fetch-file" | "fetch-hls" | "fetch-tracks" | "record-live" }>;
+type JobMessage = Extract<ToWorker, { type: "fetch-file" | "fetch-hls" | "fetch-tracks" | "record-live" | "record-live-dash" }>;
 
 async function runJob(msg: JobMessage): Promise<void> {
   const ctrl = new AbortController();
@@ -45,6 +46,17 @@ async function runJob(msg: JobMessage): Promise<void> {
             signal: ctrl.signal,
             stop: stop.signal,
             audioOnly: msg.audioOnly,
+            onProgress: (b, seconds) => post({ type: "progress", jobId: msg.jobId, bytes: b, seconds }),
+          })
+        : msg.type === "record-live-dash"
+        ? await recordLiveDash({
+            jobId: msg.jobId,
+            manifestUrl: msg.manifestUrl,
+            reps: msg.reps,
+            dir: root,
+            file,
+            signal: ctrl.signal,
+            stop: stop.signal,
             onProgress: (b, seconds) => post({ type: "progress", jobId: msg.jobId, bytes: b, seconds }),
           })
         : msg.type === "fetch-tracks"
@@ -103,6 +115,7 @@ self.onmessage = async (e: MessageEvent<ToWorker>) => {
     case "fetch-hls":
     case "fetch-tracks":
     case "record-live":
+    case "record-live-dash":
       void runJob(msg);
       break;
     case "stop":

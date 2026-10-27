@@ -179,9 +179,6 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
   } else if (item.variants?.length === 0) {
     download.disabled = true;
     note.textContent = "No quality in this stream can be saved.";
-  } else if (item.isLive && item.type === "dash") {
-    download.disabled = true;
-    note.textContent = "Recording live DASH streams arrives in a later update.";
   } else if (pendingErrors.has(item.id)) {
     note.classList.add("is-error");
     note.textContent = pendingErrors.get(item.id)!;
