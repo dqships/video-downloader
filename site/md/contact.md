@@ -2,7 +2,7 @@
 
 Bugs · Ideas · Privacy
 
-Vidzilla is an independent project. The quickest way to reach it is an issue on GitHub, where every report is read and you can follow what happens to it.
+Vidzilla is an independent project based in Michigan, USA. Email [{{supportEmail}}](mailto:{{supportEmail}}) for anything, or open an issue on GitHub, where every report is read and you can follow what happens to it.
 
 ## A site where Vidzilla doesn't work
 
@@ -14,7 +14,7 @@ Also through [GitHub issues]({{repoUrl}}/issues). Check the open ones first; add
 
 ## Privacy questions
 
-Read the [privacy policy]({{origin}}/privacy) first, then open an issue if it doesn't answer your question.
+Read the [privacy policy]({{origin}}/privacy) first, then email [{{supportEmail}}](mailto:{{supportEmail}}) if it doesn't answer your question.
 
 ## From the Chrome Web Store
 
