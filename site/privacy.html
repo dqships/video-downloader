@@ -41,13 +41,19 @@
         the page sent, so that saving the file works the same way playing it did. It reads the page's title to name the
         file.
       </p>
+      <p>
+        On a page whose video can't be fetched as a file, Vidzilla offers to record the player instead. Only when you
+        press Record does it copy the video and audio the player loads, and only on that tab, until the recording ends
+        or you stop it.
+      </p>
 
       <h2 class="prose-head">Where that information stays</h2>
       <p>
         On your computer. The list of media found in each tab is kept in Chrome's session storage for the extension and
         is cleared when the tab closes or Chrome quits. Your settings, such as the filename pattern, are kept in Chrome's
-        local storage for the extension. Files you save go to your Downloads folder, fetched directly from the site that
-        served them.
+        local storage for the extension, and so is the history of files you saved: each file's name, page address,
+        title, thumbnail, size and date. You can clear the history from the settings page at any time. Files you save go
+        to your Downloads folder, fetched directly from the site that served them.
       </p>
 
       <h2 class="prose-head">What Vidzilla sends</h2>
@@ -65,7 +71,7 @@
         <dt>Tabs and navigation</dt>
         <dd>To keep each tab's list of media separate and clear it when you leave the page.</dd>
         <dt>Storage</dt>
-        <dd>To keep the media list, your settings and in-progress downloads on your device.</dd>
+        <dd>To keep the media list, your settings, your download history and in-progress downloads on your device.</dd>
       </dl>
 
       <h2 class="prose-head">Protected video</h2>
