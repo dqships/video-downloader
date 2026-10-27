@@ -10,9 +10,12 @@ import { Downloads } from "./downloads";
 import { HeaderCache, replayableHeaders } from "./headers";
 import { probeDash } from "./dash-probe";
 import { probeHls } from "./hls-probe";
+import { checkCandidate, scanTab } from "./page-probe";
 import { Registry } from "./registry";
 import { clearStaleRules } from "./replay";
 
+/** Single-page apps swap videos without a page load; look again once they settle. */
+const RESCAN_DELAY_MS = 1500;
 const SNIFF_TYPES = ["xmlhttprequest", "media", "sub_frame", "other"] as chrome.webRequest.ResourceType[];
 const BADGE_COLOR = "#C8781E";
 
@@ -77,22 +80,43 @@ async function handleResponse(
 ): Promise<void> {
   const tab = await chrome.tabs.get(details.tabId).catch(() => undefined);
   if (!tab) return;
-  const sentHeaders = headerCache.get(details.requestId) ?? {};
-  const known = await registry.get(details.tabId);
+  await list({
+    tabId: details.tabId,
+    url: details.url,
+    found,
+    sentHeaders: headerCache.get(details.requestId) ?? {},
+    pageUrl: tab.url ?? details.initiator ?? "",
+    earlier,
+    extra: { sourceKind: "sniffer" },
+  });
+}
+
+/** Probes a stream's manifest if needed, then lists it after the media seen before it. */
+async function list(input: {
+  tabId: number;
+  url: string;
+  found: NonNullable<ReturnType<typeof classify>>;
+  sentHeaders: Record<string, string>;
+  pageUrl: string;
+  earlier: Promise<unknown>[];
+  extra: Pick<MediaItem, "sourceKind"> & Partial<Pick<MediaItem, "title" | "thumbnail" | "durationSec">>;
+}): Promise<void> {
+  const { tabId, url, found, sentHeaders } = input;
+  const known = await registry.get(tabId);
   // Quality playlists of a listed master, and repeat sightings, need no probe.
   const isStream = found.type !== "http";
-  if (known?.media.some((m) => m.childUrls?.includes(details.url) || (isStream && m.url === details.url))) return;
+  if (known?.media.some((m) => m.childUrls?.includes(url) || (isStream && m.url === url))) return;
   const streamDetails =
-    found.type === "hls" ? await probeHls(details.url, sentHeaders) : found.type === "dash" ? await probeDash(details.url, sentHeaders) : {};
-  await Promise.allSettled(earlier);
-  const now = await registry.get(details.tabId);
-  if (now?.media.some((m) => m.childUrls?.includes(details.url))) return;
+    found.type === "hls" ? await probeHls(url, sentHeaders) : found.type === "dash" ? await probeDash(url, sentHeaders) : {};
+  await Promise.allSettled(input.earlier);
+  const now = await registry.get(tabId);
+  if (now?.media.some((m) => m.childUrls?.includes(url))) return;
   const item: MediaItem = {
-    id: hash53(details.url),
+    id: hash53(url),
     type: found.type,
-    url: details.url,
-    tabId: details.tabId,
-    pageUrl: tab.url ?? details.initiator ?? "",
+    url,
+    tabId,
+    pageUrl: input.pageUrl,
     mime: found.mime,
     ext: found.ext,
     sizeBytes: found.sizeBytes,
@@ -101,20 +125,52 @@ async function handleResponse(
     sentHeaders,
     hasDrm: false,
     detectedAt: Date.now(),
-    sourceKind: "sniffer",
+    ...input.extra,
     ...streamDetails,
   };
+  if (item.durationSec === undefined) delete item.durationSec;
   const added = await registry.add(item);
-  const drm = pendingDrm.get(details.tabId);
+  const drm = pendingDrm.get(tabId);
   if (added && drm) {
-    pendingDrm.delete(details.tabId);
-    await registry.update(details.tabId, { drmKeySystem: drm });
+    pendingDrm.delete(tabId);
+    await registry.update(tabId, { drmKeySystem: drm });
   }
-  if (added && !metaRequested.has(details.tabId)) {
-    metaRequested.add(details.tabId);
-    void readPageMeta(details.tabId);
+  if (added && !metaRequested.has(tabId)) {
+    metaRequested.add(tabId);
+    void readPageMeta(tabId);
   }
 }
+
+/** Lists what the page declares in its markup, before anything plays. */
+async function scanPage(tabId: number): Promise<void> {
+  const candidates = await scanTab(tabId);
+  const checked = await Promise.all(candidates.map((c) => checkCandidate(c.candidate, c.pageUrl)));
+  for (const hit of checked) {
+    if (!hit) continue;
+    const { candidate, found, pageUrl } = hit;
+    const earlier = [...(handling.get(tabId) ?? [])];
+    track(
+      tabId,
+      list({
+        tabId,
+        url: candidate.url,
+        found,
+        sentHeaders: { referer: pageUrl },
+        pageUrl,
+        earlier,
+        extra: { sourceKind: "page", title: candidate.title, thumbnail: candidate.thumbnail, durationSec: candidate.durationSec },
+      }),
+    );
+  }
+}
+
+chrome.webNavigation.onCompleted.addListener((d) => {
+  if (d.frameId === 0) void scanPage(d.tabId);
+});
+
+chrome.webNavigation.onHistoryStateUpdated.addListener((d) => {
+  if (d.frameId === 0) setTimeout(() => void scanPage(d.tabId), RESCAN_DELAY_MS);
+});
 
 /** Title and thumbnail, read from the page itself. */
 async function readPageMeta(tabId: number): Promise<void> {

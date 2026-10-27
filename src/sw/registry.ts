@@ -25,7 +25,16 @@ export function mergeMedia(list: MediaItem[], item: MediaItem): { list: MediaIte
       sizeBytes: old.sizeBytes ?? item.sizeBytes,
       supportsRanges: old.supportsRanges || item.supportsRanges,
       serverFilename: old.serverFilename ?? item.serverFilename,
-      sentHeaders: Object.keys(old.sentHeaders).length ? old.sentHeaders : item.sentHeaders,
+      // The player's own request carries the cookies a page-declared URL lacks.
+      sentHeaders:
+        old.sourceKind === "page" && item.sourceKind === "sniffer"
+          ? item.sentHeaders
+          : Object.keys(old.sentHeaders).length
+            ? old.sentHeaders
+            : item.sentHeaders,
+      sourceKind: old.sourceKind === "sniffer" || item.sourceKind === "sniffer" ? "sniffer" : "page",
+      title: old.title ?? item.title,
+      thumbnail: old.thumbnail ?? item.thumbnail,
       variants: old.variants ?? item.variants,
       childUrls: old.childUrls ?? item.childUrls,
       durationSec: old.durationSec ?? item.durationSec,
@@ -33,7 +42,7 @@ export function mergeMedia(list: MediaItem[], item: MediaItem): { list: MediaIte
       subtitles: old.subtitles ?? item.subtitles,
       hasDrm: old.hasDrm || item.hasDrm,
     };
-    for (const key of ["variants", "childUrls", "durationSec", "isLive", "subtitles"] as const) {
+    for (const key of ["variants", "childUrls", "durationSec", "isLive", "subtitles", "title", "thumbnail"] as const) {
       if (merged[key] === undefined) delete merged[key];
     }
     const changed = JSON.stringify(merged) !== JSON.stringify(old);

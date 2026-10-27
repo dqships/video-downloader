@@ -16,7 +16,7 @@ downloaded.
 | 2. HLS (m3u8), AES-128, quality picker, remux to MP4 | Done |
 | 3. DASH (mpd), audio-only | Done |
 | 4. Live recording, subtitles, DRM detection everywhere | Done |
-| 5. Site extractors (Vimeo, Facebook, Instagram, Kick, ...) | Next |
+| 5. Media declared in page markup; site extractors (Vimeo, Facebook, Instagram, Kick, ...) | In progress |
 | 6. MSE fallback, settings, history | Planned |
 | 7. YouTube | Not planned (Chrome Web Store policy) |
 
@@ -77,6 +77,12 @@ extension's reload button.
   when a player hands a media element DRM keys (EME) and the popup warns on
   that page's streams. Capability probes alone don't count, since players
   probe for clear video too.
+- **Page-declared media** (`src/shared/page-media.ts`, `src/sw/page-probe.ts`):
+  after each page load (and each single-page-app route change) the page's
+  JSON-LD VideoObjects, Open Graph / Twitter player tags and `<video src>` are
+  read, and each URL is checked with a one-byte request, so a video is listed
+  with its own title before it plays. When the player later requests it, its
+  real headers (cookies included) replace the guessed ones.
 - **Popup** (`src/ui/`): reads storage and sends commands. It holds no state of
   its own. It is built from the shared Vidzilla design system (`design/`,
   `brand/`, see `DESIGN.md`), the same tokens and components the website uses,
