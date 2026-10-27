@@ -22,8 +22,14 @@ body.vz-popup {
 }
 
 .vz-popup-head,
-.vz-popup-foot {
+.vz-popup-foot,
+.vz-ask {
   flex: none;
+}
+
+/* An ask waits behind the settings view. */
+.vz-popup.is-settings .vz-ask {
+  display: none;
 }
 
 /* Settings open in place of the strip and scroll the same way. */

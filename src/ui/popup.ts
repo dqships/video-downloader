@@ -8,6 +8,7 @@ import { buildFilename } from "../shared/naming";
 import { defaultSettings, loadSettings, type Settings } from "../shared/settings";
 import type { DownloadJob, MediaItem, TabMedia } from "../shared/types";
 import { setOpenMode } from "../shared/open-mode";
+import { bindAsk, bindAskButtons } from "./asks-view";
 import { icons } from "./icons";
 import { bindSettingsForm } from "./settings-form";
 
@@ -340,6 +341,7 @@ function showSettings(open: boolean): void {
   document.querySelector<HTMLElement>("#settings-view")!.hidden = !open;
   strip.hidden = open;
   document.querySelector<HTMLElement>(".vz-popup-foot")!.hidden = open;
+  document.body.classList.toggle("is-settings", open);
   button.innerHTML = open ? icons.close : icons.gear;
   button.title = open ? "Back to the videos" : "Settings";
   button.setAttribute("aria-label", button.title);
@@ -366,6 +368,8 @@ function setupControls(): void {
   settingsButton.addEventListener("click", () => showSettings(settingsButton.getAttribute("aria-expanded") !== "true"));
   showSettings(false);
   bindSettingsForm(document);
+  bindAskButtons(document);
+  bindAsk(document);
 
   const mode = document.querySelector<HTMLButtonElement>("#switch-mode")!;
   [mode.innerHTML, mode.title] = isPanel ? [icons.popup, "Switch to the popup"] : [icons.sidePanel, "Switch to the side panel"];
