@@ -449,3 +449,32 @@ test("records a live stream to its end on its own", async () => {
   await popup.close();
   await page.close();
 });
+
+test("settings change the saved name, and saved files are listed in history", async () => {
+  const options = await context.newPage();
+  await options.goto(`chrome-extension://${extensionId}/options.html`);
+  await options.locator('input[name="template"]').fill("%hostname %title");
+  await options.locator('input[name="subfolder"]').fill("Vidzilla");
+  await options.locator('input[name="subfolder"]').press("Tab");
+  await waitFor(
+    () => sw.evaluate(async () => (await chrome.storage.local.get("settings")).settings?.subfolder === "Vidzilla"),
+    "settings to save",
+  );
+  assert.match(await options.locator("#example").textContent(), /^Vidzilla\/example Northern Lights Over Tromsø\.mp4$/);
+
+  const { tabId, page } = await visit("/page.html");
+  const { job } = await downloadFromPopup(tabId);
+  assert.equal(job.state, "complete", job.error);
+  assert.equal(job.filename, "Vidzilla/127.0.0.1 Test Clip Fixture Site.mp4");
+
+  const row = options.locator(".vz-history-row").first();
+  await row.waitFor();
+  assert.equal(await row.locator(".vz-history-file").textContent(), "Vidzilla/127.0.0.1 Test Clip Fixture Site.mp4");
+  assert.match(await row.locator(".vz-history-meta").textContent(), /127\.0\.0\.1/);
+  await options.locator("#clear").click();
+  await options.locator("#history-empty").waitFor();
+
+  await sw.evaluate(() => chrome.storage.local.remove("settings"));
+  await options.close();
+  await page.close();
+});

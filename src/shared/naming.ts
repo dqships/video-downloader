@@ -22,6 +22,8 @@ export function siteLabel(url: string): string {
   } catch {
     return "";
   }
+  // An address has no site name to pick out.
+  if (/^[\d.]+$/.test(host) || host.includes(":") || host.startsWith("[")) return host;
   const parts = host.replace(/^www\d*\./, "").split(".");
   if (parts.length === 1) return parts[0] ?? "";
   // Treat "co.uk", "com.au" and similar as one suffix.

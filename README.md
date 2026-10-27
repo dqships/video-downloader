@@ -16,8 +16,8 @@ downloaded.
 | 2. HLS (m3u8), AES-128, quality picker, remux to MP4 | Done |
 | 3. DASH (mpd), audio-only | Done |
 | 4. Live recording, subtitles, DRM detection everywhere | Done |
-| 5. Media declared in page markup; site extractors (Vimeo, Facebook, Instagram, Kick, ...) | In progress |
-| 6. MSE fallback, settings, history | Planned |
+| 5. Media declared in page markup; site extractors (Twitch clips, X) | Done |
+| 6. Settings, history; MSE fallback | In progress |
 | 7. YouTube | Not planned (Chrome Web Store policy) |
 
 Live HLS streams record until they end or you press stop; live DASH recording
@@ -87,6 +87,11 @@ extension's reload button.
   detection, never replacing it. Twitch clips offer every height the CDN
   has; X names each video after its own post and lists the page's main post
   first. Titles drop the site's name (`src/shared/titles.ts`).
+- **Settings and history** (`src/ui/options.*`, `src/shared/history.ts`):
+  the gear in the popup opens a page for the filename template, length,
+  folder and save dialog, and a list of saved files (show in folder, open
+  the page it came from). History lives in `chrome.storage.local`, capped
+  at 300 entries.
 - **Popup** (`src/ui/`): reads storage and sends commands. It holds no state of
   its own. It is built from the shared Vidzilla design system (`design/`,
   `brand/`, see `DESIGN.md`), the same tokens and components the website uses,
