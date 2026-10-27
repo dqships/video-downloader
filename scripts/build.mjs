@@ -13,9 +13,15 @@ mkdirSync(out, { recursive: true });
 
 const copyStatic = () => {
   cpSync(join(root, "src/manifest.json"), join(out, "manifest.json"));
-  for (const f of ["popup.html", "popup.css", "tokens.css"]) cpSync(join(root, "src/ui", f), join(out, f));
+  for (const f of ["popup.html", "popup.css"]) cpSync(join(root, "src/ui", f), join(out, f));
+  // The shared design system: tokens, components and the bundled font.
+  for (const f of ["tokens.css", "components.css", "fonts"]) {
+    cpSync(join(root, "design", f), join(out, "design", f), { recursive: true });
+  }
+  for (const f of ["mark.svg", "mark-dark.svg", "icon-16.png", "icon-32.png", "icon-48.png", "icon-128.png"]) {
+    cpSync(join(root, "brand", f), join(out, "brand", f));
+  }
   cpSync(join(root, "src/offscreen/offscreen.html"), join(out, "offscreen.html"));
-  cpSync(join(root, "assets/icons"), join(out, "icons"), { recursive: true });
 };
 
 const options = {
@@ -31,6 +37,7 @@ const options = {
   target: "chrome116",
   sourcemap: true,
   logLevel: "info",
+  loader: { ".svg": "text" },
   plugins: [{ name: "static", setup: (b) => b.onEnd(copyStatic) }],
 };
 

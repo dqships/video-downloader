@@ -51,7 +51,9 @@ extension's reload button.
   resumes with Range requests after network errors, then hands back a `blob:`
   URL that `chrome.downloads` saves under the chosen filename.
 - **Popup** (`src/ui/`): reads storage and sends commands. It holds no state of
-  its own.
+  its own. It is built from the shared Vidzilla design system (`design/`,
+  `brand/`, see `DESIGN.md`), the same tokens and components the website uses,
+  so the two can't drift apart.
 
 ## Tests
 
