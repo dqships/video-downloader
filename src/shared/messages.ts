@@ -22,6 +22,10 @@ export const storageKeys = {
   settings: "settings",
   history: "history",
   asks: "asks",
+  /** House ad schedule state (shared/ads.ts AdState). */
+  ads: "ads",
+  /** The ad list last fetched from the website, with when. */
+  adFeed: "adFeed",
 } as const;
 
 export function sendCommand(cmd: Command): Promise<CommandResult> {

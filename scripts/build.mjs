@@ -30,6 +30,8 @@ const copyStatic = () => {
     cpSync(join(root, "brand", f), join(out, "brand", f));
   }
   cpSync(join(root, "src/offscreen/offscreen.html"), join(out, "offscreen.html"));
+  // The house ad list, used until the first fetch from the website works.
+  cpSync(join(root, "site/ads.json"), join(out, "ads.json"));
   cpSync(join(root, "src/capture/capture.html"), join(out, "capture.html"));
 };
 
