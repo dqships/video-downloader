@@ -29,10 +29,21 @@ Do this first: the store listing needs the privacy policy's address.
    repository.
 2. Leave the settings as Vercel reads them from `vercel.json` (Framework:
    Other, build `pnpm site`, output `site-dist`) and press **Deploy**.
-3. Optional: under **Settings → Domains**, add your own domain.
+3. Under **Settings → Domains**, add your own domain. Put the same address
+   in `site/pages.mjs` (`origin`, now a placeholder), so canonical links, the
+   sitemap and `llms.txt` point at it, and push.
 
 The privacy policy is then at `https://<your-domain>/privacy`. Every push to
 `main` redeploys the site.
+
+To check the deploy (the markdown middleware only runs on Vercel, not in a
+plain static preview):
+
+```sh
+curl -sI https://<your-domain>/                # 200, with the security headers and Vary: Accept
+curl -s -H "Accept: text/markdown" https://<your-domain>/pricing   # the page as markdown
+curl -sI https://<your-domain>/no-such-page    # 404
+```
 
 ## 2. Submit the extension
 

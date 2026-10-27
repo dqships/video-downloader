@@ -208,7 +208,10 @@ Durations: `--duration-base` 540 ms for movement (frames arriving, progress),
 ## Illustration and image style
 
 Build assets in code first: the mark, film strips, frames, edge print and the
-countdown leader are all drawn with CSS and SVG. If an image ever has to be
+countdown leader are all drawn with CSS and SVG. The site's social preview
+(`brand/og-image.png`, 1200 × 630) is too: the lockup and the hero line on the
+lightbox above a strip of film with edge print, rendered from the tokens by
+`scripts/make-og.mjs`. If an image ever has to be
 generated (Replicate), use this prompt and change only the scene:
 
 > Flat logo-modernism illustration, 1960s corporate identity style. Built only

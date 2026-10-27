@@ -140,7 +140,20 @@ extension's reload button.
   browser with the same download worker the extension uses, when the site
   hosting it allows other websites to read its files (CORS). Web pages, sites
   that don't allow it, DASH and YouTube get a plain explanation instead; there
-  is no server. `pnpm site` builds a deployable copy into `site-dist/`.
+  is no server. `pnpm site` builds a deployable copy into `site-dist/`, and
+  `pnpm site:serve` serves it the way Vercel will.
+- **Site launch setup** (`site/pages.mjs`, `scripts/build-site.mjs`,
+  `middleware.js`, `vercel.json`): the build adds each page's canonical, Open
+  Graph, Twitter and JSON-LD tags and the shared header and footer
+  (`site/partials/`), writes `robots.txt`, `sitemap.xml` and `llms.txt`, and
+  copies each page's markdown twin (`site/md/`). It fails if a title isn't
+  30–60 characters, a description isn't 120–160, a page has other than one
+  `<h1>`, or an inline script isn't allowed by the CSP in `vercel.json`.
+  `vercel.json` sets the security headers (HSTS, CSP, X-Frame-Options and
+  friends) and `Vary: Accept`; `middleware.js` answers `Accept: text/markdown`
+  with the page's markdown at the same URL, or a markdown 404. Missing pages get
+  `404.html` with a real 404 status. The domain lives in `site/pages.mjs`
+  (`origin`); `brand/og-image.png` is made by `pnpm og`.
 
 ## Tests
 
@@ -160,4 +173,8 @@ recording (HLS and DASH) stopped by hand and to the end; subtitles from HLS, DAS
 track; the EME warning),
 Referer replay for a file and for every segment of a stream, and that live and
 DRM streams stay unavailable. `tests/e2e/site.test.mjs` does the same for the
-website's paste box, with the media on a separate origin.
+website's paste box, with the media on a separate origin and the site served
+with its real headers and CSP. `tests/e2e/site-launch.test.mjs` checks the
+launch setup: every page's head, the security headers, `robots.txt`,
+`sitemap.xml` and `llms.txt` (every link resolves), markdown negotiation, real
+404s in HTML and markdown, and no console errors on any page.

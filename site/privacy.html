@@ -3,28 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Vidzilla privacy policy</title>
-    <meta name="description" content="What the Vidzilla Chrome extension reads, what it keeps, and what it never sends." />
-    <link rel="icon" href="../brand/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="../design/tokens.css" />
-    <link rel="stylesheet" href="../design/components.css" />
-    <link rel="stylesheet" href="site.css" />
-    <script>
-      try {
-        const t = localStorage.getItem("vz-theme");
-        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
-      } catch {}
-    </script>
+    <title>Vidzilla privacy policy: what the extension reads</title>
+    <meta
+      name="description"
+      content="What the Vidzilla Chrome extension reads, what it keeps on your computer, and what it never sends. No servers, no accounts, no analytics, no ads."
+    />
+    <!-- vz:meta -->
+    <!-- vz:assets -->
   </head>
   <body>
-    <header class="top">
-      <a class="top-logo" href="index.html" aria-label="Vidzilla home">
-        <svg class="top-mark" aria-hidden="true"><use href="../brand/symbols.svg#vz-mark" /></svg>
-        <svg class="top-word" aria-hidden="true"><use href="../brand/symbols.svg#vz-wordmark" /></svg>
-      </a>
-    </header>
+    <!-- vz:header -->
 
-    <main class="prose">
+    <main id="main" class="prose">
       <h1 class="section-title">Privacy policy</h1>
       <p class="vz-edge">Effective 27 October 2026</p>
 
@@ -79,13 +69,13 @@
 
       <h2 class="prose-head">Changes and contact</h2>
       <p>
-        If this policy changes, the new version will be posted here with a new effective date. Questions go through the
-        support link on Vidzilla's Chrome Web Store listing.
+        If this policy changes, the new version will be posted here with a new effective date. Questions about privacy
+        go through the <a href="/contact">contact page</a>.
       </p>
     </main>
 
-    <footer class="foot">
-      <p class="foot-links"><a href="index.html">Back to Vidzilla</a></p>
-    </footer>
+    <!-- vz:footer -->
+
+    <script type="module" src="/page.js"></script>
   </body>
 </html>

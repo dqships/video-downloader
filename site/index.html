@@ -3,29 +3,19 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Vidzilla: save the video you're watching</title>
+    <title>Vidzilla: save the video you're watching in Chrome</title>
     <meta
       name="description"
-      content="Vidzilla is a Chrome extension that finds the video playing on a page and saves it to your computer as a file, at the quality the site sent."
+      content="Vidzilla is a free Chrome extension that finds the video playing on a page and saves it to your computer as a file, at the quality the site sent."
     />
-    <link rel="icon" href="../brand/favicon.svg" type="image/svg+xml" />
-    <link rel="preload" href="../design/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="../design/tokens.css" />
-    <link rel="stylesheet" href="../design/components.css" />
-    <link rel="stylesheet" href="site.css" />
-    <script>
-      // Apply a saved theme before first paint. Falls back to the system theme.
-      try {
-        const t = localStorage.getItem("vz-theme");
-        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
-      } catch {}
-    </script>
+    <!-- vz:meta -->
+    <!-- vz:assets -->
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
 
     <header class="top">
-      <a class="top-logo" href="#" aria-label="Vidzilla home">
+      <a class="top-logo" href="/" aria-label="Vidzilla home">
         <svg class="top-mark" aria-hidden="true"><use href="../brand/symbols.svg#vz-mark" /></svg>
         <svg class="top-word" aria-hidden="true"><use href="../brand/symbols.svg#vz-wordmark" /></svg>
       </a>
@@ -322,22 +312,9 @@
       </section>
     </main>
 
-    <footer class="foot">
-      <a class="foot-logo" href="#" aria-label="Vidzilla home">
-        <svg class="top-mark" aria-hidden="true"><use href="../brand/symbols.svg#vz-mark" /></svg>
-        <svg class="top-word" aria-hidden="true"><use href="../brand/symbols.svg#vz-wordmark" /></svg>
-      </a>
-      <p class="foot-note">
-        Vidzilla saves what your browser already plays. Respect the sites you save from.
-      </p>
-      <p class="foot-links">
-        <a href="https://github.com/dqships/video-downloader">Source <svg aria-hidden="true"><use href="../design/icons.svg#i-arrow.up.right" /></svg></a>
-        <a href="privacy.html">Privacy</a>
-        <a href="https://github.com/dqships/video-downloader/blob/main/DESIGN.md">Design system <svg aria-hidden="true"><use href="../design/icons.svg#i-arrow.up.right" /></svg></a>
-      </p>
-    </footer>
+    <!-- vz:footer -->
 
-    <script type="module" src="site.js"></script>
-    <script type="module" src="paste.js"></script>
+    <script type="module" src="/site.js"></script>
+    <script type="module" src="/paste.js"></script>
   </body>
 </html>
