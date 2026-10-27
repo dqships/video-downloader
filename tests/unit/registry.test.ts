@@ -111,3 +111,39 @@ describe("mergeMedia with player recordings", () => {
     expect(mergeMedia([item({ id: "d", type: "dash", url: "https://cdn.x.net/manifest.mpd" })], other).changed).toBe(true);
   });
 });
+
+describe("mergeMedia when the page plays another video", () => {
+  const at = (s: number) => 1_000_000 + s * 1000;
+  const dash = (id: string, s: number, over: Partial<MediaItem> = {}) =>
+    item({ id, type: "dash", url: `https://cdn.x/${id}/manifest.mpd`, detectedAt: at(s), ...over });
+
+  it("lists only the video playing now when the next one autoplays", () => {
+    let list = mergeMedia([], dash("first", 0)).list;
+    list = mergeMedia(list, dash("first-audio", 2)).list;
+    list = mergeMedia(list, dash("second", 95)).list;
+    expect(list.map((m) => m.id)).toEqual(["second"]);
+    list = mergeMedia(list, dash("third", 200)).list;
+    expect(list.map((m) => m.id)).toEqual(["third"]);
+  });
+
+  it("keeps what a player loads together in its first seconds", () => {
+    let list = mergeMedia([], dash("video", 0)).list;
+    list = mergeMedia(list, item({ id: "file", sizeBytes: 300 * MB, detectedAt: at(4) })).list;
+    expect(list.map((m) => m.id)).toEqual(["video", "file"]);
+  });
+
+  it("keeps the files a page declares until a second video plays", () => {
+    const declared = item({ id: "declared", sourceKind: "page", url: "https://cdn.x/1080.mp4", sizeBytes: 300 * MB, detectedAt: at(0) });
+    let list = mergeMedia([declared], dash("first", 60)).list;
+    expect(list.map((m) => m.id)).toEqual(["declared", "first"]);
+    list = mergeMedia(list, dash("second", 160)).list;
+    expect(list.map((m) => m.id)).toEqual(["second"]);
+  });
+
+  it("keeps a video that is downloading or being recorded", () => {
+    const player = item({ id: "player", type: "mse", recording: true, detectedAt: at(0) });
+    let list = mergeMedia([player], dash("first", 1)).list;
+    list = mergeMedia(list, dash("second", 90), new Set(["first"])).list;
+    expect(list.map((m) => m.id)).toEqual(["player", "first", "second"]);
+  });
+});

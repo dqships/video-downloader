@@ -143,7 +143,7 @@ async function list(input: {
   };
   if (item.durationSec === undefined) delete item.durationSec;
   for (const [key, value] of Object.entries(await enrich(item))) if (value !== undefined) Object.assign(item, { [key]: value });
-  const added = await registry.add(item);
+  const added = await registry.add(item, await downloads.busyMedia(tabId));
   const drm = pendingDrm.get(tabId);
   if (added && drm) {
     pendingDrm.delete(tabId);

@@ -287,6 +287,33 @@ test("saves only the sound of an HLS stream as .m4a", async () => {
   await downloadStream("/hls-multi.html", pick("Audio only"), { audioOnly: true });
 });
 
+test("labels a stream by the file it saves, and leaves frames in place while it downloads", async () => {
+  const { tabId, page } = await visit("/hls-multi.html");
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
+  const frame = popup.locator(".vz-frame").first();
+  await frame.waitFor();
+  assert.equal(await frame.locator(".vz-badge").textContent(), "MP4");
+  await pick("Audio only")(popup);
+  assert.equal(await frame.locator(".vz-badge").textContent(), "M4A");
+  assert.match(await frame.locator(".vz-frame-name").inputValue(), /\.m4a$/);
+  await pick("360p")(popup);
+  assert.equal(await frame.locator(".vz-badge").textContent(), "MP4");
+
+  // Count frames put back in the strip and arrival animations replayed: each one is a flash.
+  await popup.evaluate(() => {
+    window.__moves = 0;
+    window.__animations = 0;
+    new MutationObserver((records) => (window.__moves += records.length)).observe(document.getElementById("strip"), { childList: true });
+    document.getElementById("strip").addEventListener("animationstart", () => window.__animations++);
+  });
+  await frame.locator(".download").click();
+  await frame.locator(".vz-frame-note.is-done").waitFor({ timeout: 60000 });
+  assert.deepEqual(await popup.evaluate(() => [window.__moves, window.__animations]), [0, 0]);
+  await popup.close();
+  await page.close();
+});
+
 test("downloads DASH and saves the picked quality", async () => {
   const { tab, file } = await downloadStream("/dash.html", async (popup) => {
     const select = popup.locator(".vz-frame .vz-select select").first();
@@ -580,7 +607,7 @@ test("records a live DASH stream to its end on its own", async () => {
   await page.close();
 });
 
-test("settings change the saved name, and saved files are listed in history", async () => {
+test("settings change the saved name, and saved files are listed in the popup's Saved files view", async () => {
   const options = await context.newPage();
   await options.goto(`chrome-extension://${extensionId}/options.html`);
   await options.locator('input[name="template"]').fill("%hostname %title");
@@ -591,20 +618,36 @@ test("settings change the saved name, and saved files are listed in history", as
     "settings to save",
   );
   assert.match(await options.locator(".vz-settings-example").textContent(), /^Vidzilla\/example Northern Lights Over Tromsø\.mp4$/);
+  // The settings page is settings only; saved files live in the popup.
+  assert.equal(await options.locator("#history").count(), 0);
 
   const { tabId, page } = await visit("/page.html");
   const { job } = await downloadFromPopup(tabId);
   assert.equal(job.state, "complete", job.error);
   assert.equal(job.filename, "Vidzilla/127.0.0.1 Test Clip Fixture Site.mp4");
 
-  const row = options.locator(".vz-history-row").first();
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}&narrow`);
+  await popup.locator(".vz-frame").first().waitFor();
+  const pages = context.pages().length;
+  await popup.click("#open-history");
+  assert.equal(context.pages().length, pages, "no new tab");
+  assert.ok(await popup.locator("#saved-view").isVisible());
+  assert.equal(await popup.locator("#strip").isVisible(), false);
+  const row = popup.locator(".vz-history-row").first();
   await row.waitFor();
   assert.equal(await row.locator(".vz-history-file").textContent(), "Vidzilla/127.0.0.1 Test Clip Fixture Site.mp4");
   assert.match(await row.locator(".vz-history-meta").textContent(), /127\.0\.0\.1/);
-  await options.locator("#clear").click();
-  await options.locator("#history-empty").waitFor();
+  await popup.locator("#clear-history").click();
+  await popup.locator("#history-empty").waitFor();
+  // The head button leads back to the videos.
+  assert.equal(await popup.locator("#toggle-settings").getAttribute("title"), "Back to the videos");
+  await popup.click("#toggle-settings");
+  assert.ok(await popup.locator("#strip").isVisible());
+  assert.equal(await popup.locator("#saved-view").isVisible(), false);
 
   await sw.evaluate(() => chrome.storage.local.remove("settings"));
+  await popup.close();
   await options.close();
   await page.close();
 });

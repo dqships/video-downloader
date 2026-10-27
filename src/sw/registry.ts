@@ -9,6 +9,12 @@ const MAX_PER_TYPE = 10;
 /** With a DASH manifest on the page, small direct files are its segments. */
 const DASH_SEGMENT_BYTES = 20 * 1024 * 1024;
 const WRITE_DELAY_MS = 300;
+/**
+ * A player loads one stream per video, along with its tracks and mirrors in
+ * the first seconds. Media that arrives this long after the last one means a
+ * new video started (BBC plays the next one when the first ends).
+ */
+export const NEW_VIDEO_GAP_MS = 15_000;
 
 function isLikelyDashSegment(item: MediaItem): boolean {
   return item.type === "http" && (item.sizeBytes ?? 0) < DASH_SEGMENT_BYTES;
@@ -29,8 +35,14 @@ function isMirror(a: MediaItem, b: MediaItem): boolean {
   }
 }
 
-/** Pure merge rules, kept apart from storage so they can be tested. */
-export function mergeMedia(list: MediaItem[], item: MediaItem): { list: MediaItem[]; changed: boolean } {
+/** What the page's player fetched; a player recording or the page's markup doesn't count. */
+const isPlayback = (m: MediaItem) => m.sourceKind === "sniffer" && m.type !== "mse";
+
+/**
+ * Pure merge rules, kept apart from storage so they can be tested. `busy`
+ * holds media with a download running, which is never dropped.
+ */
+export function mergeMedia(list: MediaItem[], item: MediaItem, busy: ReadonlySet<string> = new Set()): { list: MediaItem[]; changed: boolean } {
   const existing = list.findIndex((m) => m.id === item.id);
   if (existing >= 0) {
     const old = list[existing]!;
@@ -81,6 +93,12 @@ export function mergeMedia(list: MediaItem[], item: MediaItem): { list: MediaIte
   // A quality or audio playlist of a master we already list.
   if (list.some((m) => m.childUrls?.includes(item.url))) return { list, changed: false };
 
+  // A new video is playing: list only it, not every video the page played before.
+  const before = item.detectedAt - NEW_VIDEO_GAP_MS;
+  if (isPlayback(item) && list.some((m) => isPlayback(m) && m.detectedAt <= before)) {
+    list = list.filter((m) => m.detectedAt > before || m.recording || busy.has(m.id));
+  }
+
   let next = [...list, item];
   if (item.type === "dash") next = next.filter((m) => !isLikelyDashSegment(m));
   if (item.childUrls?.length) {
@@ -113,9 +131,9 @@ export class Registry {
   }
 
   /** Returns true when the item is new or changed something. */
-  async add(item: MediaItem): Promise<boolean> {
+  async add(item: MediaItem, busy?: ReadonlySet<string>): Promise<boolean> {
     const tab = (await this.get(item.tabId)) ?? { tabId: item.tabId, pageUrl: item.pageUrl, media: [] };
-    const { list, changed } = mergeMedia(tab.media, item);
+    const { list, changed } = mergeMedia(tab.media, item, busy);
     if (!changed) return false;
     this.put({ ...tab, media: list });
     return true;
