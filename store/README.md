@@ -7,7 +7,7 @@ the website on Vercel. You need Node 22.12 or later and pnpm 10.
 git clone https://github.com/dqships/video-downloader.git
 cd video-downloader
 pnpm install
-pnpm package        # builds and writes release/vidzilla-<version>.zip (1.0.1 now)
+pnpm package        # builds and writes release/vidzilla-<version>.zip (1.0.2 now)
 ```
 
 The images in this folder are ready to upload. `pnpm store-assets` makes them
@@ -49,7 +49,7 @@ curl -sI https://vidzilla.followusai.com/no-such-page    # 404
 ## 2. Submit the extension
 
 In the [developer dashboard](https://chrome.google.com/webstore/devconsole),
-press **New item** and upload `release/vidzilla-1.0.1.zip` (the version in `src/manifest.json`). Then fill in the
+press **New item** and upload `release/vidzilla-1.0.2.zip` (the version in `src/manifest.json`). Then fill in the
 tabs as below.
 
 ### Store listing
