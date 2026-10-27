@@ -57,7 +57,7 @@ test("every page has a complete head", async () => {
 
     const graph = JSON.parse(attr(html, /<script type="application\/ld\+json">(.*?)<\/script>/))["@graph"];
     const org = graph.find((n) => n["@type"] === "Organization");
-    assert.ok(org.contactPoint && org.sameAs.length, "Organization with contactPoint and sameAs");
+    assert.ok(org.contactPoint?.email && org.address && org.sameAs.length, "Organization with contactPoint, address and sameAs");
     assert.ok(graph.find((n) => n["@type"] === "WebApplication").offers);
 
     // Server-rendered: at least 500 characters of text in the raw HTML.

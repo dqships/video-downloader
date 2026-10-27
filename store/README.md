@@ -29,20 +29,21 @@ Do this first: the store listing needs the privacy policy's address.
    repository.
 2. Leave the settings as Vercel reads them from `vercel.json` (Framework:
    Other, build `pnpm site`, output `site-dist`) and press **Deploy**.
-3. Under **Settings → Domains**, add your own domain. Put the same address
-   in `site/pages.mjs` (`origin`, now a placeholder), so canonical links, the
-   sitemap and `llms.txt` point at it, and push.
+3. Under **Settings → Domains**, add `vidzilla.followusai.com` and set the
+   DNS record Vercel shows (a CNAME for `vidzilla` on `followusai.com`).
+   Canonical links, the sitemap and `llms.txt` already point there
+   (`origin` in `site/pages.mjs`).
 
-The privacy policy is then at `https://<your-domain>/privacy`. Every push to
+The privacy policy is then at `https://vidzilla.followusai.com/privacy`. Every push to
 `main` redeploys the site.
 
 To check the deploy (the markdown middleware only runs on Vercel, not in a
 plain static preview):
 
 ```sh
-curl -sI https://<your-domain>/                # 200, with the security headers and Vary: Accept
-curl -s -H "Accept: text/markdown" https://<your-domain>/pricing   # the page as markdown
-curl -sI https://<your-domain>/no-such-page    # 404
+curl -sI https://vidzilla.followusai.com/                # 200, with the security headers and Vary: Accept
+curl -s -H "Accept: text/markdown" https://vidzilla.followusai.com/pricing   # the page as markdown
+curl -sI https://vidzilla.followusai.com/no-such-page    # 404
 ```
 
 ## 2. Submit the extension
@@ -57,7 +58,8 @@ tabs as below.
 - **Summary** (from the manifest): Finds the video and audio a page plays and saves it to your computer.
 - **Category:** Tools
 - **Language:** English
-- **Homepage URL:** your Vercel address
+- **Homepage URL:** `https://vidzilla.followusai.com`
+- **Support email:** `support@followusai.com`
 - **Description:**
 
 ```
@@ -119,7 +121,7 @@ Please only save media you have the right to keep.
   kept on the device for the media list and history) and **Website content**
   (page titles and thumbnails). Then tick all three certifications: no sale
   of data, no use for unrelated purposes, no use for creditworthiness.
-- **Privacy policy URL:** `https://<your-domain>/privacy`
+- **Privacy policy URL:** `https://vidzilla.followusai.com/privacy`
 
 ### Distribution
 

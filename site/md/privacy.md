@@ -31,4 +31,4 @@ Vidzilla does not save video protected by DRM and does not try to get around it.
 
 ## Changes and contact
 
-If this policy changes, the new version will be posted here with a new effective date. Questions about privacy go through the [contact page]({{origin}}/contact).
+If this policy changes, the new version will be posted here with a new effective date. Questions about privacy go to [{{supportEmail}}](mailto:{{supportEmail}}) or the [contact page]({{origin}}/contact).
