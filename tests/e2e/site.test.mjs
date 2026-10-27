@@ -5,38 +5,19 @@
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { createReadStream, statSync } from "node:fs";
-import { createServer } from "node:http";
+import { statSync } from "node:fs";
 import { createRequire } from "node:module";
-import { extname, join, normalize } from "node:path";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { serveSite } from "../../scripts/serve-site.mjs";
 import { startServer } from "./server.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_PATH ?? "playwright");
 
-const siteDist = fileURLToPath(new URL("../../site-dist/", import.meta.url));
 const clip = fileURLToPath(new URL("../fixtures/media/clip.mp4", import.meta.url));
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".png": "image/png" };
 
 let site, shared, closed, browser, page;
-
-function serveSite() {
-  const server = createServer((req, res) => {
-    const path = new URL(req.url, "http://localhost").pathname;
-    const file = join(siteDist, normalize(path === "/" ? "index.html" : path).replace(/^(\.\.[/\\])+/, ""));
-    try {
-      statSync(file);
-    } catch {
-      res.writeHead(404).end();
-      return;
-    }
-    res.writeHead(200, { "Content-Type": TYPES[extname(file)] ?? "application/octet-stream" });
-    createReadStream(file).pipe(res);
-  });
-  return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve({ server, origin: `http://127.0.0.1:${server.address().port}` })));
-}
 
 function probe(file) {
   const out = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,height", "-of", "json", file]).toString());
