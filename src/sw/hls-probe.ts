@@ -38,10 +38,21 @@ function mediaFacts(pl: HlsMedia): Pick<HlsDetails, "durationSec" | "isLive" | "
   };
 }
 
-/** Never throws: an unreadable playlist just lists without details. */
-export async function probeHls(url: string, sent: Record<string, string>): Promise<HlsDetails> {
+/**
+ * Never throws: an unreadable playlist just lists without details. Returns
+ * null when the server answered with something that is not a playlist at
+ * all (ad servers reply to .m3u8 URLs with VAST XML), so it isn't listed.
+ */
+export async function probeHls(url: string, sent: Record<string, string>): Promise<HlsDetails | null> {
+  let text: string;
   try {
-    const pl = parseM3u8(await fetchWithReplay(url, sent), url);
+    text = await fetchWithReplay(url, sent);
+  } catch {
+    return {};
+  }
+  if (!text.trimStart().startsWith("#EXTM3U")) return null;
+  try {
+    const pl = parseM3u8(text, url);
     if (pl.kind === "media") {
       const variant: StreamVariant = { id: "0", label: "Original", url };
       return { variants: [variant], ...mediaFacts(pl) };
