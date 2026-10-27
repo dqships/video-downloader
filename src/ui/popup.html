@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vidzilla</title>
+    <link rel="stylesheet" href="design/tokens.css" />
+    <link rel="stylesheet" href="design/components.css" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body class="vz-popup">
+    <header class="vz-popup-head">
+      <svg class="vz-popup-mark" viewBox="4 14 88 76.21" aria-hidden="true">
+        <path fill="currentColor" d="M4 14H92L62.89 64.43L48 38.64L33.11 64.43Z" />
+        <path fill="currentColor" d="M48 48.64L60 69.43L48 90.21L36 69.43Z" />
+      </svg>
+      <h1 class="vz-popup-title">vidzilla</h1>
+      <p class="vz-popup-host vz-edge" id="page-host"></p>
+    </header>
+    <main id="strip" class="vz-strip" aria-live="polite"></main>
+    <template id="frame-template">
+      <article class="vz-frame">
+        <div class="vz-rail" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="vz-thumb"></div>
+        <div class="vz-frame-body">
+          <input class="vz-input vz-frame-name" type="text" spellcheck="false" aria-label="File name" />
+          <p class="vz-frame-meta"><span class="vz-badge"></span><span class="vz-select" hidden><select aria-label="Quality"></select></span><span class="meta-text"></span></p>
+          <p class="vz-frame-note" hidden></p>
+        </div>
+        <div class="vz-frame-actions">
+          <button class="vz-icon-btn copy" type="button" title="Copy link"></button>
+          <button class="vz-icon-btn vz-icon-btn--primary download" type="button" title="Download"></button>
+        </div>
+        <div class="vz-perf" hidden></div>
+      </article>
+    </template>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
