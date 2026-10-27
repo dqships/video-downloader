@@ -33,6 +33,10 @@ const copyStatic = () => {
   // The house ad list, used until the first fetch from the website works.
   cpSync(join(root, "site/ads.json"), join(out, "ads.json"));
   cpSync(join(root, "src/capture/capture.html"), join(out, "capture.html"));
+  // Licences: Vidzilla's own and those of the bundled third-party code.
+  cpSync(join(root, "LICENSE"), join(out, "licenses/LICENSE.txt"));
+  cpSync(join(root, "THIRD_PARTY_NOTICES.md"), join(out, "licenses/THIRD_PARTY_NOTICES.md"));
+  cpSync(join(root, "node_modules/mediabunny/LICENSE"), join(out, "licenses/mediabunny-LICENSE.txt"));
 };
 
 const options = {
