@@ -256,6 +256,35 @@ test("downloads DASH served as one indexed file per track", async () => {
   assert.deepEqual(tab.media.map((m) => m.type), ["dash"]);
 });
 
+test("downloads WebM DASH (VP9 and Opus) into an MP4 without re-encoding", async () => {
+  const { tabId, page, tab } = await visit("/dash-webm.html");
+  assert.deepEqual(tab.media[0].variants.map((v) => v.label), ["360p", "Audio only"]);
+  const { job, item } = await downloadFromPopup(tabId);
+  assert.equal(job.state, "complete", job.error);
+  assert.match(job.filename, /\.mp4$/);
+  const file = probe(item.filename);
+  assert.match(file.format, /mp4/);
+  assert.equal(file.video?.codec_name, "vp9");
+  assert.equal(file.audio?.codec_name, "opus");
+  assert.ok(Math.abs(file.duration - 6) < 0.5, `duration ${file.duration}`);
+  assert.equal(execFileSync("ffmpeg", ["-v", "error", "-i", item.filename, "-f", "null", "-"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }), "");
+  await page.close();
+});
+
+test("downloads one-file WebM DASH with Vorbis sound as a WebM", async () => {
+  const { tabId, page, tab } = await visit("/dash-webm-base.html");
+  assert.deepEqual(tab.media.map((m) => m.type), ["dash"]);
+  const { job, item } = await downloadFromPopup(tabId);
+  assert.equal(job.state, "complete", job.error);
+  assert.match(job.filename, /\.webm$/);
+  const file = probe(item.filename);
+  assert.match(file.format, /webm|matroska/);
+  assert.equal(file.video?.codec_name, "vp8");
+  assert.equal(file.audio?.codec_name, "vorbis");
+  assert.ok(Math.abs(file.duration - 6) < 0.5, `duration ${file.duration}`);
+  await page.close();
+});
+
 test("saves only the sound of a DASH stream as .m4a", async () => {
   await downloadStream("/dash.html", pick("Audio only"), { audioOnly: true });
 });

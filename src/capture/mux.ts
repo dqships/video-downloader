@@ -1,4 +1,4 @@
-// Joins what a page fed its player into a single file. Each SourceBuffer gives
+// Joins what a page fed its player, or the tracks of a WebM DASH stream, into a single file. Each SourceBuffer gives
 // one or more runs: an init segment followed by media segments, with a new run
 // whenever the player switches quality. Runs of one track are joined into one
 // track where the codec allows it; packets are copied as they are, shifted so
@@ -243,8 +243,12 @@ class Taken {
 }
 const EPSILON = 1e-3;
 
-async function gopsOf(run: Run): Promise<Gop[]> {
-  const gops: Gop[] = [];
+/** A run's frame groups in order, each handed out once the next one begins. */
+async function* readGops(run: Run): AsyncGenerator<Gop> {
+  let gop: Gop | undefined;
+  /** The packet before the newest one, for the length of a last block that has none. */
+  let previous: EncodedPacket | undefined;
+  let newest: EncodedPacket | undefined;
   for await (const raw of new EncodedPacketSink(run.track).packets()) {
     let packet = run.offset ? raw.clone({ timestamp: raw.timestamp + run.offset }) : raw;
     if (packet.type === "key" && run.inband) {
@@ -253,18 +257,26 @@ async function gopsOf(run: Run): Promise<Gop[]> {
       data.set(packet.data, run.inband.length);
       packet = packet.clone({ data });
     }
-    let gop = gops.at(-1);
     // WebM leaves the last block of a cluster without a duration: it lasts until the next one.
     if (gop && gop.packets.at(-1)!.duration === 0) settleDuration(gop, packet.timestamp);
-    if (packet.type === "key" || !gop) gops.push((gop = { start: packet.timestamp, end: packet.timestamp, packets: [] }));
+    if (packet.type === "key" || !gop) {
+      if (gop) yield gop;
+      gop = { start: packet.timestamp, end: packet.timestamp, packets: [] };
+    }
+    previous = newest;
+    newest = packet;
     gop.packets.push(packet);
     gop.end = Math.max(gop.end, packet.timestamp + packet.duration);
   }
-  const last = gops.at(-1);
-  if (last && last.packets.at(-1)!.duration === 0) {
-    const before = last.packets.at(-2) ?? gops.at(-2)?.packets.at(-1);
-    settleDuration(last, last.packets.at(-1)!.timestamp + (before?.duration ?? 0));
-  }
+  if (!gop) return;
+  const last = gop.packets.at(-1)!;
+  if (last.duration === 0 && previous) settleDuration(gop, last.timestamp + previous.duration);
+  yield gop;
+}
+
+async function gopsOf(run: Run): Promise<Gop[]> {
+  const gops: Gop[] = [];
+  for await (const gop of readGops(run)) gops.push(gop);
   return gops;
 }
 
@@ -300,8 +312,36 @@ async function timeline(runs: Run[]): Promise<Gop[]> {
   return kept.sort((a, b) => a.start - b.start);
 }
 
-/** `tracks`: per SourceBuffer, its runs in the order they were appended. */
-export async function muxCaptured(tracks: CapturedRun[][], onProgress?: (fraction: number) => void): Promise<MuxResult> {
+/** A track's frame groups in the order to write them, and the time they span. */
+interface Planned {
+  gops: AsyncIterable<Gop> | Gop[];
+  start: number;
+  end: number;
+}
+
+async function plan(runs: Run[]): Promise<Planned> {
+  if (runs.length === 1) {
+    // One run (a downloaded track) is written as it is read, without holding it.
+    const run = runs[0]!;
+    return { gops: readGops(run), start: run.start, end: (await run.track.computeDuration()) + run.offset };
+  }
+  const gops = await timeline(runs);
+  if (gops.length === 0) throw new Error("The player hadn't loaded any audio or video yet");
+  return { gops, start: gops[0]!.start, end: Math.max(...gops.map((g) => g.end)) };
+}
+
+export interface JoinResult {
+  ext: "mp4" | "webm" | "m4a";
+  durationSec: number;
+}
+
+/**
+ * Joins tracks into one file written to `target`. `tracks`: per track (a
+ * SourceBuffer, or a downloaded DASH representation), its runs in the order
+ * they were appended. With several video or audio tracks, the biggest of
+ * each is kept.
+ */
+export async function joinTracks(tracks: CapturedRun[][], target: StreamTarget, onProgress?: (fraction: number) => void): Promise<JoinResult> {
   const inputs: Input[] = [];
   try {
     const chosen: Run[][] = [];
@@ -316,17 +356,11 @@ export async function muxCaptured(tracks: CapturedRun[][], onProgress?: (fractio
     if (picked.length === 0) throw new Error("The player hadn't loaded any audio or video yet");
     const webm = picked.some((runs) => WEBM_ONLY.has(runs[0]!.codec));
     const hasVideo = picked.some(isVideo);
-    const timelines = await Promise.all(picked.map(timeline));
-    if (timelines.some((t) => t.length === 0)) throw new Error("The player hadn't loaded any audio or video yet");
+    const plans = await Promise.all(picked.map(plan));
 
-    const chunks: StreamTargetChunk[] = [];
-    const output = new Output({
-      format: webm ? new WebMOutputFormat() : new Mp4OutputFormat({ fastStart: false }),
-      target: new StreamTarget(new WritableStream<StreamTargetChunk>({ write: (c) => void chunks.push({ ...c, data: c.data.slice() }) })),
-    });
-
-    const base = Math.min(...timelines.map((t) => t[0]!.start));
-    const end = Math.max(...timelines.map((t) => Math.max(...t.map((g) => g.end)))) - base;
+    const output = new Output({ format: webm ? new WebMOutputFormat() : new Mp4OutputFormat({ fastStart: false }), target });
+    const base = Math.min(...plans.map((p) => p.start));
+    const end = Math.max(...plans.map((p) => p.end)) - base;
 
     const writers = picked.map((runs) => {
       const codec = runs[0]!.codec;
@@ -344,9 +378,9 @@ export async function muxCaptured(tracks: CapturedRun[][], onProgress?: (fractio
 
     let done = 0;
     await Promise.all(
-      timelines.map(async (gops, i) => {
+      plans.map(async ({ gops }, i) => {
         let first = true;
-        for (const gop of gops) {
+        for await (const gop of gops) {
           for (const packet of gop.packets) {
             const timestamp = Math.max(0, packet.timestamp - base);
             await writers[i]!(packet.clone({ timestamp }), first);
@@ -357,13 +391,22 @@ export async function muxCaptured(tracks: CapturedRun[][], onProgress?: (fractio
             onProgress?.(Math.min(1, done));
           }
         }
+        if (first) throw new Error("The player hadn't loaded any audio or video yet");
       }),
     );
     await output.finalize();
-    return { blob: assemble(chunks), ext: webm ? "webm" : hasVideo ? "mp4" : "m4a", durationSec: Math.max(0, end) };
+    return { ext: webm ? "webm" : hasVideo ? "mp4" : "m4a", durationSec: Math.max(0, end) };
   } finally {
     for (const input of inputs) input.dispose();
   }
+}
+
+/** A player recording, joined in memory (the capture page saves it as a blob). */
+export async function muxCaptured(tracks: CapturedRun[][], onProgress?: (fraction: number) => void): Promise<MuxResult> {
+  const chunks: StreamTargetChunk[] = [];
+  const target = new StreamTarget(new WritableStream<StreamTargetChunk>({ write: (c) => void chunks.push({ ...c, data: c.data.slice() }) }));
+  const { ext, durationSec } = await joinTracks(tracks, target, onProgress);
+  return { blob: assemble(chunks), ext, durationSec };
 }
 
 /** Positioned writes to one Blob (the MP4 writer goes back to fill in sizes). */

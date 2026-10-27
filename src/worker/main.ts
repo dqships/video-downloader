@@ -4,6 +4,7 @@
 /// <reference lib="webworker" />
 import type { FromWorker, ToWorker } from "../shared/worker-protocol";
 import { fetchFile } from "./fetch-file";
+import { fetchTracks } from "./fetch-tracks";
 import { recordLive } from "./record-live";
 import { remuxHls } from "./remux-hls";
 
@@ -26,7 +27,7 @@ async function purgeOpfs(): Promise<void> {
   }
 }
 
-type JobMessage = Extract<ToWorker, { type: "fetch-file" | "fetch-hls" | "record-live" }>;
+type JobMessage = Extract<ToWorker, { type: "fetch-file" | "fetch-hls" | "fetch-tracks" | "record-live" }>;
 
 async function runJob(msg: JobMessage): Promise<void> {
   const ctrl = new AbortController();
@@ -45,6 +46,15 @@ async function runJob(msg: JobMessage): Promise<void> {
             stop: stop.signal,
             audioOnly: msg.audioOnly,
             onProgress: (b, seconds) => post({ type: "progress", jobId: msg.jobId, bytes: b, seconds }),
+          })
+        : msg.type === "fetch-tracks"
+        ? await fetchTracks({
+            jobId: msg.jobId,
+            tracks: msg.tracks,
+            dir: root,
+            file,
+            signal: ctrl.signal,
+            onProgress: (b, fraction) => post({ type: "progress", jobId: msg.jobId, bytes: b, fraction }),
           })
         : msg.type === "fetch-hls"
         ? await remuxHls({
@@ -91,6 +101,7 @@ self.onmessage = async (e: MessageEvent<ToWorker>) => {
   switch (msg.type) {
     case "fetch-file":
     case "fetch-hls":
+    case "fetch-tracks":
     case "record-live":
       void runJob(msg);
       break;

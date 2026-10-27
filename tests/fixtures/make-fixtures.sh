@@ -132,3 +132,23 @@ TTML
 sed 's#</Period>#<AdaptationSet contentType="text" mimeType="application/ttml+xml" lang="de"><Label>Deutsch</Label><Representation id="ttml" bandwidth="1000"><BaseURL>../subs/de.ttml</BaseURL></Representation></AdaptationSet></Period>#' \
   "$out/dash/manifest.mpd" > "$out/dash/subs.mpd"
 printf 'WEBVTT\n\n00:00:01.000 --> 00:00:02.500\nBonjour\n' > "$out/subs/page.vtt"
+
+# WebM DASH: VP9 and Opus in numbered WebM segments, and a VP8/Vorbis pair as
+# one WebM file per track (SegmentBase, Cues index), the way vkvideo serves it.
+rm -rf "$out/dash-webm" "$out/dash-webm-base"
+mkdir -p "$out/dash-webm" "$out/dash-webm-base"
+ff -i "$out/clip.mp4" -map 0:v -map 0:a -c:v libvpx-vp9 -b:v 600k -deadline realtime -cpu-used 8 -g 60 -keyint_min 60 -c:a libopus -b:a 96k \
+  -f dash -dash_segment_type webm -seg_duration 2 -use_timeline 0 -use_template 1 -adaptation_sets "id=0,streams=v id=1,streams=a" \
+  -init_seg_name 'init-$RepresentationID$.webm' -media_seg_name 'chunk-$RepresentationID$-$Number%05d$.webm' \
+  "$out/dash-webm/manifest.mpd"
+ff -i "$out/clip.mp4" -map 0:v -c:v libvpx -b:v 600k -deadline realtime -cpu-used 8 -g 60 -dash 1 "$out/dash-webm-base/video.webm"
+ff -i "$out/clip.mp4" -map 0:a -c:a libvorbis -b:a 96k -dash 1 "$out/dash-webm-base/audio.webm"
+cat > "$out/dash-webm-base/manifest.mpd" <<'MPD'
+<?xml version="1.0" encoding="utf-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" type="static" mediaPresentationDuration="PT6.0S" profiles="urn:webm:dash:profile:webm-on-demand:2012">
+  <Period>
+    <AdaptationSet mimeType="video/webm" codecs="vp8"><Representation id="v" bandwidth="600000" width="640" height="360"><BaseURL>video.webm</BaseURL><SegmentBase indexRange="0-0"/></Representation></AdaptationSet>
+    <AdaptationSet mimeType="audio/webm" codecs="vorbis"><Representation id="a" bandwidth="96000"><BaseURL>audio.webm</BaseURL><SegmentBase indexRange="0-0"/></Representation></AdaptationSet>
+  </Period>
+</MPD>
+MPD
