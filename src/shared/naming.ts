@@ -120,3 +120,19 @@ export function asciiFilename(path: string): string {
     })
     .join("/");
 }
+
+const MIME_BY_EXT: Record<string, string> = {
+  mp4: "video/mp4", m4v: "video/x-m4v", webm: "video/webm", mkv: "video/x-matroska", mov: "video/quicktime",
+  mpg: "video/mpeg", mpeg: "video/mpeg", ogv: "video/ogg", flv: "video/x-flv", "3gp": "video/3gpp", avi: "video/x-msvideo",
+  ts: "video/mp2t", m4a: "audio/mp4", mp3: "audio/mpeg", weba: "audio/webm", ogg: "audio/ogg", oga: "audio/ogg",
+  opus: "audio/ogg", flac: "audio/flac", wav: "audio/wav", aac: "audio/aac",
+};
+
+/**
+ * The type to give a saved file's blob. Chrome sniffs a blob with no type as
+ * text/plain and swaps the name's extension for .txt.
+ */
+export function mimeForFilename(name: string): string {
+  const ext = /\.([a-z0-9]{1,5})$/i.exec(name)?.[1]?.toLowerCase();
+  return (ext && MIME_BY_EXT[ext]) || "application/octet-stream";
+}

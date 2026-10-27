@@ -13,6 +13,7 @@ import gearshape from "../../design/icons/gearshape.svg";
 import trash from "../../design/icons/trash.svg";
 import film from "../../design/icons/film.svg";
 import lock from "../../design/icons/lock.svg";
+import rectangleInsetTopright from "../../design/icons/rectangle.inset.topright.filled.svg";
 import recordCircle from "../../design/icons/record.circle.svg";
 import sidebarRight from "../../design/icons/sidebar.right.svg";
 import stopFill from "../../design/icons/stop.fill.svg";
@@ -34,6 +35,7 @@ export const icons = {
   gear: gearshape,
   clock,
   sidePanel: sidebarRight,
+  popup: rectangleInsetTopright,
   trash,
   external: arrowUpRight,
   waveform,

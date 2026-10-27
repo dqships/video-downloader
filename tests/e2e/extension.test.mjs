@@ -64,6 +64,7 @@ async function downloadFromPopup(tabId, prepare = async () => {}) {
     60000,
   );
   const [item] = await sw.evaluate((id) => chrome.downloads.search({ id }), job.chromeDownloadId);
+  if (item) assert.notEqual(item.mime, "text/plain", "saved file is typed, so Chrome keeps its extension");
   await popup.close();
   return { job, item, popup };
 }
@@ -138,6 +139,8 @@ test("popup lists the media and the download saves a playable file", async () =>
   // Playwright reroutes browser downloads into its own folder under a random
   // name, so check the name we asked for and probe the file where it landed.
   assert.equal(job.filename, "Test Clip Fixture Site.mp4");
+  // An untyped blob is sniffed as text/plain and Chrome renames the file .txt.
+  assert.equal(item.mime, "video/mp4");
   const duration = Number(
     execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", item.filename]).toString(),
   );
@@ -154,7 +157,7 @@ test("popup keeps its width when Chrome opens it small, with head and foot contr
   await popup.locator(".vz-frame").first().waitFor();
   assert.equal(await popup.evaluate(() => document.body.getBoundingClientRect().width), 380);
   await popup.setViewportSize({ width: 380, height: 600 });
-  for (const id of ["#open-panel", "#open-options", "#open-folder", "#open-history", "#clear-list"]) {
+  for (const id of ["#switch-mode", "#toggle-settings", "#open-folder", "#open-history", "#clear-list"]) {
     assert.ok(await popup.locator(id).isVisible(), `${id} visible`);
   }
   await popup.close();
@@ -169,10 +172,36 @@ test("side panel shows the active tab's media and the same controls", async () =
   await panel.locator(".vz-frame").first().waitFor();
   assert.ok(await panel.locator("#open-folder").isVisible());
   assert.ok(await panel.locator(".vz-frame .download").first().isVisible());
-  // Already in the panel: no button to open it again.
-  assert.equal(await panel.locator("#open-panel").isVisible(), false);
+  assert.equal(await panel.locator("#switch-mode").getAttribute("title"), "Switch to the popup");
   assert.ok(await panel.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  // An open side panel stands in for the popup, and the choice is saved.
+  await waitFor(() => sw.evaluate(async () => (await chrome.action.getPopup({})) === ""), "toolbar opens the panel");
+  assert.equal((await sw.evaluate(() => chrome.storage.local.get("settings"))).settings.sidePanel, true);
   await panel.close();
+  await page.close();
+});
+
+test("settings open inside the popup, and the side panel toggle there switches what the toolbar opens", async () => {
+  const { tabId, page } = await visit("/page.html");
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}&narrow`);
+  await popup.locator(".vz-frame").first().waitFor();
+  const pages = context.pages().length;
+  await popup.click("#toggle-settings");
+  assert.ok(await popup.locator("#settings-view").isVisible());
+  assert.equal(await popup.locator("#strip").isVisible(), false);
+  assert.equal(context.pages().length, pages, "no new tab");
+
+  const toggle = popup.locator('#settings-view input[name="sidePanel"]');
+  if (await toggle.isChecked()) await toggle.click();
+  await waitFor(() => sw.evaluate(async () => (await chrome.action.getPopup({})).endsWith("popup.html")), "toolbar opens the popup");
+  await toggle.click();
+  await waitFor(() => sw.evaluate(async () => (await chrome.action.getPopup({})) === ""), "toolbar opens the panel");
+
+  await popup.click("#toggle-settings");
+  assert.ok(await popup.locator("#strip").isVisible());
+  await toggle.evaluate((el) => el.click()); // back to the popup for the tests that follow
+  await popup.close();
   await page.close();
 });
 
@@ -559,7 +588,7 @@ test("settings change the saved name, and saved files are listed in history", as
     () => sw.evaluate(async () => (await chrome.storage.local.get("settings")).settings?.subfolder === "Vidzilla"),
     "settings to save",
   );
-  assert.match(await options.locator("#example").textContent(), /^Vidzilla\/example Northern Lights Over Tromsø\.mp4$/);
+  assert.match(await options.locator(".vz-settings-example").textContent(), /^Vidzilla\/example Northern Lights Over Tromsø\.mp4$/);
 
   const { tabId, page } = await visit("/page.html");
   const { job } = await downloadFromPopup(tabId);

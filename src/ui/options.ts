@@ -1,56 +1,17 @@
-// Options page: saving settings and the list of saved files. Settings save as
-// they change; the history list follows storage, so downloads that finish
-// while the page is open appear on their own.
+// Options page: settings (see settings-form.ts) and the list of saved files.
+// The history list follows storage, so downloads that finish while the page
+// is open appear on their own.
 
 import { formatBytes } from "../shared/format";
 import { loadHistory, removeHistory } from "../shared/history";
 import { storageKeys } from "../shared/messages";
-import { buildFilename } from "../shared/naming";
-import { defaultSettings, loadSettings, type Settings } from "../shared/settings";
 import type { HistoryEntry } from "../shared/types";
 import { icons } from "./icons";
+import { bindSettingsForm } from "./settings-form";
 
-const form = document.querySelector<HTMLFormElement>("#settings")!;
-const example = document.querySelector<HTMLOutputElement>("#example")!;
-const saved = document.querySelector<HTMLElement>("#saved")!;
 const list = document.querySelector<HTMLOListElement>("#history")!;
 const empty = document.querySelector<HTMLElement>("#history-empty")!;
 const rowTemplate = document.querySelector<HTMLTemplateElement>("#history-row")!;
-
-const field = <T extends HTMLInputElement>(name: keyof Settings) => form.elements.namedItem(name) as T;
-let savedTimer: ReturnType<typeof setTimeout> | undefined;
-
-function readForm(): Settings {
-  const maxLength = Math.round(Number(field("maxLength").value));
-  return {
-    template: field("template").value.trim() || defaultSettings.template,
-    maxLength: Number.isFinite(maxLength) ? Math.min(200, Math.max(20, maxLength)) : defaultSettings.maxLength,
-    subfolder: field("subfolder").value.trim(),
-    saveAs: field("saveAs").checked,
-    sidePanel: field("sidePanel").checked,
-  };
-}
-
-function showExample(s: Settings): void {
-  const name = buildFilename({
-    template: s.template,
-    maxLength: s.maxLength,
-    title: "Northern Lights Over Tromsø",
-    pageUrl: "https://www.example.com/watch",
-    mediaUrl: "https://cdn.example.com/v/clip.mp4",
-    ext: "mp4",
-  });
-  example.value = s.subfolder ? `${s.subfolder.replace(/[\\/]+$/, "")}/${name}` : name;
-}
-
-async function save(): Promise<void> {
-  const s = readForm();
-  showExample(s);
-  await chrome.storage.local.set({ [storageKeys.settings]: s });
-  saved.textContent = "Saved";
-  clearTimeout(savedTimer);
-  savedTimer = setTimeout(() => (saved.textContent = ""), 1500);
-}
 
 function hostOf(url: string): string {
   try {
@@ -112,16 +73,7 @@ async function refreshHistory(): Promise<void> {
 }
 
 async function init(): Promise<void> {
-  const s = await loadSettings();
-  field("template").value = s.template;
-  field("maxLength").value = String(s.maxLength);
-  field("subfolder").value = s.subfolder;
-  field("saveAs").checked = s.saveAs;
-  field("sidePanel").checked = s.sidePanel;
-  showExample(s);
-  form.addEventListener("input", () => showExample(readForm()));
-  form.addEventListener("change", () => void save());
-  form.addEventListener("submit", (e) => e.preventDefault());
+  bindSettingsForm(document);
   const clear = document.querySelector<HTMLButtonElement>("#clear")!;
   clear.innerHTML = `${icons.trash}<span>Clear history</span>`;
   clear.addEventListener("click", () => void removeHistory());

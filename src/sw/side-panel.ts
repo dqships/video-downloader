@@ -1,18 +1,13 @@
-// The toolbar button opens either the popup or the side panel, as set in
-// settings. Chrome only opens the panel on click when the action has no popup.
+// Keeps the toolbar button opening what the user chose, popup or side panel,
+// across restarts and changes made from settings.
 
 import { storageKeys } from "../shared/messages";
+import { applyOpenMode } from "../shared/open-mode";
 import { loadSettings } from "../shared/settings";
 
-async function apply(): Promise<void> {
-  const { sidePanel } = await loadSettings();
-  await chrome.action.setPopup({ popup: sidePanel ? "" : "popup.html" });
-  await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: sidePanel }).catch(() => {});
-}
-
 export function watchSidePanelSetting(): void {
-  void apply();
+  void loadSettings().then((s) => applyOpenMode(s.sidePanel));
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && storageKeys.settings in changes) void apply();
+    if (area === "local" && storageKeys.settings in changes) void loadSettings().then((s) => applyOpenMode(s.sidePanel));
   });
 }

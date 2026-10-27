@@ -26,6 +26,31 @@ body.vz-popup {
   flex: none;
 }
 
+/* Settings open in place of the strip and scroll the same way. */
+.vz-popup-settings {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.vz-popup-settings .vz-section-head {
+  padding: 0 var(--space-1);
+}
+
+.vz-popup-settings .vz-settings-saved {
+  margin: 0;
+}
+
+.vz-popup-settings .vz-field {
+  padding: var(--space-3) var(--space-4);
+}
+
 .vz-popup .vz-strip {
   flex: 0 1 auto;
   min-height: 0;
@@ -52,6 +77,8 @@ body.vz-popup.wide {
 
 /* These set their own display, which would beat the hidden attribute. */
 .vz-select[hidden],
-.vz-icon-btn[hidden] {
+.vz-icon-btn[hidden],
+.vz-popup-foot[hidden],
+.vz-popup-settings[hidden] {
   display: none;
 }

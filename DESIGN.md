@@ -196,8 +196,14 @@ One page, two shells. `popup.html` is the popup; the build writes
 `sidepanel.html` from it with `.vz-popup--panel` on `<body>`.
 
 - **Head** (`.vz-popup-head`): mark, wordmark, the page's host as edge print,
-  then icon buttons: `sidebar.right` (open in the side panel, popup only) and
-  `gearshape` (settings).
+  then icon buttons: the mode switch (`sidebar.right` "Switch to the side
+  panel" in the popup, `rectangle.inset.topright.filled` "Switch to the popup"
+  in the panel) and `gearshape` (settings, which turns into `xmark` while
+  they are open).
+- **Settings view** (`.vz-popup-settings`): the gear swaps the strip and foot
+  for the same `.vz-fields` rows as the options page, in place, never in a new
+  tab. The rows live once in `src/ui/settings-fields.html` and the build puts
+  them in both pages.
 - **Strip**: the only part that scrolls. The head and foot never move, so every
   control stays in view however many videos a page has.
 - **Foot** (`.vz-popup-foot`): the tail of the roll. Quiet small buttons
@@ -209,8 +215,9 @@ One page, two shells. `popup.html` is the popup; the build writes
   a popup tiny and grows it to fit the page, so viewport units collapse it and
   clip the controls. The side panel fills Chrome's panel (`100vh`) and follows
   the active tab.
-- **Setting**: "Open in the side panel" makes the toolbar button open the panel
-  instead of the popup.
+- **Mode**: whichever the user picks, popup or side panel, sticks. Opening
+  the side panel makes it the toolbar button's target until the user switches
+  back with the head button or the "Open in the side panel" setting.
 
 ## Icons
 
@@ -221,7 +228,7 @@ Symbol they stand in for (`arrow.down.circle`, `doc.on.doc`, `checkmark`,
 `xmark`, `lock`, `film`, `waveform`, `play.fill`, `pause.fill`,
 `arrow.up.right`, `chevron.right`, `chevron.down`, `sun.max`, `moon`, `folder`,
 `exclamationmark.triangle`, `gearshape`, `clock`, `trash`, `stop.fill`, `record.circle`,
-`sidebar.right`). Icons use `currentColor`. Add a new icon by drawing
+`sidebar.right`, `rectangle.inset.topright.filled`). Icons use `currentColor`. Add a new icon by drawing
 it to the same rules; never mix in another library, and never use a sparkles
 icon. Import them as text (esbuild `loader: { ".svg": "text" }`) or inline them.
 

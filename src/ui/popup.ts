@@ -7,7 +7,9 @@ import { sendCommand, storageKeys } from "../shared/messages";
 import { buildFilename } from "../shared/naming";
 import { defaultSettings, loadSettings, type Settings } from "../shared/settings";
 import type { DownloadJob, MediaItem, TabMedia } from "../shared/types";
+import { setOpenMode } from "../shared/open-mode";
 import { icons } from "./icons";
+import { bindSettingsForm } from "./settings-form";
 
 const strip = document.getElementById("strip")!;
 const pageHost = document.getElementById("page-host")!;
@@ -330,19 +332,46 @@ async function switchTab(next: number): Promise<void> {
   await load();
 }
 
-function setupControls(): void {
-  const options = document.querySelector<HTMLButtonElement>("#open-options")!;
-  options.innerHTML = icons.gear;
-  options.addEventListener("click", () => void chrome.runtime.openOptionsPage());
+let windowId: number | undefined;
 
-  const panel = document.querySelector<HTMLButtonElement>("#open-panel")!;
-  panel.innerHTML = icons.sidePanel;
-  panel.hidden = isPanel || document.body.classList.contains("wide");
-  panel.addEventListener("click", async () => {
-    const win = await chrome.windows.getCurrent();
-    if (win.id !== undefined) await chrome.sidePanel.open({ windowId: win.id });
-    window.close();
-  });
+/** Swaps the strip for the settings form, in place. */
+function showSettings(open: boolean): void {
+  const button = document.querySelector<HTMLButtonElement>("#toggle-settings")!;
+  document.querySelector<HTMLElement>("#settings-view")!.hidden = !open;
+  strip.hidden = open;
+  document.querySelector<HTMLElement>(".vz-popup-foot")!.hidden = open;
+  button.innerHTML = open ? icons.close : icons.gear;
+  button.title = open ? "Back to the videos" : "Settings";
+  button.setAttribute("aria-label", button.title);
+  button.setAttribute("aria-expanded", String(open));
+}
+
+/** Popup to side panel and back. The choice is saved, so the toolbar button keeps opening it. */
+async function switchMode(): Promise<void> {
+  if (isPanel) {
+    await setOpenMode(false);
+    await chrome.action.openPopup().catch(() => {});
+    if (windowId !== undefined && typeof chrome.sidePanel.close === "function") await chrome.sidePanel.close({ windowId });
+    else window.close();
+    return;
+  }
+  // Open first: Chrome only allows it straight from the click.
+  if (windowId !== undefined) await chrome.sidePanel.open({ windowId });
+  await setOpenMode(true);
+  window.close();
+}
+
+function setupControls(): void {
+  const settingsButton = document.querySelector<HTMLButtonElement>("#toggle-settings")!;
+  settingsButton.addEventListener("click", () => showSettings(settingsButton.getAttribute("aria-expanded") !== "true"));
+  showSettings(false);
+  bindSettingsForm(document);
+
+  const mode = document.querySelector<HTMLButtonElement>("#switch-mode")!;
+  [mode.innerHTML, mode.title] = isPanel ? [icons.popup, "Switch to the popup"] : [icons.sidePanel, "Switch to the side panel"];
+  mode.setAttribute("aria-label", mode.title);
+  mode.hidden = document.body.classList.contains("wide");
+  mode.addEventListener("click", () => void switchMode());
 
   const folder = document.querySelector<HTMLButtonElement>("#open-folder")!;
   folder.innerHTML = `${icons.folder}<span>Downloads</span>`;
@@ -361,13 +390,19 @@ function setupControls(): void {
 
 async function main(): Promise<void> {
   setupControls();
-  [tabId, settings] = await Promise.all([resolveTabId(), loadSettings()]);
+  [tabId, settings, windowId] = await Promise.all([resolveTabId(), loadSettings(), chrome.windows.getCurrent().then((w) => w.id)]);
   if (isPanel) {
-    const windowId = (await chrome.windows.getCurrent()).id;
+    // An open side panel stands in for the popup until the user switches back.
+    if (!document.body.classList.contains("wide")) void setOpenMode(true);
     chrome.tabs.onActivated.addListener((info) => {
       if (info.windowId === windowId) void switchTab(info.tabId);
     });
   }
+  chrome.storage.local.onChanged.addListener(async (changes) => {
+    if (!(storageKeys.settings in changes)) return;
+    settings = await loadSettings();
+    render(); // file names follow the template
+  });
   chrome.storage.session.onChanged.addListener((changes) => {
     const tabKey = storageKeys.tab(tabId);
     if (tabKey in changes) tab = changes[tabKey]!.newValue as TabMedia | undefined;

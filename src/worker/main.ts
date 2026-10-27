@@ -85,7 +85,8 @@ async function runJob(msg: JobMessage): Promise<void> {
             onProgress: (b, total) => post({ type: "progress", jobId: msg.jobId, bytes: b, totalBytes: total }),
           });
     if (bytes < 1024) throw new Error("The server sent an empty file");
-    const blobUrl = URL.createObjectURL(await file.getFile());
+    const saved = await file.getFile();
+    const blobUrl = URL.createObjectURL(saved.slice(0, saved.size, msg.mime));
     blobUrls.set(msg.jobId, blobUrl);
     post({ type: "done", jobId: msg.jobId, blobUrl, bytes });
   } catch (err) {

@@ -20,44 +20,10 @@
     <section class="vz-section" aria-labelledby="settings-title">
       <div class="vz-section-head">
         <h2 id="settings-title" class="vz-section-title">Saving</h2>
-        <p id="saved" class="vz-field-help" aria-live="polite"></p>
+        <p class="vz-field-help vz-settings-saved" aria-live="polite"></p>
       </div>
-      <form id="settings" class="vz-fields">
-        <label class="vz-field vz-field--wide">
-          <span class="vz-field-text">
-            <span class="vz-field-label">File name</span>
-            <span class="vz-field-help"><code>%title</code>, <code>%hostname</code> and <code>%date</code> are filled in. Example: <output id="example"></output></span>
-          </span>
-          <input class="vz-input" name="template" type="text" spellcheck="false" />
-        </label>
-        <label class="vz-field">
-          <span class="vz-field-text">
-            <span class="vz-field-label">Longest name</span>
-            <span class="vz-field-help">Characters, before the extension.</span>
-          </span>
-          <input class="vz-input vz-input--short" name="maxLength" type="number" min="20" max="200" step="1" />
-        </label>
-        <label class="vz-field">
-          <span class="vz-field-text">
-            <span class="vz-field-label">Folder</span>
-            <span class="vz-field-help">Inside your Downloads folder. Empty saves straight into Downloads.</span>
-          </span>
-          <input class="vz-input" name="subfolder" type="text" spellcheck="false" placeholder="None" />
-        </label>
-        <label class="vz-field">
-          <span class="vz-field-text">
-            <span class="vz-field-label">Ask where to save</span>
-            <span class="vz-field-help">Chrome shows its save dialog for every file.</span>
-          </span>
-          <input class="vz-toggle" name="saveAs" type="checkbox" role="switch" />
-        </label>
-        <label class="vz-field">
-          <span class="vz-field-text">
-            <span class="vz-field-label">Open in the side panel</span>
-            <span class="vz-field-help">The toolbar button opens Vidzilla beside the page and it follows the tab you're on.</span>
-          </span>
-          <input class="vz-toggle" name="sidePanel" type="checkbox" role="switch" />
-        </label>
+      <form class="vz-fields vz-settings-form">
+        <!-- settings-fields -->
       </form>
     </section>
 
