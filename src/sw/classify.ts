@@ -24,7 +24,7 @@ export interface Classified {
 /** Direct files smaller than this are usually previews, ads or segments. */
 export const MIN_DIRECT_BYTES = 500 * 1024;
 
-const MIME_EXT: Record<string, string> = {
+export const MIME_EXT: Record<string, string> = {
   "video/mp4": "mp4",
   "video/x-m4v": "m4v",
   "video/webm": "webm",
