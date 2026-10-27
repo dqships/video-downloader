@@ -7,6 +7,7 @@
 // the runs are joined where the codec allows it (mux.ts).
 
 import type { FromOffscreenEnvelope, FromWorker } from "../shared/worker-protocol";
+import { mimeForFilename } from "../shared/naming";
 import { muxCaptured } from "./mux";
 
 interface Run {
@@ -79,7 +80,7 @@ async function finish(): Promise<void> {
     const { blob, ext } = await muxCaptured(streams);
     tracks.clear();
     const name = filename.replace(/\.[a-z0-9]{1,5}$/i, "") + `.${ext}`;
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob.slice(0, blob.size, mimeForFilename(name)));
     const downloadId = await chrome.downloads.download({ url, filename: name, saveAs, conflictAction: "uniquify" });
     await toSw({ type: "saved", jobId, downloadId, filename: name, bytes: blob.size });
     // Keep the blob alive until Chrome has the file.

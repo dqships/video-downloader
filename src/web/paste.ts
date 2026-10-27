@@ -5,7 +5,7 @@
 
 import { formatBytes, formatDuration } from "../shared/format";
 import { dataUrl, singleVariantMaster } from "../shared/hls";
-import { buildFilename, nameFromUrl, siteLabel } from "../shared/naming";
+import { buildFilename, mimeForFilename, nameFromUrl, siteLabel } from "../shared/naming";
 import { defaultSettings } from "../shared/settings";
 import type { StreamVariant } from "../shared/types";
 import type { FromWorker, ToWorker } from "../shared/worker-protocol";
@@ -155,13 +155,14 @@ function start(entry: Entry): void {
   Object.assign(entry, { jobId, state: "running", fraction: 0, bytes: 0, error: undefined, filename: filenameFor(entry) });
   entries.set(jobId, entry);
   const { media } = entry;
+  const mime = mimeForFilename(entry.filename!);
   if (media.kind === "hls") {
     const variant = chosenVariant(entry)!;
     // Media playlists are read as is; a master is narrowed to the chosen quality.
     const url = variant.url === media.url || variant.audioOnly ? variant.url : dataUrl(singleVariantMaster(variant));
-    toWorker({ type: "fetch-hls", jobId, url, audioOnly: variant.audioOnly });
+    toWorker({ type: "fetch-hls", jobId, mime, url, audioOnly: variant.audioOnly });
   } else {
-    toWorker({ type: "fetch-file", jobId, url: media.url, expectedBytes: media.sizeBytes, supportsRanges: media.supportsRanges });
+    toWorker({ type: "fetch-file", jobId, mime, url: media.url, expectedBytes: media.sizeBytes, supportsRanges: media.supportsRanges });
   }
   update(entry);
 }

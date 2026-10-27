@@ -283,6 +283,11 @@
   color: var(--color-danger);
 }
 
+/* A note that ends in a text button reads as one sentence. */
+.vz-frame-note.has-action {
+  display: block;
+}
+
 .vz-frame-note.is-done {
   color: var(--color-success);
 }
@@ -375,6 +380,44 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--color-text-muted);
+}
+
+/* The popup's foot: page-wide actions under the strip, like the tail of a roll. */
+.vz-popup-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.vz-popup-foot .vz-btn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Text button: an inline action inside a sentence, such as "Show in folder". */
+.vz-text-btn {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: var(--weight-bold);
+  text-decoration: underline;
+  text-decoration-thickness: var(--size-hairline);
+  text-underline-offset: var(--space-1);
+  cursor: pointer;
+}
+
+.vz-text-btn:hover {
+  text-decoration-thickness: var(--size-focus);
+}
+
+.vz-text-btn:focus-visible {
+  outline: var(--size-focus) solid var(--color-primary);
+  outline-offset: var(--size-hairline);
+  border-radius: var(--radius-sm);
 }
 
 .vz-empty {

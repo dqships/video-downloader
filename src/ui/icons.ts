@@ -8,11 +8,14 @@ import checkmark from "../../design/icons/checkmark.svg";
 import docOnDoc from "../../design/icons/doc.on.doc.svg";
 import exclamation from "../../design/icons/exclamationmark.triangle.svg";
 import folder from "../../design/icons/folder.svg";
+import clock from "../../design/icons/clock.svg";
 import gearshape from "../../design/icons/gearshape.svg";
 import trash from "../../design/icons/trash.svg";
 import film from "../../design/icons/film.svg";
 import lock from "../../design/icons/lock.svg";
+import rectangleInsetTopright from "../../design/icons/rectangle.inset.topright.filled.svg";
 import recordCircle from "../../design/icons/record.circle.svg";
+import sidebarRight from "../../design/icons/sidebar.right.svg";
 import stopFill from "../../design/icons/stop.fill.svg";
 import waveform from "../../design/icons/waveform.svg";
 import xmark from "../../design/icons/xmark.svg";
@@ -30,6 +33,9 @@ export const icons = {
   film,
   folder,
   gear: gearshape,
+  clock,
+  sidePanel: sidebarRight,
+  popup: rectangleInsetTopright,
   trash,
   external: arrowUpRight,
   waveform,
