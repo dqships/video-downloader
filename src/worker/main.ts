@@ -4,11 +4,14 @@
 /// <reference lib="webworker" />
 import type { FromWorker, ToWorker } from "../shared/worker-protocol";
 import { fetchFile } from "./fetch-file";
+import { recordLive } from "./record-live";
 import { remuxHls } from "./remux-hls";
 
 declare const self: DedicatedWorkerGlobalScope;
 
 const running = new Map<string, AbortController>();
+/** Live recordings: aborting one ends it and keeps the file. */
+const stops = new Map<string, AbortController>();
 const blobUrls = new Map<string, string>();
 
 const post = (msg: FromWorker) => self.postMessage(msg);
@@ -23,7 +26,7 @@ async function purgeOpfs(): Promise<void> {
   }
 }
 
-type JobMessage = Extract<ToWorker, { type: "fetch-file" | "fetch-hls" }>;
+type JobMessage = Extract<ToWorker, { type: "fetch-file" | "fetch-hls" | "record-live" }>;
 
 async function runJob(msg: JobMessage): Promise<void> {
   const ctrl = new AbortController();
@@ -31,8 +34,19 @@ async function runJob(msg: JobMessage): Promise<void> {
   try {
     const root = await opfs();
     const file = await root.getFileHandle(partName(msg.jobId), { create: true });
+    const stop = new AbortController();
+    stops.set(msg.jobId, stop);
     const bytes =
-      msg.type === "fetch-hls"
+      msg.type === "record-live"
+        ? await recordLive({
+            url: msg.url,
+            file,
+            signal: ctrl.signal,
+            stop: stop.signal,
+            audioOnly: msg.audioOnly,
+            onProgress: (b, seconds) => post({ type: "progress", jobId: msg.jobId, bytes: b, seconds }),
+          })
+        : msg.type === "fetch-hls"
         ? await remuxHls({
             url: msg.url,
             file,
@@ -58,6 +72,7 @@ async function runJob(msg: JobMessage): Promise<void> {
     await cleanup(msg.jobId);
   } finally {
     running.delete(msg.jobId);
+    stops.delete(msg.jobId);
   }
 }
 
@@ -76,7 +91,11 @@ self.onmessage = async (e: MessageEvent<ToWorker>) => {
   switch (msg.type) {
     case "fetch-file":
     case "fetch-hls":
+    case "record-live":
       void runJob(msg);
+      break;
+    case "stop":
+      stops.get(msg.jobId)?.abort();
       break;
     case "cancel":
       running.get(msg.jobId)?.abort(new Error("Cancelled"));

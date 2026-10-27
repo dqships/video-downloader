@@ -2,7 +2,7 @@
 // for a download, turns the chosen representations into HLS playlists for
 // the download worker. Fetches replay the page's headers.
 
-import { dashChildUrls, hlsMediaPlaylist, listDashVariants, parseMpd, resolveSegments, type ByteRange, type DashManifest } from "../shared/dash";
+import { dashChildUrls, hlsMediaPlaylist, listDashSubtitles, listDashVariants, parseMpd, resolveSegments, type ByteRange, type DashManifest } from "../shared/dash";
 import { dataUrl, singleVariantMaster } from "../shared/hls";
 import type { StreamVariant } from "../shared/types";
 import type { HlsDetails } from "./hls-probe";
@@ -25,6 +25,7 @@ export async function probeDash(url: string, sent: Record<string, string>): Prom
       durationSec: m.duration !== undefined ? Math.round(m.duration * 10) / 10 : undefined,
       isLive: m.isLive,
       hasDrm: m.hasDrm,
+      subtitles: listDashSubtitles(m),
     };
   } catch {
     return {};

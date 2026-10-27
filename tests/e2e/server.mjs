@@ -12,10 +12,16 @@ const TYPES = {
   ".ts": "video/mp2t",
   ".m4s": "video/iso.segment",
   ".mpd": "application/dash+xml",
+  ".vtt": "text/vtt",
+  ".ttml": "application/ttml+xml",
 };
 
 /** Plays a playlist the way a player would: master first, then its children. */
 const player = (...urls) => `<script>(async () => { for (const u of ${JSON.stringify(urls)}) await fetch(u); })()</script>`;
+
+const LIVE_SEGMENTS = 10;
+/** When each live run's broadcast started. */
+const liveStarts = {};
 
 /** Playlists made on the fly, for cases ffmpeg fixtures don't cover. */
 const dynamic = {
@@ -43,6 +49,15 @@ const pages = {
     await fetch("/media/dash-base/manifest.mpd");
     await fetch("/media/dash-base/video.mp4", { headers: { range: "bytes=0-1000000" } });
   })()</script>`,
+  "/subs-hls.html": `<title>Stream With Subtitles</title>${player("/media/subs/master.m3u8")}`,
+  "/subs-dash.html": `<title>Dash With Subtitles</title>${player("/media/dash/subs.mpd")}`,
+  "/track.html": `<title>Captioned Clip</title><video src="/media/clip.mp4" muted autoplay controls>
+    <track kind="subtitles" src="/media/subs/page.vtt" srclang="fr" label="Français"></video>`,
+  // Headless Chromium has no Widevine, so hand setMediaKeys a stand-in: the
+  // extension only needs to see the call.
+  "/eme.html": `<title>Protected Player</title><video></video>${player("/media/hls/master.m3u8")}<script>
+    setTimeout(() => document.querySelector("video").setMediaKeys({ keySystem: "com.widevine.alpha" }).catch(() => {}), 300);
+  </script>`,
   "/live.html": `<title>Live Now</title>${player("/live/index.m3u8")}`,
   "/drm.html": `<title>Locked Stream</title>${player("/drm/index.m3u8")}`,
   "/mixed.html": `<title>Northern Lights Over Tromsø, Full Timelapse | Fixture Site</title>
@@ -80,6 +95,25 @@ export function startServer(port = 0, { cors = false } = {}) {
     if (cors) res.setHeader("Access-Control-Allow-Origin", "*");
     if (pages[url.pathname]) {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }).end(`<!doctype html>${pages[url.pathname]}`);
+      return;
+    }
+    // A broadcast in progress: segments of media/live appear every 2 s, three at
+    // a time, and the stream ends after the tenth. /live-rec/<run>/index.m3u8,
+    // so each test gets its own clock.
+    const livePage = /^\/live-page\/([\w-]+)\.html$/.exec(url.pathname);
+    if (livePage) {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }).end(`<!doctype html><title>Live Broadcast</title>${player(`/live-rec/${livePage[1]}/index.m3u8`)}`);
+      return;
+    }
+    const live = /^\/live-rec\/([\w-]+)\/index\.m3u8$/.exec(url.pathname);
+    if (live) {
+      liveStarts[live[1]] ??= Date.now();
+      const available = Math.min(LIVE_SEGMENTS, 3 + Math.floor((Date.now() - liveStarts[live[1]]) / 2000));
+      const first = available - 3;
+      const lines = ["#EXTM3U", "#EXT-X-VERSION:3", "#EXT-X-TARGETDURATION:2", `#EXT-X-MEDIA-SEQUENCE:${first}`];
+      for (let i = first; i < available; i++) lines.push("#EXTINF:2.000000,", `/media/live/seg${String(i).padStart(3, "0")}.ts`);
+      if (available === LIVE_SEGMENTS) lines.push("#EXT-X-ENDLIST");
+      res.writeHead(200, { "Content-Type": TYPES[".m3u8"], "Cache-Control": "no-store" }).end(lines.join("\n") + "\n");
       return;
     }
     if (dynamic[url.pathname]) {

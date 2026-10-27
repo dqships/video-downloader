@@ -32,6 +32,21 @@ export interface MediaItem {
   durationSec?: number;
   /** Streams only: still being broadcast (no end marker yet). */
   isLive?: boolean;
+  /** Subtitle tracks this stream carries. */
+  subtitles?: SubtitleTrack[];
+}
+
+/** A subtitle track a page or stream offers; saved as .srt next to the video. */
+export interface SubtitleTrack {
+  id: string;
+  /** "English", "Deutsch (CC)"... */
+  label: string;
+  lang?: string;
+  /**
+   * Where the text is: one WebVTT/TTML/SRT file, an HLS subtitle playlist of
+   * WebVTT segments, or a list of segment URLs (DASH).
+   */
+  source: { kind: "file"; url: string } | { kind: "hls"; url: string } | { kind: "segments"; urls: string[] };
 }
 
 /** One downloadable quality of a stream: a video playlist plus its audio. */
@@ -61,6 +76,10 @@ export interface TabMedia {
   pageUrl: string;
   title?: string;
   thumbnail?: string;
+  /** Set when the page plays DRM-protected media (EME): the key system. */
+  drmKeySystem?: string;
+  /** Subtitle tracks the page itself attaches (<track> elements). */
+  subtitles?: SubtitleTrack[];
   media: MediaItem[];
 }
 
@@ -79,6 +98,13 @@ export interface DownloadJob {
   totalBytes?: number;
   /** Streams: fraction done, 0..1, since the final size isn't known up front. */
   progress?: number;
+  /** Live recordings: seconds recorded so far. */
+  recordedSec?: number;
+  /** A live recording: runs until the stream ends or the user stops it. */
+  recording?: boolean;
+  /** Subtitles saved alongside: the file name, or why it failed. */
+  subtitleFile?: string;
+  subtitleError?: string;
   /** Streams: the quality being downloaded. */
   variantLabel?: string;
   error?: string;

@@ -15,13 +15,13 @@ downloaded.
 | 1. Detection and direct files (mp4, webm, mp3...) | Done |
 | 2. HLS (m3u8), AES-128, quality picker, remux to MP4 | Done |
 | 3. DASH (mpd), audio-only | Done |
-| 4. Live recording, subtitles, DRM detection everywhere | Next |
-| 5. Site extractors (Vimeo, Facebook, Instagram, Kick, ...) | Planned |
+| 4. Live recording, subtitles, DRM detection everywhere | Done |
+| 5. Site extractors (Vimeo, Facebook, Instagram, Kick, ...) | Next |
 | 6. MSE fallback, settings, history | Planned |
 | 7. YouTube | Not planned (Chrome Web Store policy) |
 
-Live streams are listed and marked live; recording them comes in milestone 4.
-WebM-only DASH streams are listed but can't be saved yet.
+Live HLS streams record until they end or you press stop; live DASH recording
+comes later. WebM-only DASH streams are listed but can't be saved yet.
 
 ## Try it
 
@@ -66,6 +66,17 @@ extension's reload button.
   worker job remuxes DASH. Multi-period manifests use the longest period.
 - **Audio only**: every stream offers it; the picture is dropped and the file
   is saved as `.m4a`.
+- **Live recording** (`src/worker/record-live.ts`): packets are copied from the
+  live playlist as segments appear, shifted to start at zero, into an MP4 that
+  is finalized when the stream ends or you press stop.
+- **Subtitles** (`src/shared/subtitles.ts`, `src/sw/subtitles.ts`): HLS
+  WebVTT renditions, DASH WebVTT/TTML tracks and a page's `<track>` captions
+  are offered in a second picker and saved next to the video as `.srt`
+  (segments merged, repeats across segment edges dropped).
+- **DRM** (`src/content/`): besides manifest checks, a page-world script sees
+  when a player hands a media element DRM keys (EME) and the popup warns on
+  that page's streams. Capability probes alone don't count, since players
+  probe for clear video too.
 - **Popup** (`src/ui/`): reads storage and sends commands. It holds no state of
   its own. It is built from the shared Vidzilla design system (`design/`,
   `brand/`, see `DESIGN.md`), the same tokens and components the website uses,
@@ -88,7 +99,9 @@ node scripts/screenshots.mjs out/   # popup in light and dark mode
 
 The end-to-end tests cover detection, real downloads verified with ffprobe
 (direct MP4; HLS plain, AES-128, fMP4 and two-quality with separate audio;
-DASH numbered, timeline, byte-range and single indexed file; audio only),
+DASH numbered, timeline, byte-range and single indexed file; audio only; live
+recording stopped by hand and to the end; subtitles from HLS, DASH and a page
+track; the EME warning),
 Referer replay for a file and for every segment of a stream, and that live and
 DRM streams stay unavailable. `tests/e2e/site.test.mjs` does the same for the
 website's paste box, with the media on a separate origin.
