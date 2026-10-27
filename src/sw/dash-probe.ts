@@ -15,10 +15,17 @@ async function readManifest(url: string, sent: Record<string, string>): Promise<
   return parseMpd(await fetchWithReplay(url, sent), url);
 }
 
-/** Never throws: an unreadable manifest just lists without details. */
-export async function probeDash(url: string, sent: Record<string, string>): Promise<HlsDetails> {
+/** Never throws: an unreadable manifest just lists without details; null when it isn't a manifest. */
+export async function probeDash(url: string, sent: Record<string, string>): Promise<HlsDetails | null> {
+  let text: string;
   try {
-    const m = await readManifest(url, sent);
+    text = await fetchWithReplay(url, sent);
+  } catch {
+    return {};
+  }
+  if (!/<(\w+:)?MPD[\s>]/.test(text)) return null;
+  try {
+    const m = parseMpd(text, url);
     return {
       variants: listDashVariants(m, url),
       childUrls: dashChildUrls(m),

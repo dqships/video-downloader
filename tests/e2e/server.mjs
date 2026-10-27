@@ -32,6 +32,12 @@ const dynamic = {
     '#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://key-1",KEYFORMAT="com.apple.streamingkeydelivery",KEYFORMATVERSIONS="1"\n#EXTINF:2,\n/media/hls/seg000.ts\n#EXT-X-ENDLIST\n',
 };
 
+/** Ad servers that answer a .m3u8 URL with VAST XML instead of a playlist. */
+const notPlaylists = {
+  "/ads/vast.m3u8": '<?xml version="1.0"?><VAST version="3.0"></VAST>',
+  "/ads/vast.mpd": '<?xml version="1.0"?><VAST version="3.0"></VAST>',
+};
+
 const pages = {
   "/page.html": `<title>Test Clip | Fixture Site</title><meta property="og:image" content="/poster.png">
     <video src="/media/clip.mp4" muted autoplay controls></video>`,
@@ -74,6 +80,7 @@ const pages = {
       document.querySelector("main").innerHTML = '<video src="/media/clip.mp4" preload="none" controls></video>';
     }, 300);
   </script>`,
+  "/ad-manifest.html": `<title>Ad Before The Show</title>${player("/ads/vast.m3u8", "/ads/vast.mpd", "/media/hls/master.m3u8")}`,
   "/live.html": `<title>Live Now</title>${player("/live/index.m3u8")}`,
   "/drm.html": `<title>Locked Stream</title>${player("/drm/index.m3u8")}`,
   "/mixed.html": `<title>Northern Lights Over Tromsø, Full Timelapse | Fixture Site</title>
@@ -130,6 +137,10 @@ export function startServer(port = 0, { cors = false } = {}) {
       for (let i = first; i < available; i++) lines.push("#EXTINF:2.000000,", `/media/live/seg${String(i).padStart(3, "0")}.ts`);
       if (available === LIVE_SEGMENTS) lines.push("#EXT-X-ENDLIST");
       res.writeHead(200, { "Content-Type": TYPES[".m3u8"], "Cache-Control": "no-store" }).end(lines.join("\n") + "\n");
+      return;
+    }
+    if (notPlaylists[url.pathname]) {
+      res.writeHead(200, { "Content-Type": "application/xml" }).end(notPlaylists[url.pathname]);
       return;
     }
     if (dynamic[url.pathname]) {
