@@ -83,6 +83,10 @@ extension's reload button.
   read, and each URL is checked with a one-byte request, so a video is listed
   with its own title before it plays. When the player later requests it, its
   real headers (cookies included) replace the guessed ones.
+- **Site extractors** (`src/sw/sites.ts`): small additions on top of
+  detection, never replacing it. Twitch clips offer every height the CDN
+  has; X names each video after its own post and lists the page's main post
+  first. Titles drop the site's name (`src/shared/titles.ts`).
 - **Popup** (`src/ui/`): reads storage and sends commands. It holds no state of
   its own. It is built from the shared Vidzilla design system (`design/`,
   `brand/`, see `DESIGN.md`), the same tokens and components the website uses,

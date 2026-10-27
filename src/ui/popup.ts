@@ -42,7 +42,9 @@ async function resolveTabId(): Promise<number> {
 
 function sorted(media: MediaItem[]): MediaItem[] {
   return [...media].sort(
-    (a, b) => TYPE_ORDER[a.type] - TYPE_ORDER[b.type] || (b.sizeBytes ?? 0) - (a.sizeBytes ?? 0) || b.detectedAt - a.detectedAt,
+    (a, b) =>
+      (a.rank ?? Infinity) - (b.rank ?? Infinity) ||
+      TYPE_ORDER[a.type] - TYPE_ORDER[b.type] || (b.sizeBytes ?? 0) - (a.sizeBytes ?? 0) || b.detectedAt - a.detectedAt,
   );
 }
 

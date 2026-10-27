@@ -35,6 +35,7 @@ export function mergeMedia(list: MediaItem[], item: MediaItem): { list: MediaIte
       sourceKind: old.sourceKind === "sniffer" || item.sourceKind === "sniffer" ? "sniffer" : "page",
       title: old.title ?? item.title,
       thumbnail: old.thumbnail ?? item.thumbnail,
+      rank: old.rank ?? item.rank,
       variants: old.variants ?? item.variants,
       childUrls: old.childUrls ?? item.childUrls,
       durationSec: old.durationSec ?? item.durationSec,
@@ -42,7 +43,7 @@ export function mergeMedia(list: MediaItem[], item: MediaItem): { list: MediaIte
       subtitles: old.subtitles ?? item.subtitles,
       hasDrm: old.hasDrm || item.hasDrm,
     };
-    for (const key of ["variants", "childUrls", "durationSec", "isLive", "subtitles", "title", "thumbnail"] as const) {
+    for (const key of ["variants", "childUrls", "durationSec", "isLive", "subtitles", "title", "thumbnail", "rank"] as const) {
       if (merged[key] === undefined) delete merged[key];
     }
     const changed = JSON.stringify(merged) !== JSON.stringify(old);

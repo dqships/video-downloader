@@ -28,6 +28,8 @@ export interface MediaItem {
   /** The page's own name for this video, when it has several (JSON-LD). */
   title?: string;
   thumbnail?: string;
+  /** Listing order a site extractor chose (0 first); unset items follow. */
+  rank?: number;
   /** Streams only: the qualities on offer, best first. */
   variants?: StreamVariant[];
   /** Streams only: child playlists of this master, hidden from the list. */
@@ -62,8 +64,10 @@ export interface StreamVariant {
   width?: number;
   bandwidth?: number;
   codecs?: string;
-  /** The media playlist to download. */
+  /** The media playlist to download (for a direct file, the file itself). */
   url: string;
+  /** Direct files only: the file's size. */
+  sizeBytes?: number;
   /** A separate audio playlist, when the stream keeps audio apart. */
   audioUrl?: string;
   audioCodecs?: string;

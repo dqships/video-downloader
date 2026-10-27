@@ -4,7 +4,7 @@
 // chrome.storage.session for the UI and to survive service-worker restarts.
 
 import { storageKeys } from "../shared/messages";
-import { buildFilename, sanitizeFilename } from "../shared/naming";
+import { asciiFilename, buildFilename, sanitizeFilename } from "../shared/naming";
 import { loadSettings } from "../shared/settings";
 import { dataUrl, singleVariantMaster } from "../shared/hls";
 import type { DownloadJob, MediaItem, StreamVariant, TabMedia } from "../shared/types";
@@ -73,6 +73,10 @@ export class Downloads {
     if (item.hasDrm) throw new Error("This video is protected by DRM and can't be downloaded.");
     if (item.isLive && item.type === "dash") throw new Error("Recording live DASH streams arrives in a later version.");
     let variant: StreamVariant | undefined;
+    // A direct file may come in several sizes (a site extractor found them).
+    const file = item.type === "http" ? (item.variants?.find((v) => v.id === variantId) ?? item.variants?.[0]) : undefined;
+    const fileUrl = file?.url ?? item.url;
+    const fileBytes = file ? file.sizeBytes : item.sizeBytes;
     if (item.type !== "http") {
       variant = item.variants?.find((v) => v.id === variantId) ?? item.variants?.[0];
       if (!variant) throw new Error("Couldn't read this stream's playlist. Reload the page and try again.");
@@ -106,13 +110,13 @@ export class Downloads {
       state: "running",
       phase: "fetching",
       bytesReceived: 0,
-      totalBytes: variant ? undefined : item.sizeBytes,
+      totalBytes: variant ? undefined : fileBytes,
       progress: variant && !item.isLive ? 0 : undefined,
       recording: item.isLive || undefined,
       recordedSec: item.isLive ? 0 : undefined,
-      variantLabel: variant && item.variants!.length > 1 ? variant.label : undefined,
+      variantLabel: (variant ?? file) && item.variants!.length > 1 ? (variant ?? file)!.label : undefined,
       saveAs: settings.saveAs,
-      ruleIds: variant ? [] : await installReplay([item.url], item.sentHeaders),
+      ruleIds: variant ? [] : await installReplay([fileUrl], item.sentHeaders),
       startedAt: Date.now(),
     };
     this.jobs.set(job.jobId, job);
@@ -136,8 +140,8 @@ export class Downloads {
         await toWorker({
           type: "fetch-file",
           jobId: job.jobId,
-          url: item.url,
-          expectedBytes: item.sizeBytes,
+          url: fileUrl,
+          expectedBytes: fileBytes,
           supportsRanges: item.supportsRanges,
         });
       }
@@ -194,12 +198,17 @@ export class Downloads {
         await removeReplay(job.ruleIds ?? []);
         job.ruleIds = [];
         try {
-          job.chromeDownloadId = await chrome.downloads.download({
-            url: msg.blobUrl,
-            filename: job.filename,
-            conflictAction: "uniquify",
-            saveAs: job.saveAs,
-          });
+          const save = () =>
+            chrome.downloads.download({ url: msg.blobUrl, filename: job.filename, conflictAction: "uniquify", saveAs: job.saveAs });
+          try {
+            job.chromeDownloadId = await save();
+          } catch (err) {
+            // Some systems (no UTF-8 locale) refuse non-ASCII names; save under a plain one.
+            const plain = asciiFilename(job.filename);
+            if (!/invalid filename/i.test(String(err)) || plain === job.filename) throw err;
+            job.filename = plain;
+            job.chromeDownloadId = await save();
+          }
           this.persist();
         } catch (err) {
           await this.fail(job, err instanceof Error ? err.message : String(err));
@@ -244,3 +253,4 @@ export class Downloads {
     }, 200);
   }
 }
+
