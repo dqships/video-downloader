@@ -159,7 +159,8 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
     } as const;
     [download.innerHTML, download.title] = look[mode];
     download.setAttribute("aria-label", download.title);
-    download.classList.toggle("vz-icon-btn--primary", !isRunning);
+    // Vermilion marks an action; cancel is the only one that isn't.
+    download.classList.toggle("vz-icon-btn--primary", mode !== "cancel");
   }
   frame.classList.toggle("is-fogged", item.hasDrm);
   note.className = "vz-frame-note";
