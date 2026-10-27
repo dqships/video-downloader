@@ -1,7 +1,7 @@
 # Ad-free upgrade with Stripe
 
 Plan for selling "Vidzilla without ads" for **$0.99 a year** or **$9 once**.
-Nothing here is built yet. The extension already has the switch it needs
+Nothing here is built yet; option A below is the chosen way. The extension already has the switch it needs
 (`adFree` in the `ads` state, see `src/shared/ads.ts`) and a place for the
 "Remove ads" link (`upgradeUrl` in `site/ads.json`).
 
@@ -27,9 +27,10 @@ for payments. Option B keeps "no server of our own" at the price of a fee and
 a dependency. Either one also means the privacy policy must change: payments
 mean an email address and Stripe as a processor.
 
-**Recommendation: A**, because the fee in B lands on a $0.99 price that
-Stripe's fixed fee already eats into (see Fees). Choose B if you'd rather run
-nothing at all.
+**Decided (DQ, 27 October 2026): A**, Vidzilla's own small server on
+Vercel. The fee in B would land on a $0.99 price that Stripe's fixed fee
+already eats into (see Fees). The "no server" decision still holds for the
+paste-a-link downloader; this server only handles purchases.
 
 ## Fees, worth knowing before picking $0.99
 
