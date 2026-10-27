@@ -108,7 +108,9 @@ extension's reload button.
   come out as the player had them (H.264 with differing parameter sets is written as avc3,
   with them in each keyframe); each run is placed by the SourceBuffer's
   timestampOffset, and WebM init segments lose the source file's index
-  (SeekHead, Cues). The recording ends once every MediaSource
+  (SeekHead, Cues). Sound that the player loaded later than the picture
+  gets silence in front (AAC-LC and Opus frames that need no encoder), so it
+  starts with the video in any player. The recording ends once every MediaSource
   that got media has ended, so probe players and ads don't cut it short. Record reloads the page with
   the recording armed: the script holds the player's first buffers until
   the service worker answers, so the file starts at the beginning. The frame
