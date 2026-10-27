@@ -8,7 +8,6 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const dist = join(root, "site-dist");
 const config = JSON.parse(readFileSync(join(root, "vercel.json"), "utf8"));
 const { default: middleware, config: middlewareConfig } = await import(pathToFileURL(join(root, "middleware.js")).href);
 
@@ -27,7 +26,7 @@ const TYPES = {
 // The sources in vercel.json and the middleware matcher are written as plain regexes.
 const matches = (source, path) => new RegExp(`^${source}$`).test(path);
 
-function file(path) {
+function file(dist, path) {
   const candidates = path.endsWith("/") ? [`${path}index.html`] : [path, `${path}.html`];
   for (const c of candidates) {
     const full = join(dist, normalize(c).replace(/^(\.\.[/\\])+/, ""));
@@ -47,7 +46,7 @@ function headersFor(path) {
   return out;
 }
 
-async function handle(req, res) {
+async function handle(dist, req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   let path = decodeURIComponent(url.pathname);
   const headers = headersFor(path);
@@ -72,7 +71,7 @@ async function handle(req, res) {
     }
   }
 
-  const found = file(path);
+  const found = file(dist, path);
   if (!found) {
     const body = readFileSync(join(dist, "404.html"));
     return void res.writeHead(404, merge({ "Content-Type": TYPES[".html"] }, headers)).end(body);
@@ -81,9 +80,10 @@ async function handle(req, res) {
   res.end(readFileSync(found));
 }
 
-export function serveSite(port = 0) {
+/** Serves a built site; dist defaults to site-dist/. */
+export function serveSite(port = 0, dist = join(root, "site-dist")) {
   const server = createServer((req, res) =>
-    handle(req, res).catch((e) => {
+    handle(dist, req, res).catch((e) => {
       console.error(e);
       res.writeHead(500).end();
     }),

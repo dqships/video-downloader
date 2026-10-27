@@ -5,6 +5,9 @@
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { after, before, test } from "node:test";
@@ -17,7 +20,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH ?? "playwright");
 
 const clip = fileURLToPath(new URL("../fixtures/media/clip.mp4", import.meta.url));
 
-let site, shared, closed, browser, page;
+let dist, site, shared, closed, browser, page;
 
 function probe(file) {
   const out = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,height", "-of", "json", file]).toString());
@@ -30,8 +33,10 @@ async function paste(link) {
 }
 
 before(async () => {
-  execFileSync("node", [fileURLToPath(new URL("../../scripts/build-site.mjs", import.meta.url))]);
-  [site, shared, closed] = await Promise.all([serveSite(), startServer(0, { cors: true }), startServer(0)]);
+  // Each test file builds its own copy, so files running in parallel don't clear each other's.
+  dist = mkdtempSync(join(tmpdir(), "vz-site-"));
+  execFileSync("node", [fileURLToPath(new URL("../../scripts/build-site.mjs", import.meta.url)), dist]);
+  [site, shared, closed] = await Promise.all([serveSite(0, dist), startServer(0, { cors: true }), startServer(0)]);
   browser = await chromium.launch();
   page = await browser.newPage({ acceptDownloads: true });
   await page.goto(site.origin);
@@ -40,6 +45,7 @@ before(async () => {
 after(async () => {
   await browser?.close();
   for (const s of [site, shared, closed]) s?.server.close();
+  if (dist) rmSync(dist, { recursive: true, force: true });
 });
 
 test("saves a pasted video file", async () => {

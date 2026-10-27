@@ -7,17 +7,17 @@
 // from site/pages.mjs. The build fails if a page breaks the launch rules
 // (title and description length, one h1) or if an inline script isn't
 // allowed by the Content-Security-Policy in vercel.json.
-// Usage: node scripts/build-site.mjs
+// Usage: node scripts/build-site.mjs [outDir]   (default site-dist/)
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import * as esbuild from "esbuild";
 import { notFoundMarkdown, origin, pages, repoUrl, supportEmail } from "../site/pages.mjs";
 import { release } from "../site/release.js";
 
 const root = new URL("../", import.meta.url);
-const out = new URL("site-dist/", root);
+const out = process.argv[2] ? pathToFileURL(`${process.argv[2].replace(/\/$/, "")}/`) : new URL("site-dist/", root);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 // Root-absolute asset paths, so the 404 page works at any depth.
 const flatten = (text) => text.replaceAll("../design/", "/design/").replaceAll("../brand/", "/brand/");
@@ -196,7 +196,6 @@ ${pages.map((p) => `- [${label[p.file]}](${origin}/${p.file}.md): ${describe(p.f
 ## Optional
 
 - [Source code](${repoUrl}): the extension and this website, on GitHub
-- [Design system](${repoUrl}/blob/main/DESIGN.md): the tokens and components the site and extension share
 `,
 );
 
@@ -213,4 +212,4 @@ await esbuild.build({
   logLevel: "warning",
   loader: { ".svg": "text" },
 });
-console.log("site-dist/ written");
+console.log(`${fileURLToPath(out)} written`);
