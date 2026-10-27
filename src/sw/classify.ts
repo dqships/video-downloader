@@ -53,6 +53,13 @@ const MEDIA_EXTS = new Set([
   "m4a", "mp3", "weba", "ogg", "oga", "opus", "flac", "wav", "aac",
 ]);
 
+/**
+ * Video ad servers. Players fetch these before the programme (Google IMA on
+ * news sites, audio spots on Dailymotion), and listing them puts an ad at
+ * the top of the list.
+ */
+const AD_URL = /(^|[./])(doubleclick\.net|googlesyndication\.com|2mdn\.net|imasdk\.googleapis\.com|adswizz\.com)\/|\/source\/dclk_video_ads\//i;
+
 /** Pieces of a stream, never whole files. */
 const SEGMENT_PATH = /\.(ts|m4s|m2ts|cmfv|cmfa)$/i;
 
@@ -105,6 +112,7 @@ export function classify(info: ResponseInfo): Classified | null {
     return null;
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+  if (AD_URL.test(url.hostname + "/" + url.pathname)) return null;
 
   const mime = (header(info, "content-type") ?? "").split(";")[0]!.trim().toLowerCase();
   const ext = pathExt(url.pathname);
@@ -133,6 +141,8 @@ export function classify(info: ResponseInfo): Classified | null {
   if (!looksLikeMedia) return null;
   // Range requests with a byte range in the query string are segments too.
   if (/[?&](range|bytestart)=/i.test(href)) return null;
+  // ...and so are byte ranges written into the path (".../begin/0/len/5000/...").
+  if (/\/(range\/\d|begin\/\d+\/len\/\d)/i.test(url.pathname)) return null;
 
   const sizeBytes = totalSize(info);
   if (sizeBytes !== undefined && sizeBytes < MIN_DIRECT_BYTES) return null;

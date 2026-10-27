@@ -39,6 +39,7 @@ describe("classify", () => {
     expect(classify(res({ statusCode: 404 }))).toBeNull();
     expect(classify(res({ initiator: "chrome-extension://abc" }))).toBeNull();
     expect(classify(res({ url: "https://x.com/v.mp4?range=0-5000" }))).toBeNull();
+    expect(classify(res({ url: "https://rr5---sn-x.googlevideo.com/videoplayback/id/9a/itag/91/begin/0/len/5000/goap/x" }))).toBeNull();
   });
 
   it("ignores non-media XHR", () => {
@@ -58,5 +59,14 @@ describe("dispositionFilename", () => {
     expect(dispositionFilename(`attachment; filename="a.mp4"; filename*=UTF-8''caf%C3%A9.mp4`)).toBe("café.mp4");
     expect(dispositionFilename("inline; filename=plain.mp4")).toBe("plain.mp4");
     expect(dispositionFilename(undefined)).toBeUndefined();
+  });
+
+  it("ignores video ad servers", () => {
+    const hls = { type: "xmlhttprequest", headers: { "Content-Type": "application/vnd.apple.mpegurl" } };
+    expect(classify(res({ url: "https://redirector.gvt1.com/api/manifest/hls_variant/requiressl/yes/source/dclk_video_ads/id/9a/itag/0/x.m3u8", ...hls }))).toBeNull();
+    expect(classify(res({ url: "https://delivery-cdn-cf.adswizz.com/proxidigital/spot.wav", headers: { "Content-Type": "audio/x-wav", "Content-Length": String(8 * MB) } }))).toBeNull();
+    expect(classify(res({ url: "https://imasdk.googleapis.com/js/core/bridge.mp4" }))).toBeNull();
+    // A site whose name merely contains an ad network's name still counts.
+    expect(classify(res({ url: "https://notdoubleclick.net.example.com/v.mp4" }))).not.toBeNull();
   });
 });
