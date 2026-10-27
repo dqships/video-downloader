@@ -55,10 +55,10 @@ const MEDIA_EXTS = new Set([
 
 /**
  * Video ad servers. Players fetch these before the programme (Google IMA on
- * news sites, audio spots on Dailymotion), and listing them puts an ad at
- * the top of the list.
+ * news sites, audio spots on Dailymotion) and banner ads play them beside
+ * it (Criteo, AppNexus), and listing them buries the video.
  */
-const AD_URL = /(^|[./])(doubleclick\.net|googlesyndication\.com|2mdn\.net|imasdk\.googleapis\.com|adswizz\.com)\/|\/source\/dclk_video_ads\//i;
+const AD_URL = /(^|[./])(doubleclick\.net|googlesyndication\.com|2mdn\.net|imasdk\.googleapis\.com|adswizz\.com|criteo\.net|adnxs\.com|adnxs-simple\.com)\/|\/source\/dclk_video_ads\//i;
 
 /** Pieces of a stream, never whole files. */
 const SEGMENT_PATH = /\.(ts|m4s|m2ts|cmfv|cmfa)$/i;

@@ -10,7 +10,7 @@ import { classify } from "./classify";
 import { Downloads } from "./downloads";
 import { HeaderCache, replayableHeaders } from "./headers";
 import { probeDash } from "./dash-probe";
-import { probeHls } from "./hls-probe";
+import { probeHls, type FrameRef } from "./hls-probe";
 import { checkCandidate, scanTab } from "./page-probe";
 import { enrich } from "./sites";
 import { Registry } from "./registry";
@@ -88,6 +88,7 @@ async function handleResponse(
     found,
     sentHeaders: headerCache.get(details.requestId) ?? {},
     pageUrl: tab.url ?? details.initiator ?? "",
+    frame: { tabId: details.tabId, frameId: details.frameId },
     earlier,
     extra: { sourceKind: "sniffer" },
   });
@@ -100,6 +101,8 @@ async function list(input: {
   found: NonNullable<ReturnType<typeof classify>>;
   sentHeaders: Record<string, string>;
   pageUrl: string;
+  /** The frame that loaded the URL, when a request showed us. */
+  frame?: FrameRef;
   earlier: Promise<unknown>[];
   extra: Pick<MediaItem, "sourceKind"> & Partial<Pick<MediaItem, "title" | "thumbnail" | "durationSec">>;
 }): Promise<void> {
@@ -109,7 +112,11 @@ async function list(input: {
   const isStream = found.type !== "http";
   if (known?.media.some((m) => m.childUrls?.includes(url) || (isStream && m.url === url))) return;
   const streamDetails =
-    found.type === "hls" ? await probeHls(url, sentHeaders) : found.type === "dash" ? await probeDash(url, sentHeaders) : {};
+    found.type === "hls"
+      ? await probeHls(url, sentHeaders, input.frame)
+      : found.type === "dash"
+        ? await probeDash(url, sentHeaders, input.frame)
+        : {};
   // The URL looked like a stream but the server sent something else.
   if (streamDetails === null) return;
   await Promise.allSettled(input.earlier);
