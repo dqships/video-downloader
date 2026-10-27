@@ -82,6 +82,8 @@ export interface StreamVariant {
   /** DASH: representations to download, as `adaptationSet:representation`. */
   videoRep?: string;
   audioRep?: string;
+  /** DASH: the audio is Vorbis, so the file is saved as WebM. */
+  webm?: boolean;
 }
 
 export interface TabMedia {

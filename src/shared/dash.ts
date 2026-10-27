@@ -266,25 +266,42 @@ export function parseMpd(text: string, mpdUrl: string): DashManifest {
   };
 }
 
-/** MP4-family tracks; WebM DASH can't go through the HLS reader. */
-function isMp4Family(rep: DashRepresentation): boolean {
+/** MP4-family tracks go through the HLS reader; the others (WebM) are fetched as files and joined. */
+export function isMp4Family(rep: DashRepresentation): boolean {
   if (rep.mime.endsWith("/webm")) return false;
-  return !/^(vp8|vp9|vp09|vorbis)/i.test(rep.codecs ?? "");
+  return !/^(vp8|vp9|vp09|vorbis|opus)/i.test(rep.codecs ?? "");
 }
 
-/** The audio a player would start with: main role, then highest bitrate. */
+/** Vorbis can only be saved in WebM; everything else goes in MP4. */
+export const needsWebm = (rep: DashRepresentation | undefined) => /^vorbis/i.test(rep?.codecs ?? "");
+
+/**
+ * The audio a player would start with: main role, then highest bitrate.
+ * MP4-family audio is preferred (it suits either kind of video), and Vorbis,
+ * which forces a WebM file, comes last.
+ */
 export function bestAudio(m: DashManifest): DashRepresentation | undefined {
   return m.representations
-    .filter((r) => r.kind === "audio" && !r.hasDrm && isMp4Family(r))
-    .sort((a, b) => Number(b.isMain) - Number(a.isMain) || (b.bandwidth ?? 0) - (a.bandwidth ?? 0))[0];
+    .filter((r) => r.kind === "audio" && !r.hasDrm)
+    .sort(
+      (a, b) =>
+        Number(needsWebm(a)) - Number(needsWebm(b)) ||
+        Number(isMp4Family(b)) - Number(isMp4Family(a)) ||
+        Number(b.isMain) - Number(a.isMain) ||
+        (b.bandwidth ?? 0) - (a.bandwidth ?? 0),
+    )[0];
 }
 
 /** Qualities on offer, best first, each with the best audio, plus audio only. */
 export function listDashVariants(m: DashManifest, mpdUrl: string): StreamVariant[] {
   const audio = bestAudio(m);
-  const videos = m.representations
-    .filter((r) => r.kind === "video" && !r.hasDrm && isMp4Family(r))
-    .sort((a, b) => (b.height ?? 0) - (a.height ?? 0) || (b.bandwidth ?? 0) - (a.bandwidth ?? 0));
+  const all = m.representations
+    .filter((r) => r.kind === "video" && !r.hasDrm)
+    .sort((a, b) => (b.height ?? 0) - (a.height ?? 0) || Number(isMp4Family(b)) - Number(isMp4Family(a)) || (b.bandwidth ?? 0) - (a.bandwidth ?? 0));
+  // Sites often offer each height twice (H.264 and VP9/AV1); where they do,
+  // the MP4-family ones are kept.
+  const mp4Heights = new Set(all.filter(isMp4Family).map((v) => v.height));
+  const videos = all.filter((v) => isMp4Family(v) || !mp4Heights.has(v.height));
   const out: StreamVariant[] = videos.map((v) => ({
     id: "",
     label: "",
@@ -297,6 +314,7 @@ export function listDashVariants(m: DashManifest, mpdUrl: string): StreamVariant
     audioRep: audio?.key,
     audioLanguage: audio?.lang,
     audioCodecs: audio?.codecs,
+    webm: needsWebm(audio) || undefined,
   }));
   if (audio) {
     out.push({
@@ -308,6 +326,7 @@ export function listDashVariants(m: DashManifest, mpdUrl: string): StreamVariant
       audioRep: audio.key,
       audioLanguage: audio.lang,
       audioCodecs: audio.codecs,
+      webm: needsWebm(audio) || undefined,
     });
   }
   return labelVariants(out);

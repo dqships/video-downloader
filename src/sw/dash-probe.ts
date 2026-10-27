@@ -2,9 +2,10 @@
 // for a download, turns the chosen representations into HLS playlists for
 // the download worker. Fetches replay the page's headers.
 
-import { dashChildUrls, hlsMediaPlaylist, listDashSubtitles, listDashVariants, parseMpd, resolveSegments, type ByteRange, type DashManifest, type SegmentRef } from "../shared/dash";
+import { dashChildUrls, hlsMediaPlaylist, isMp4Family, listDashSubtitles, listDashVariants, parseMpd, resolveSegments, type ByteRange, type DashManifest, type SegmentRef } from "../shared/dash";
 import { dataUrl, singleVariantMaster } from "../shared/hls";
 import type { StreamVariant } from "../shared/types";
+import type { TrackPart } from "../shared/worker-protocol";
 import type { FrameRef, HlsDetails } from "./hls-probe";
 import { fetchForProbe, fetchWithReplay } from "./hls-probe";
 import { installReplay, removeReplay } from "./replay";
@@ -76,25 +77,54 @@ async function dropMissingTail(segments: SegmentRef[], sent: Record<string, stri
   }
 }
 
+export type DashPlan =
+  /** A data: URL playlist (a one-quality master, or the audio playlist alone) for the HLS reader. */
+  | { kind: "hls"; url: string; urls: string[] }
+  /** WebM tracks: each one's files, fetched and joined by the worker. */
+  | { kind: "tracks"; tracks: TrackPart[][]; urls: string[] };
+
 /**
- * What the worker should read for this variant: a data: URL playlist (a
- * one-quality master, or the audio playlist alone), and every URL it will
- * fetch, for header-replay scoping.
+ * What the worker should read for this variant, and every URL it will fetch,
+ * for header-replay scoping.
  */
-export async function planDash(
-  manifestUrl: string,
-  variant: StreamVariant,
-  sent: Record<string, string>,
-): Promise<{ url: string; urls: string[] }> {
+export async function planDash(manifestUrl: string, variant: StreamVariant, sent: Record<string, string>): Promise<DashPlan> {
   const m = await readManifest(manifestUrl, sent);
   if (m.isLive) throw new Error("Recording live streams arrives in a later version.");
   const urls: string[] = [manifestUrl];
-  const playlist = async (key: string | undefined) => {
+  const rep = (key: string | undefined) => {
     if (!key) return undefined;
-    const rep = m.representations.find((r) => r.key === key);
-    if (!rep) throw new Error("This quality is no longer in the stream's manifest. Reload the page and try again.");
-    if (rep.hasDrm) throw new Error("This video is protected by DRM and can't be downloaded.");
-    const resolved = await resolveSegments(rep, m.duration, (u, r) => fetchRange(u, r, sent));
+    const found = m.representations.find((r) => r.key === key);
+    if (!found) throw new Error("This quality is no longer in the stream's manifest. Reload the page and try again.");
+    if (found.hasDrm) throw new Error("This video is protected by DRM and can't be downloaded.");
+    return found;
+  };
+  const audioRep = rep(variant.audioRep);
+  const videoRep = variant.audioOnly ? undefined : rep(variant.videoRep);
+  if (variant.audioOnly && !audioRep) throw new Error("This stream has no separate audio track.");
+  if (!variant.audioOnly && !videoRep) throw new Error("This quality is no longer in the stream's manifest. Reload the page and try again.");
+  const reps = [videoRep, audioRep].filter((r) => r !== undefined);
+
+  if (reps.some((r) => !isMp4Family(r))) {
+    const tracks: TrackPart[][] = [];
+    for (const r of reps) {
+      // A single-file representation is a whole WebM file: no index needed.
+      if (r.segments.kind !== "list") {
+        urls.push(r.segments.url);
+        tracks.push([{ url: r.segments.url }]);
+        continue;
+      }
+      const segments = await dropMissingTail(r.segments.segments, sent);
+      if (!segments.length) throw new Error("This stream's manifest lists no segments.");
+      const parts = [...(r.segments.init ? [r.segments.init] : []), ...segments].map((s) => ({ url: s.url, range: s.range }));
+      urls.push(...parts.map((p) => p.url));
+      tracks.push(parts);
+    }
+    return { kind: "tracks", tracks, urls };
+  }
+
+  const playlist = async (r: typeof audioRep) => {
+    if (!r) return undefined;
+    const resolved = await resolveSegments(r, m.duration, (u, range) => fetchRange(u, range, sent));
     const init = resolved.init;
     const segments = await dropMissingTail(resolved.segments, sent);
     if (!segments.length) throw new Error("This stream's manifest lists no segments.");
@@ -102,12 +132,8 @@ export async function planDash(
     urls.push(...segments.map((s) => s.url));
     return dataUrl(hlsMediaPlaylist(init, segments));
   };
-  const audio = await playlist(variant.audioRep);
-  if (variant.audioOnly) {
-    if (!audio) throw new Error("This stream has no separate audio track.");
-    return { url: audio, urls };
-  }
-  const video = await playlist(variant.videoRep);
-  if (!video) throw new Error("This quality is no longer in the stream's manifest. Reload the page and try again.");
-  return { url: dataUrl(singleVariantMaster({ ...variant, url: video, audioUrl: audio })), urls };
+  const audio = await playlist(audioRep);
+  if (variant.audioOnly) return { kind: "hls", url: audio!, urls };
+  const video = (await playlist(videoRep))!;
+  return { kind: "hls", url: dataUrl(singleVariantMaster({ ...variant, url: video, audioUrl: audio })), urls };
 }
