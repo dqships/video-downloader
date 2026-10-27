@@ -9,10 +9,16 @@ import { storageKeys } from "./messages";
 export const SITE_ORIGIN = "https://vidzilla.followusai.com";
 export const UPGRADE_URL = `${SITE_ORIGIN}/upgrade`;
 export const LICENSE_URL = `${SITE_ORIGIN}/api/license`;
+/** Opens Stripe's customer portal for this install's yearly plan. */
+export const PORTAL_URL = `${SITE_ORIGIN}/api/portal`;
 /** The page Stripe returns to after a purchase. */
 export const THANKS_PATH = "/upgrade-thanks";
 /** How often a paid license is checked again (a yearly plan can lapse). */
 export const LICENSE_TTL_MS = 24 * 3_600_000;
+/** How often a copy checks after another computer on the profile reported a purchase. */
+export const PAID_ELSEWHERE_RETRY_MS = 10 * 60_000;
+/** A purchase reported elsewhere is trusted over a "no" for this long (Stripe's search lags). */
+export const PAID_ELSEWHERE_GRACE_MS = 24 * 3_600_000;
 
 export interface License {
   adFree: boolean;
@@ -56,4 +62,28 @@ export function parseLicense(json: unknown, now: number): License | undefined {
 /** Ad-free right now: paid, and a yearly plan's period hasn't run out. */
 export function isAdFree(license: License, now: number): boolean {
   return license.adFree && (license.until == null || license.until > now);
+}
+
+/**
+ * Whether to ask the website now, without the user asking. Only copies that
+ * paid check daily (a yearly plan can lapse, a payment can be refunded):
+ * free copies would otherwise cost every install two Stripe searches a day.
+ * A free copy checks when another computer on the same Chrome profile saw a
+ * purchase (`paidAt`, synced), until it hears yes. Buying (the thanks page)
+ * and Check again in Settings always ask.
+ */
+export function shouldCheck(license: License, paidAt: number | undefined, now: number): boolean {
+  if (license.adFree) return now - license.checkedAt >= LICENSE_TTL_MS;
+  // At once for a purchase newer than our last answer, then every few minutes.
+  return paidAt !== undefined && (license.checkedAt < paidAt || now - license.checkedAt >= PAID_ELSEWHERE_RETRY_MS);
+}
+
+/**
+ * The synced purchase mark after a check: set when this copy is paid, kept
+ * while a fresh mark may just be ahead of Stripe's search, cleared once the
+ * answer stays no (refunded, or a yearly plan ran out).
+ */
+export function nextPaidAt(paidAt: number | undefined, adFree: boolean, now: number): number | undefined {
+  if (adFree) return paidAt ?? now;
+  return paidAt !== undefined && now - paidAt < PAID_ELSEWHERE_GRACE_MS ? paidAt : undefined;
 }

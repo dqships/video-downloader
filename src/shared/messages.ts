@@ -34,6 +34,8 @@ export const storageKeys = {
   license: "license",
   /** This install's random ID, in chrome.storage.sync. */
   installId: "installId",
+  /** When a copy on this Chrome profile last saw a paid license (ms), in chrome.storage.sync. */
+  paidAt: "paidAt",
 } as const;
 
 export function sendCommand(cmd: Command): Promise<CommandResult> {
