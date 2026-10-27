@@ -5,6 +5,7 @@
 
 import { formatBytes } from "../shared/format";
 import type { MediaItem, StreamVariant } from "../shared/types";
+import { findXPost } from "./x-post";
 
 type Extra = Partial<Pick<MediaItem, "variants" | "title" | "thumbnail" | "rank">>;
 
@@ -40,24 +41,6 @@ async function twitchClip(item: MediaItem): Promise<Extra | undefined> {
     sizes[i] ? [{ id: String(height), label: `${height}p · ${formatBytes(sizes[i])}`, height, url: `${head}${height}${tail}`, sizeBytes: sizes[i] }] : [],
   );
   return variants.length > 1 ? { variants } : undefined;
-}
-
-/** X: which post a video belongs to; runs in the page. */
-function findXPost(mediaKey: string, statusId: string | null) {
-  const video = [...document.querySelectorAll("video")].find((v) => v.poster.includes(`/${mediaKey}`));
-  const post = video?.closest("article");
-  if (!video || !post) return null;
-  const author = post.querySelector('[data-testid="User-Name"] span')?.textContent?.trim();
-  const text = post.querySelector('[data-testid="tweetText"]')?.textContent?.replace(/\s+/g, " ").trim();
-  // The post the page is about is the focused one (tabindex -1), or the one whose timestamp links to the page.
-  const main =
-    post.getAttribute("tabindex") === "-1" || (statusId !== null && post.querySelector(`a[href$="/status/${statusId}"] time`) !== null);
-  const posts = [...document.querySelectorAll("article")];
-  return {
-    title: [author, text?.slice(0, 100)].filter(Boolean).join(": ") || undefined,
-    thumbnail: video.poster || undefined,
-    rank: main ? 0 : posts.indexOf(post) + 1,
-  };
 }
 
 /** amplify_video/<id>/, ext_tw_video/<id>/ or tweet_video/<name>.mp4 (GIFs). */
