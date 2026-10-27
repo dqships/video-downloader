@@ -83,6 +83,7 @@ const pages = {
     }, 300);
   </script>`,
   "/dash-tail.html": `<title>Dash Short Tail</title>${player("/media/dash/tail.mpd")}`,
+  "/page-only.html": `<title>Page Only</title>${player("/page-only/index.m3u8")}`,
   "/flaky.html": `<title>Busy Server</title>${player("/flaky/index.m3u8")}`,
   "/ad-manifest.html": `<title>Ad Before The Show</title>${player("/ads/vast.m3u8", "/ads/vast.mpd", "/media/hls/master.m3u8")}`,
   "/live.html": `<title>Live Now</title>${player("/live/index.m3u8")}`,
@@ -150,11 +151,18 @@ export function startServer(port = 0, { cors = false } = {}) {
       res.writeHead(200, { "Content-Type": TYPES[".mpd"] }).end(mpd);
       return;
     }
-    // Turns the second request away, as Dailymotion does when the extension
-    // reads a playlist at the same moment as the player.
+    // Turns the next two requests after the player's away, as Dailymotion's
+    // server does now and then.
+    // Only answers the page itself: requests it didn't make are refused.
+    if (url.pathname === "/page-only/index.m3u8") {
+      const site = req.headers["sec-fetch-site"];
+      if (site !== "same-origin" && site !== "same-site") res.writeHead(403).end();
+      else res.writeHead(200, { "Content-Type": TYPES[".m3u8"] }).end(dynamic["/drm/index.m3u8"].replace(/#EXT-X-KEY[^\n]*\n/, ""));
+      return;
+    }
     if (url.pathname === "/flaky/index.m3u8") {
       flakyHits++;
-      if (flakyHits === 2) res.writeHead(403).end();
+      if (flakyHits === 2 || flakyHits === 3) res.writeHead(403).end();
       else res.writeHead(200, { "Content-Type": TYPES[".m3u8"] }).end(dynamic["/drm/index.m3u8"].replace(/#EXT-X-KEY[^\n]*\n/, ""));
       return;
     }
