@@ -58,6 +58,22 @@ const pages = {
   "/eme.html": `<title>Protected Player</title><video></video>${player("/media/hls/master.m3u8")}<script>
     setTimeout(() => document.querySelector("video").setMediaKeys({ keySystem: "com.widevine.alpha" }).catch(() => {}), 300);
   </script>`,
+  "/declared.html": `<title>Morning Bulletin | Fixture News</title>
+    <meta property="og:title" content="Morning Bulletin">
+    <meta property="og:video" content="/embed/7"><meta property="og:video:type" content="text/html">
+    <meta property="og:video:secure_url" content="/media/hls/master.m3u8"><meta property="og:video:type" content="application/x-mpegURL">
+    <script type="application/ld+json">${JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "NewsArticle",
+      video: { "@type": "VideoObject", name: "Harbour at Dawn", contentUrl: "/media/clip.mp4", thumbnailUrl: "/poster.png", duration: "PT6S" },
+    })}</script>
+    <video controls preload="none"></video>`,
+  "/spa.html": `<title>Feed</title><main></main><script>
+    setTimeout(() => {
+      history.pushState({}, "", "/spa/clip-2");
+      document.querySelector("main").innerHTML = '<video src="/media/clip.mp4" preload="none" controls></video>';
+    }, 300);
+  </script>`,
   "/live.html": `<title>Live Now</title>${player("/live/index.m3u8")}`,
   "/drm.html": `<title>Locked Stream</title>${player("/drm/index.m3u8")}`,
   "/mixed.html": `<title>Northern Lights Over Tromsø, Full Timelapse | Fixture Site</title>
