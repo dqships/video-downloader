@@ -46,6 +46,10 @@
       "all_frames": true
     }
   ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "action": {
     "default_title": "Vidzilla",
     "default_popup": "popup.html",

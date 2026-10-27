@@ -16,6 +16,7 @@ export const storageKeys = {
   tab: (tabId: number) => `tab:${tabId}`,
   jobs: "jobs",
   settings: "settings",
+  history: "history",
 } as const;
 
 export function sendCommand(cmd: Command): Promise<CommandResult> {

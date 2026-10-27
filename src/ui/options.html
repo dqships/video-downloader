@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vidzilla settings</title>
+    <link rel="stylesheet" href="design/tokens.css" />
+    <link rel="stylesheet" href="design/components.css" />
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body class="vz-options">
+    <header class="vz-popup-head">
+      <svg class="vz-popup-mark" viewBox="4 14 88 76.21" aria-hidden="true">
+        <path fill="currentColor" d="M4 14H92L62.89 64.43L48 38.64L33.11 64.43Z" />
+        <path fill="currentColor" d="M48 48.64L60 69.43L48 90.21L36 69.43Z" />
+      </svg>
+      <h1 class="vz-popup-title">vidzilla</h1>
+    </header>
+
+    <section aria-labelledby="settings-title">
+      <h2 id="settings-title" class="vz-options-heading">Saving</h2>
+      <form id="settings" class="vz-options-form">
+        <label class="vz-field">
+          <span class="vz-field-label vz-edge">File name</span>
+          <input class="vz-input" name="template" type="text" spellcheck="false" />
+          <span class="vz-field-hint">%title, %hostname and %date are filled in. Example: <output id="example"></output></span>
+        </label>
+        <label class="vz-field">
+          <span class="vz-field-label vz-edge">Longest name</span>
+          <input class="vz-input" name="maxLength" type="number" min="20" max="200" step="1" />
+          <span class="vz-field-hint">Characters, before the extension.</span>
+        </label>
+        <label class="vz-field">
+          <span class="vz-field-label vz-edge">Folder</span>
+          <input class="vz-input" name="subfolder" type="text" spellcheck="false" placeholder="Downloads" />
+          <span class="vz-field-hint">A folder inside your Downloads folder. Leave empty to save straight into Downloads.</span>
+        </label>
+        <label class="vz-field vz-field--inline">
+          <input class="vz-toggle" name="saveAs" type="checkbox" role="switch" />
+          <span>Ask where to save each file</span>
+        </label>
+        <p id="saved" class="vz-field-hint" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section aria-labelledby="history-title">
+      <div class="vz-options-heading-row">
+        <h2 id="history-title" class="vz-options-heading">Saved files</h2>
+        <button id="clear" class="vz-btn vz-btn--quiet vz-btn--small" type="button">Clear list</button>
+      </div>
+      <ol id="history" class="vz-history"></ol>
+      <p id="history-empty" class="vz-field-hint" hidden>Nothing saved yet. Files you save with Vidzilla show up here.</p>
+    </section>
+
+    <template id="history-row">
+      <li class="vz-history-row">
+        <div class="vz-thumb"></div>
+        <div class="vz-history-body">
+          <p class="vz-history-name"></p>
+          <p class="vz-history-meta vz-edge"></p>
+        </div>
+        <div class="vz-frame-actions">
+          <button class="vz-icon-btn show" type="button" title="Show in folder"></button>
+          <a class="vz-icon-btn page" target="_blank" rel="noopener" title="Open the page it came from"></a>
+          <button class="vz-icon-btn remove" type="button" title="Remove from list"></button>
+        </div>
+      </li>
+    </template>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

@@ -65,7 +65,20 @@ try {
     await p.close();
   };
 
+  // Sample history for the options page.
+  await sw.evaluate((thumb) => {
+    const now = Date.now();
+    return chrome.storage.local.set({
+      history: [
+        { id: "h1", filename: "Northern Lights Over Tromsø, Full Timelapse.mp4", pageUrl: "https://www.example.com/watch", thumbnail: thumb, bytes: 48_200_000, quality: "1080p", savedAt: now - 60_000 },
+        { id: "h2", filename: "Vidzilla/Morning Bulletin.m4a", pageUrl: "https://news.example.org/story/1", bytes: 3_100_000, quality: "Audio only", savedAt: now - 86_400_000 },
+      ],
+    });
+  }, `${site.origin}/poster.png`);
+
   for (const scheme of ["light", "dark"]) {
+    await shoot(`options-${scheme}`, `chrome-extension://${id}/options.html`, scheme, 760);
+    await shoot(`options-${scheme}-narrow`, `chrome-extension://${id}/options.html`, scheme, 380);
     // Narrow: the real popup width. Wide: the popup opened as a tab.
     await shoot(`popup-${scheme}-narrow`, `chrome-extension://${id}/popup.html?tabId=${tab.tabId}&narrow=1`, scheme, 380);
     await shoot(`popup-${scheme}-wide`, `chrome-extension://${id}/popup.html?tabId=${tab.tabId}`, scheme, 760);
