@@ -21,7 +21,7 @@ downloaded.
 | 7. YouTube | Not planned (Chrome Web Store policy) |
 
 Live HLS streams record until they end or you press stop; live DASH recording
-comes later. WebM-only DASH streams are listed but can't be saved yet.
+comes later.
 
 ## Try it
 
@@ -64,6 +64,12 @@ extension's reload button.
   byte ranges, and SegmentBase (the file's sidx is read for the ranges) all
   become HLS media playlists with `EXT-X-MAP` and byte ranges, so the same
   worker job remuxes DASH. Multi-period manifests use the longest period.
+  WebM DASH (VP8, VP9, AV1, Opus, Vorbis) can't go through the HLS reader:
+  the worker fetches each track's init and segments (or its one file) into
+  OPFS and joins them packet by packet (`src/worker/fetch-tracks.ts`, with
+  the same joiner as player recording). The file is MP4, or WebM when the
+  sound is Vorbis. Where a height comes in both H.264 and VP9/AV1, the
+  H.264 one is listed.
 - **Audio only**: every stream offers it; the picture is dropped and the file
   is saved as `.m4a`.
 - **Live recording** (`src/worker/record-live.ts`): packets are copied from the
@@ -132,7 +138,9 @@ node scripts/screenshots.mjs out/   # popup in light and dark mode
 
 The end-to-end tests cover detection, real downloads verified with ffprobe
 (direct MP4; HLS plain, AES-128, fMP4 and two-quality with separate audio;
-DASH numbered, timeline, byte-range and single indexed file; audio only; live
+DASH numbered, timeline, byte-range and single indexed file; WebM DASH
+segmented (VP9/Opus to MP4) and one file per track (VP8/Vorbis to WebM);
+audio only; live
 recording stopped by hand and to the end; subtitles from HLS, DASH and a page
 track; the EME warning),
 Referer replay for a file and for every segment of a stream, and that live and

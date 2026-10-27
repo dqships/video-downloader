@@ -111,9 +111,27 @@ describe("listDashVariants", () => {
     expect(variants[2]!.videoRep).toBeUndefined();
   });
 
-  it("skips WebM representations", () => {
-    const webm = `<MPD type="static" mediaPresentationDuration="PT1S"><Period><AdaptationSet mimeType="video/webm"><Representation id="w" codecs="vp9" height="1080"/></AdaptationSet></Period></MPD>`;
-    expect(listDashVariants(parseMpd(webm, URL_), URL_)).toEqual([]);
+  it("offers WebM qualities, preferring MP4-family ones where a height has both", () => {
+    const mpd = `<MPD type="static" mediaPresentationDuration="PT1S"><Period>
+      <AdaptationSet mimeType="video/webm"><Representation id="w1080" codecs="vp9" height="1080"/><Representation id="w720" codecs="vp9" height="720"/></AdaptationSet>
+      <AdaptationSet mimeType="video/mp4"><Representation id="m720" codecs="avc1.64001f" height="720"/></AdaptationSet>
+      <AdaptationSet mimeType="audio/webm"><Representation id="o" codecs="opus" bandwidth="160000"/></AdaptationSet>
+      <AdaptationSet mimeType="audio/webm"><Representation id="v" codecs="vorbis" bandwidth="190000"/></AdaptationSet>
+    </Period></MPD>`;
+    const variants = listDashVariants(parseMpd(mpd, URL_), URL_);
+    expect(variants.map((v) => [v.label, v.videoRep?.split(":")[1], v.audioRep?.split(":")[1], !!v.webm])).toEqual([
+      ["1080p", "w1080", "o", false],
+      ["720p", "m720", "o", false],
+      ["Audio only", undefined, "o", false],
+    ]);
+  });
+
+  it("saves as WebM when the only audio is Vorbis", () => {
+    const mpd = `<MPD type="static" mediaPresentationDuration="PT1S"><Period>
+      <AdaptationSet mimeType="video/webm"><Representation id="w" codecs="vp8" height="360"/></AdaptationSet>
+      <AdaptationSet mimeType="audio/webm"><Representation id="v" codecs="vorbis"/></AdaptationSet>
+    </Period></MPD>`;
+    expect(listDashVariants(parseMpd(mpd, URL_), URL_).every((v) => v.webm)).toBe(true);
   });
 });
 

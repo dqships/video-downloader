@@ -14,6 +14,7 @@ const TYPES = {
   ".mpd": "application/dash+xml",
   ".vtt": "text/vtt",
   ".ttml": "application/ttml+xml",
+  ".webm": "video/webm",
 };
 
 /** Plays a playlist the way a player would: master first, then its children. */
@@ -53,6 +54,11 @@ const pages = {
   "/dash-timeline.html": `<title>Dash Timeline</title>${player("/media/dash-timeline/manifest.mpd")}`,
   "/dash-single.html": `<title>Dash Byte Ranges</title>${player("/media/dash-single/manifest.mpd")}`,
   // A player reading one file per track by byte range, as on Facebook.
+  "/dash-webm.html": `<title>Dash WebM</title>${player("/media/dash-webm/manifest.mpd", "/media/dash-webm/init-0.webm")}`,
+  "/dash-webm-base.html": `<title>Dash WebM Vorbis</title><script>(async () => {
+    await fetch("/media/dash-webm-base/manifest.mpd");
+    await fetch("/media/dash-webm-base/video.webm", { headers: { range: "bytes=0-100000" } });
+  })()</script>`,
   "/dash-base.html": `<title>Dash One File</title><script>(async () => {
     await fetch("/media/dash-base/manifest.mpd");
     await fetch("/media/dash-base/video.mp4", { headers: { range: "bytes=0-1000000" } });
