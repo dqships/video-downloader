@@ -78,7 +78,7 @@ test("saves a pasted HLS stream at the chosen quality, audio included", async ()
   await frame.locator(".vz-badge", { hasText: "HLS" }).waitFor();
   assert.equal(await frame.locator(".vz-frame-name").inputValue(), "hls-multi.mp4");
   const select = frame.locator(".vz-select select");
-  assert.deepEqual(await select.locator("option").allTextContents(), ["360p", "180p"]);
+  assert.deepEqual(await select.locator("option").allTextContents(), ["360p", "180p", "Audio only"]);
   await select.selectOption({ label: "180p" });
   await frame.locator(".vz-frame-name").fill("Two qualities");
   const [download] = await Promise.all([page.waitForEvent("download", { timeout: 60000 }), frame.locator(".download").click()]);

@@ -8,6 +8,7 @@ import type { FromOffscreenEnvelope } from "../shared/worker-protocol";
 import { classify } from "./classify";
 import { Downloads } from "./downloads";
 import { HeaderCache, replayableHeaders } from "./headers";
+import { probeDash } from "./dash-probe";
 import { probeHls } from "./hls-probe";
 import { Registry } from "./registry";
 import { clearStaleRules } from "./replay";
@@ -19,6 +20,18 @@ const headerCache = new HeaderCache();
 const registry = new Registry(updateBadge);
 const downloads = new Downloads();
 const metaRequested = new Set<number>();
+/** Detected responses still being read and listed, per tab. */
+const handling = new Map<number, Set<Promise<unknown>>>();
+
+function track(tabId: number, work: Promise<unknown>): void {
+  const set = handling.get(tabId) ?? new Set();
+  handling.set(tabId, set);
+  set.add(work);
+  void work.finally(() => {
+    set.delete(work);
+    if (!set.size && handling.get(tabId) === set) handling.delete(tabId);
+  });
+}
 
 function updateBadge(tab: TabMedia | undefined, tabId: number): void {
   const count = tab?.media.length ?? 0;
@@ -33,12 +46,12 @@ chrome.webRequest.onSendHeaders.addListener(
 );
 
 chrome.webRequest.onResponseStarted.addListener(
-  (details) => void onResponse(details),
+  (details) => onResponse(details),
   { urls: ["<all_urls>"], types: SNIFF_TYPES },
   ["responseHeaders", "extraHeaders"],
 );
 
-async function onResponse(details: chrome.webRequest.OnResponseStartedDetails): Promise<void> {
+function onResponse(details: chrome.webRequest.OnResponseStartedDetails): void {
   if (details.tabId < 0) return;
   const found = classify({
     url: details.url,
@@ -48,14 +61,30 @@ async function onResponse(details: chrome.webRequest.OnResponseStartedDetails): 
     initiator: details.initiator,
   });
   if (!found) return;
+  // A manifest seen earlier on this tab may own this URL (a player fetches the
+  // master, then its quality playlists or track files), so media is listed in
+  // arrival order, each after the ones before it are read.
+  const earlier = [...(handling.get(details.tabId) ?? [])];
+  track(details.tabId, handleResponse(details, found, earlier));
+}
 
+async function handleResponse(
+  details: chrome.webRequest.OnResponseStartedDetails,
+  found: NonNullable<ReturnType<typeof classify>>,
+  earlier: Promise<unknown>[],
+): Promise<void> {
   const tab = await chrome.tabs.get(details.tabId).catch(() => undefined);
   if (!tab) return;
   const sentHeaders = headerCache.get(details.requestId) ?? {};
   const known = await registry.get(details.tabId);
   // Quality playlists of a listed master, and repeat sightings, need no probe.
-  if (known?.media.some((m) => m.childUrls?.includes(details.url) || (found.type === "hls" && m.url === details.url))) return;
-  const streamDetails = found.type === "hls" ? await probeHls(details.url, sentHeaders) : {};
+  const isStream = found.type !== "http";
+  if (known?.media.some((m) => m.childUrls?.includes(details.url) || (isStream && m.url === details.url))) return;
+  const streamDetails =
+    found.type === "hls" ? await probeHls(details.url, sentHeaders) : found.type === "dash" ? await probeDash(details.url, sentHeaders) : {};
+  await Promise.allSettled(earlier);
+  const now = await registry.get(details.tabId);
+  if (now?.media.some((m) => m.childUrls?.includes(details.url))) return;
   const item: MediaItem = {
     id: hash53(details.url),
     type: found.type,
