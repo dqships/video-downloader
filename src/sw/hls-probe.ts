@@ -2,14 +2,14 @@
 // show the length and spot DRM or live streams before anything downloads.
 // Fetches replay the page's headers, like downloads do.
 
-import { isDrmKey, listVariants, parseM3u8, type HlsMedia } from "../shared/hls";
+import { isDrmKey, listHlsSubtitles, listVariants, parseM3u8, type HlsMedia } from "../shared/hls";
 import type { MediaItem, StreamVariant } from "../shared/types";
 import { installReplay, removeReplay } from "./replay";
 
 const PLAYLIST_TIMEOUT_MS = 15_000;
 const MAX_PLAYLIST_BYTES = 8 * 1024 * 1024;
 
-export type HlsDetails = Partial<Pick<MediaItem, "variants" | "childUrls" | "durationSec" | "isLive" | "hasDrm">>;
+export type HlsDetails = Partial<Pick<MediaItem, "variants" | "childUrls" | "durationSec" | "isLive" | "hasDrm" | "subtitles">>;
 
 /** Fetches a playlist; the caller has installed header replay for its directory. */
 export async function fetchPlaylistText(url: string): Promise<string> {
@@ -51,12 +51,13 @@ export async function probeHls(url: string, sent: Record<string, string>): Promi
       ...new Set([...pl.variants.map((v) => v.uri), ...pl.renditions.flatMap((r) => (r.uri ? [r.uri] : []))]),
     ];
     const sessionDrm = pl.sessionKeys.some(isDrmKey);
+    const subtitles = listHlsSubtitles(pl);
     const best = variants[0];
-    if (!best) return { variants, childUrls, hasDrm: sessionDrm };
+    if (!best) return { variants, childUrls, subtitles, hasDrm: sessionDrm };
     // The best quality's playlist tells us the length, liveness and keys.
     const media = parseM3u8(await fetchWithReplay(best.url, sent), best.url);
     const facts = media.kind === "media" ? mediaFacts(media) : { hasDrm: false };
-    return { variants, childUrls, ...facts, hasDrm: sessionDrm || facts.hasDrm };
+    return { variants, childUrls, subtitles, ...facts, hasDrm: sessionDrm || facts.hasDrm };
   } catch {
     return {};
   }
