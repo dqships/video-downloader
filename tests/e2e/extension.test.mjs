@@ -176,6 +176,13 @@ test("skips .m3u8 and .mpd URLs that answer with something else", async () => {
   await page.close();
 });
 
+test("reads a playlist the server turned away once", async () => {
+  const { tab, page } = await visit("/flaky.html");
+  assert.equal(tab.media[0].durationSec, 2);
+  assert.equal(tab.media[0].isLive, false);
+  await page.close();
+});
+
 test("downloads a plain HLS stream as MP4", async () => {
   await downloadStream("/hls.html");
 });
