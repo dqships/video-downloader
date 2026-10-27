@@ -20,6 +20,7 @@ import { watchSidePanelSetting } from "./side-panel";
 
 /** Single-page apps swap videos without a page load; look again once they settle. */
 const RESCAN_DELAY_MS = 1500;
+const RESCAN_AFTER_LOAD_MS = 4000;
 const PLAYER_GRACE_MS = 3000;
 const SNIFF_TYPES = ["xmlhttprequest", "media", "sub_frame", "other"] as chrome.webRequest.ResourceType[];
 const BADGE_COLOR = "#C8781E";
@@ -156,11 +157,16 @@ async function list(input: {
   }
 }
 
+/** Page-declared URLs each tab's current page has already had checked. */
+const scanned = new Map<number, Set<string>>();
+
 /** Lists what the page declares in its markup, before anything plays. */
 async function scanPage(tabId: number): Promise<void> {
-  const candidates = await scanTab(tabId);
-  const checked = await Promise.all(candidates.map((c) => checkCandidate(c.candidate, c.pageUrl)));
-  for (const hit of checked) {
+  const seen = scanned.get(tabId) ?? new Set<string>();
+  scanned.set(tabId, seen);
+  const candidates = await scanTab(tabId, seen);
+  const checked = await Promise.all(candidates.map(async (c) => ({ hit: await checkCandidate(c.candidate, c.pageUrl), frameId: c.frameId })));
+  for (const { hit, frameId } of checked) {
     if (!hit) continue;
     const { candidate, found, pageUrl } = hit;
     const earlier = [...(handling.get(tabId) ?? [])];
@@ -172,6 +178,7 @@ async function scanPage(tabId: number): Promise<void> {
         found,
         sentHeaders: { referer: pageUrl },
         pageUrl,
+        frame: { tabId, frameId },
         earlier,
         extra: { sourceKind: "page", title: candidate.title, thumbnail: candidate.thumbnail, durationSec: candidate.durationSec },
       }),
@@ -180,7 +187,10 @@ async function scanPage(tabId: number): Promise<void> {
 }
 
 chrome.webNavigation.onCompleted.addListener((d) => {
-  if (d.frameId === 0) void scanPage(d.tabId);
+  if (d.frameId !== 0) return;
+  void scanPage(d.tabId);
+  // Players often build their <video> after the load event.
+  setTimeout(() => void scanPage(d.tabId), RESCAN_AFTER_LOAD_MS);
 });
 
 chrome.webNavigation.onHistoryStateUpdated.addListener((d) => {
@@ -239,12 +249,14 @@ chrome.webNavigation.onBeforeNavigate.addListener((d) => {
   if (d.frameId !== 0) return;
   metaRequested.delete(d.tabId);
   pendingDrm.delete(d.tabId);
+  scanned.delete(d.tabId);
   registry.clear(d.tabId);
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   metaRequested.delete(tabId);
   pendingDrm.delete(tabId);
+  scanned.delete(tabId);
   registry.clear(tabId);
 });
 
@@ -306,6 +318,10 @@ async function handle(cmd: Command, sender: chrome.runtime.MessageSender): Promi
     }
     case "clear-tab":
       registry.clear(cmd.payload.tabId);
+      return { ok: true };
+    case "scan-tab":
+      // The popup or side panel opened on this tab: look at the page as it is now.
+      void scanPage(cmd.payload.tabId);
       return { ok: true };
     case "check-license":
       await refreshLicense();

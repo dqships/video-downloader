@@ -147,3 +147,42 @@ describe("mergeMedia when the page plays another video", () => {
     expect(list.map((m) => m.id)).toEqual(["player", "first", "second"]);
   });
 });
+
+describe("mergeMedia with a stream listed before play", () => {
+  const declared = item({
+    id: "declared",
+    type: "hls",
+    sourceKind: "page",
+    url: "https://cdndirector.example.com/cdn/manifest/video/x1.m3u8?sec=before",
+    title: "The page's name",
+    thumbnail: "https://img.example.com/x1.jpg",
+  });
+  const played = item({ id: "played", type: "hls", url: "https://cdndirector.example.com/cdn/manifest/video/x1.m3u8?sec=after" });
+
+  it("swaps in the player's copy once it plays, under the page's name", () => {
+    const { list } = mergeMedia([declared], played);
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ id: "played", url: played.url, sourceKind: "sniffer", title: "The page's name", thumbnail: declared.thumbnail });
+  });
+
+  it("names a stream that played before the page was read, without listing it twice", () => {
+    const { list, changed } = mergeMedia([played], declared);
+    expect(changed).toBe(true);
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ id: "played", title: "The page's name" });
+    expect(mergeMedia(list, declared).changed).toBe(false);
+  });
+
+  it("keeps a declared stream that is downloading", () => {
+    const { list } = mergeMedia([declared], played, new Set(["declared"]));
+    expect(list.map((m) => m.id)).toEqual(["declared", "played"]);
+  });
+
+  it("keeps streams on other paths or hosts apart", () => {
+    const other = item({ id: "other", type: "hls", url: "https://cdndirector.example.com/cdn/manifest/video/x2.m3u8?sec=after" });
+    expect(mergeMedia([declared], other).list.map((m) => m.id)).toEqual(["declared", "other"]);
+    const bare = item({ id: "bare", type: "hls", sourceKind: "page", url: "https://a.example.com/master.m3u8?id=1" });
+    const bare2 = item({ id: "bare2", type: "hls", url: "https://a.example.com/master.m3u8?id=2" });
+    expect(mergeMedia([bare], bare2).list.map((m) => m.id)).toEqual(["bare", "bare2"]);
+  });
+});
