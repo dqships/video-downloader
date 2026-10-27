@@ -22,7 +22,7 @@ Vidzilla is free and needs no account. It shows a short ad for our other apps ev
 
 ## Removing the ads
 
-You can pay to turn the ads off: $0.99 a year, renewing each year until you cancel, or $9 once. Payments are taken by Stripe. The upgrade covers the copy of Vidzilla it was bought from and the same Chrome profile on your other computers; it removes ads only and unlocks nothing else, since every feature is free. Cancel the yearly plan any time from the link in your receipt; it stays ad-free until the paid year ends. "Once" means for as long as we offer Vidzilla. If you're not happy, write to us within 30 days of a payment for a full refund.
+You can pay to turn the ads off: $0.99 a year, renewing each year until you cancel, or $9 once. Payments are taken by Stripe. The upgrade covers the copy of Vidzilla it was bought from and the same Chrome profile on your other computers; it removes ads only and unlocks nothing else, since every feature is free. Cancel the yearly plan any time from Manage in Vidzilla's Settings or the link in your receipt; it stays ad-free until the paid year ends. "Once" means for as long as we offer Vidzilla. If you're not happy, write to us within 30 days of a payment for a full refund.
 
 ## Privacy
 

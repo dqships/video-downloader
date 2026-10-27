@@ -89,8 +89,8 @@ and sound stay exactly as the site sent them.
 Private by design
 No accounts, no analytics. Vidzilla talks to the sites that host the media you
 choose to save. It also fetches its short list of ads from
-vidzilla.followusai.com, and once a day checks there whether this copy paid to
-remove them. Nothing about you or your downloads is sent.
+vidzilla.followusai.com, and after a purchase checks there once a day whether
+this copy still pays to remove them. Nothing about you or your downloads is sent.
 
 Free, with an occasional ad
 Every few downloads, after the file is saved, Vidzilla shows a short ad for
@@ -123,7 +123,7 @@ Please only save media you have the right to keep.
 | `scripting` | Reads the page's title, thumbnail and the media it declares in its markup, to name files and list media the network doesn't show. When a server only answers the page itself, reads the stream's playlist from inside the page. |
 | `offscreen` | Runs the download worker that fetches stream segments and joins them into one file, which a service worker can't do for long downloads. |
 | `sidePanel` | Offers the same media list in Chrome's side panel, for users who want it to stay open while they browse. |
-| `storage` | Keeps the media list, settings and saved-file history on the user's device, and a random install ID in synced storage that the daily ad-free check sends to vidzilla.followusai.com. |
+| `storage` | Keeps the media list, settings and saved-file history on the user's device, and a random install ID and a purchase mark in synced storage; the ad-free check sends the ID to vidzilla.followusai.com. |
 | `unlimitedStorage` | Large videos are assembled in the extension's private storage before saving, which can exceed the default quota. |
 
 - **In-app purchases:** in the item's Store listing settings, mark that it
