@@ -188,15 +188,14 @@ async function readRun({ blob: raw, offset }: CapturedRun, inputs: Input[]): Pro
 }
 
 /**
- * The runs of one track that make the most of it: those that can be joined
- * with each other, in time order. H.264 runs whose parameter sets differ carry
- * them in each keyframe (an avc3 track) so a decoder can follow the switch.
+ * The runs of one track that can be joined with each other: the group that
+ * holds the most. H.264 runs whose parameter sets differ carry them in each
+ * keyframe (an avc3 track) so a decoder can follow the switch.
  */
 function joinable(runs: Run[]): Run[] {
   const groups = new Map<string, Run[]>();
   for (const run of runs) groups.set(run.key, [...(groups.get(run.key) ?? []), run]);
   const best = [...groups.values()].sort((a, b) => b.reduce((s, r) => s + r.bytes, 0) - a.reduce((s, r) => s + r.bytes, 0))[0] ?? [];
-  best.sort((a, b) => a.start - b.start);
   if (best[0]?.codec === "avc" && new Set(best.map((r) => hex(r.config.description))).size > 1) {
     for (const run of best) run.inband = run.config.description ? avcParameterSets(run.config.description)?.nals : undefined;
   }
@@ -212,21 +211,93 @@ function trackConfig(runs: Run[]): Run["config"] {
   return config;
 }
 
-/** Packets of one run, up to where the next run takes over (a later append replaces what it overlaps). */
-async function* runPackets(run: Run, until: number): AsyncGenerator<EncodedPacket> {
-  for await (const raw of new EncodedPacketSink(run.track).packets()) {
-    const packet = run.offset ? raw.clone({ timestamp: raw.timestamp + run.offset }) : raw;
-    if (packet.timestamp >= until) {
-      if (packet.type === "key") return;
-      continue;
+/** A keyframe and the packets that depend on it, in decode order. */
+interface Gop {
+  start: number;
+  end: number;
+  packets: EncodedPacket[];
+}
+
+/** Time ranges already taken, kept sorted and merged. */
+class Taken {
+  private ranges: [number, number][] = [];
+  /** Where [start, end) first runs into a taken range: start itself, a later point, or Infinity. */
+  firstOverlap(start: number, end: number): number {
+    let first = Infinity;
+    for (const [a, b] of this.ranges) {
+      if (a >= end - EPSILON) break;
+      if (b > start + EPSILON) first = Math.min(first, Math.max(a, start));
     }
+    return first;
+  }
+  add(start: number, end: number): void {
+    const next: [number, number][] = [];
+    let [s, e] = [start, end];
+    for (const [a, b] of this.ranges) {
+      if (b < s - EPSILON || a > e + EPSILON) next.push([a, b]);
+      else [s, e] = [Math.min(s, a), Math.max(e, b)];
+    }
+    next.push([s, e]);
+    this.ranges = next.sort((x, y) => x[0] - y[0]);
+  }
+}
+const EPSILON = 1e-3;
+
+async function gopsOf(run: Run): Promise<Gop[]> {
+  const gops: Gop[] = [];
+  for await (const raw of new EncodedPacketSink(run.track).packets()) {
+    let packet = run.offset ? raw.clone({ timestamp: raw.timestamp + run.offset }) : raw;
     if (packet.type === "key" && run.inband) {
       const data = new Uint8Array(run.inband.length + packet.data.length);
       data.set(run.inband);
       data.set(packet.data, run.inband.length);
-      yield packet.clone({ data });
-    } else yield packet;
+      packet = packet.clone({ data });
+    }
+    let gop = gops.at(-1);
+    // WebM leaves the last block of a cluster without a duration: it lasts until the next one.
+    if (gop && gop.packets.at(-1)!.duration === 0) settleDuration(gop, packet.timestamp);
+    if (packet.type === "key" || !gop) gops.push((gop = { start: packet.timestamp, end: packet.timestamp, packets: [] }));
+    gop.packets.push(packet);
+    gop.end = Math.max(gop.end, packet.timestamp + packet.duration);
   }
+  const last = gops.at(-1);
+  if (last && last.packets.at(-1)!.duration === 0) {
+    const before = last.packets.at(-2) ?? gops.at(-2)?.packets.at(-1);
+    settleDuration(last, last.packets.at(-1)!.timestamp + (before?.duration ?? 0));
+  }
+  return gops;
+}
+
+function settleDuration(gop: Gop, next: number): void {
+  const prev = gop.packets.at(-1)!;
+  const duration = Math.max(0, next - prev.timestamp);
+  if (duration === 0) return;
+  gop.packets[gop.packets.length - 1] = prev.clone({ duration });
+  gop.end = Math.max(gop.end, prev.timestamp + duration);
+}
+
+/**
+ * What the player ended up with, by Media Source's own rule: a later append
+ * replaces whatever it overlaps (players re-append, switch quality mid-way and
+ * go back over time they already have); what it doesn't cover stays. A frame
+ * group that loses its start loses the rest with it.
+ */
+async function timeline(runs: Run[]): Promise<Gop[]> {
+  const appended = (await Promise.all(runs.map(gopsOf))).flat();
+  const taken = new Taken();
+  const kept: Gop[] = [];
+  for (let i = appended.length - 1; i >= 0; i--) {
+    const gop = appended[i]!;
+    const cut = taken.firstOverlap(gop.start, gop.end);
+    if (cut <= gop.start + EPSILON) continue;
+    // A packet that would mostly play over the later append goes too.
+    const packets = cut === Infinity ? gop.packets : gop.packets.filter((p) => p.timestamp + p.duration / 2 < cut);
+    if (packets.length === 0) continue;
+    const end = Math.min(gop.end, cut);
+    kept.push({ start: gop.start, end, packets });
+    taken.add(gop.start, end);
+  }
+  return kept.sort((a, b) => a.start - b.start);
 }
 
 /** `tracks`: per SourceBuffer, its runs in the order they were appended. */
@@ -245,6 +316,8 @@ export async function muxCaptured(tracks: CapturedRun[][], onProgress?: (fractio
     if (picked.length === 0) throw new Error("The player hadn't loaded any audio or video yet");
     const webm = picked.some((runs) => WEBM_ONLY.has(runs[0]!.codec));
     const hasVideo = picked.some(isVideo);
+    const timelines = await Promise.all(picked.map(timeline));
+    if (timelines.some((t) => t.length === 0)) throw new Error("The player hadn't loaded any audio or video yet");
 
     const chunks: StreamTargetChunk[] = [];
     const output = new Output({
@@ -252,9 +325,8 @@ export async function muxCaptured(tracks: CapturedRun[][], onProgress?: (fractio
       target: new StreamTarget(new WritableStream<StreamTargetChunk>({ write: (c) => void chunks.push({ ...c, data: c.data.slice() }) })),
     });
 
-    const base = Math.min(...picked.map((runs) => runs[0]!.start));
-    const ends = await Promise.all(picked.map(async (runs) => Math.max(...(await Promise.all(runs.map(async (r) => (await r.track.computeDuration()) + r.offset))))));
-    const end = Math.max(...ends) - base;
+    const base = Math.min(...timelines.map((t) => t[0]!.start));
+    const end = Math.max(...timelines.map((t) => Math.max(...t.map((g) => g.end)))) - base;
 
     const writers = picked.map((runs) => {
       const codec = runs[0]!.codec;
@@ -272,18 +344,17 @@ export async function muxCaptured(tracks: CapturedRun[][], onProgress?: (fractio
 
     let done = 0;
     await Promise.all(
-      picked.map(async (runs, i) => {
+      timelines.map(async (gops, i) => {
         let first = true;
-        for (let r = 0; r < runs.length; r++) {
-          const until = runs[r + 1]?.start ?? Infinity;
-          for await (const packet of runPackets(runs[r]!, until)) {
+        for (const gop of gops) {
+          for (const packet of gop.packets) {
             const timestamp = Math.max(0, packet.timestamp - base);
             await writers[i]!(packet.clone({ timestamp }), first);
             first = false;
-            if (end > 0 && i === 0) {
-              done = Math.max(done, timestamp / end);
-              onProgress?.(Math.min(1, done));
-            }
+          }
+          if (end > 0 && i === 0) {
+            done = Math.max(done, (gop.end - base) / end);
+            onProgress?.(Math.min(1, done));
           }
         }
       }),

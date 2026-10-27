@@ -93,7 +93,9 @@ extension's reload button.
   and, only while the user records, copies each buffer the player appends to
   an invisible extension frame, which joins the tracks into one file
   (Mediabunny, no re-encoding) and saves it. Quality switches are joined
-  into one track (H.264 with differing parameter sets is written as avc3,
+  into one track by Media Source's own rule (a later append replaces what
+  it overlaps, the rest stays), so re-appends and switches back and forth
+  come out as the player had them (H.264 with differing parameter sets is written as avc3,
   with them in each keyframe); each run is placed by the SourceBuffer's
   timestampOffset, and WebM init segments lose the source file's index
   (SeekHead, Cues). The recording ends once every MediaSource

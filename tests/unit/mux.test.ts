@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { ALL_FORMATS, BlobSource, Input } from "mediabunny";
+import { ALL_FORMATS, BlobSource, EncodedPacketSink, Input } from "mediabunny";
 import { describe, expect, it } from "vitest";
 import { avcParameterSets, blankWebmIndexes, muxCaptured } from "../../src/capture/mux";
 
@@ -42,6 +42,31 @@ describe.skipIf(!existsSync(dash))("muxCaptured", () => {
     // version 1, profile, compat, level, lengthSize 4, one SPS [0x67, 0x01], one PPS [0x68]
     const record = new Uint8Array([1, 0x64, 0, 0x1e, 0xff, 0xe1, 0, 2, 0x67, 1, 1, 0, 1, 0x68]);
     expect(avcParameterSets(record)).toEqual({ lengthSize: 4, nals: new Uint8Array([0, 0, 0, 2, 0x67, 1, 0, 0, 0, 1, 0x68]) });
+  });
+
+  it("keeps what a later quality covers and the earlier one beyond it, as Media Source does", async () => {
+    // 180p for all six seconds, then 360p appended over the first two only.
+    const low = new Blob([readFileSync(join(dash, "init-1.m4s")), chunk(1, 1), chunk(1, 2), chunk(1, 3)]);
+    const high = new Blob([readFileSync(join(dash, "init-0.m4s")), chunk(0, 1)]);
+    const { blob } = await muxCaptured([[run(low), run(high)]]);
+    const video = (await new Input({ source: new BlobSource(blob), formats: ALL_FORMATS }).getPrimaryVideoTrack())!;
+    expect(await video.getFirstTimestamp()).toBeLessThan(0.1);
+    expect(await video.computeDuration()).toBeGreaterThan(5.5);
+    expect((await video.getDecoderConfig())!.codedWidth).toBe(640);
+  });
+
+  it("keeps each moment once when a player appends the same range again", async () => {
+    const init = readFileSync(join(dash, "init-2.m4s"));
+    const first = new Blob([init, chunk(2, 1), chunk(2, 2), chunk(2, 3), chunk(2, 4)]);
+    // A second representation from 2 s, whose segments are then appended twice.
+    const again = new Blob([init, chunk(2, 2), chunk(2, 3), chunk(2, 2), chunk(2, 3)]);
+    const { blob } = await muxCaptured([[run(first), run(again)]]);
+    const audio = (await new Input({ source: new BlobSource(blob), formats: ALL_FORMATS }).getPrimaryAudioTrack())!;
+    const stamps: number[] = [];
+    for await (const p of new EncodedPacketSink(audio).packets()) stamps.push(p.timestamp);
+    expect(stamps[0]).toBeLessThan(0.1);
+    expect(stamps.every((t, i) => i === 0 || t > stamps[i - 1]!)).toBe(true);
+    expect(await audio.computeDuration()).toBeGreaterThan(5.5);
   });
 
   it("places a run where the player's timestampOffset put it", async () => {
