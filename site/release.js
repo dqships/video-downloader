@@ -11,10 +11,10 @@ export const release = {
   formats: {
     direct: "ready",
     hls: "ready",
-    dash: "next",
-    audio: "coming",
+    dash: "ready",
+    audio: "ready",
     subtitles: "coming",
-    live: "coming",
+    live: "next",
   },
 };
 
