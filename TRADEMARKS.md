@@ -10,7 +10,7 @@ Vidzilla brand is not. The MIT License does not grant any rights to:
 - the Chrome Web Store images in `store/` (screenshots and promo tiles);
 - the icons and artwork of other apps shown in house ads.
 
-These are © 2026 DaQuan Louden, all rights reserved.
+These are © 2026 FollowUs AI, all rights reserved.
 
 ## What you can do
 
