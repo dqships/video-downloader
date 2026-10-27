@@ -332,6 +332,7 @@
 /* Popup shell: shared by the extension popup and the site's demo. ------- */
 
 .vz-popup {
+  box-sizing: border-box;
   width: 100%;
   max-width: var(--size-popup-width);
   padding: var(--space-4);
@@ -400,4 +401,64 @@
 
 .vz-empty p {
   margin: 0;
+}
+
+/* Select: a native <select> styled as edge print, for picking a quality.
+ * Markup: <span class="vz-select"><select>…</select><svg><use href="…#i-chevron.down"/></svg></span>
+ * Option labels read like "1080p · 4.0 Mbps". ---------------------------- */
+
+.vz-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--color-text);
+}
+
+.vz-select select {
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 calc(var(--text-xs-lh) + var(--space-1)) 0 var(--space-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: var(--size-hairline) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-xs);
+  line-height: var(--text-xs-lh);
+  font-weight: var(--weight-bold);
+  font-stretch: var(--stretch-condensed);
+  letter-spacing: var(--tracking-caps);
+  font-variant-numeric: tabular-nums;
+  appearance: none;
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-spring);
+}
+
+.vz-select select:hover {
+  border-color: var(--color-text-muted);
+}
+
+.vz-select select:focus-visible {
+  outline: var(--size-focus) solid var(--color-primary);
+  outline-offset: var(--size-hairline);
+  border-color: var(--color-primary);
+}
+
+.vz-select select:disabled {
+  cursor: default;
+  opacity: var(--opacity-disabled);
+}
+
+.vz-select svg {
+  position: absolute;
+  right: var(--size-hairline);
+  width: var(--text-xs-lh);
+  height: var(--text-xs-lh);
+  pointer-events: none;
+  color: var(--color-text-muted);
 }
