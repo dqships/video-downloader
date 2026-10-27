@@ -1,5 +1,5 @@
 // Bundles the extension into dist/. `--watch` rebuilds on change.
-import { cpSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
@@ -14,6 +14,9 @@ mkdirSync(out, { recursive: true });
 const copyStatic = () => {
   cpSync(join(root, "src/manifest.json"), join(out, "manifest.json"));
   for (const f of ["popup.html", "popup.css", "options.html", "options.css"]) cpSync(join(root, "src/ui", f), join(out, f));
+  // The side panel is the popup with a fluid layout that follows the active tab.
+  const popupHtml = readFileSync(join(root, "src/ui/popup.html"), "utf8");
+  writeFileSync(join(out, "sidepanel.html"), popupHtml.replace('<body class="vz-popup">', '<body class="vz-popup vz-popup--panel">'));
   // The shared design system: tokens, components and the bundled font.
   for (const f of ["tokens.css", "components.css", "fonts"]) {
     cpSync(join(root, "design", f), join(out, "design", f), { recursive: true });

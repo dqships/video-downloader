@@ -15,6 +15,7 @@ import { checkCandidate, scanTab } from "./page-probe";
 import { enrich } from "./sites";
 import { Registry } from "./registry";
 import { clearStaleRules } from "./replay";
+import { watchSidePanelSetting } from "./side-panel";
 
 /** Single-page apps swap videos without a page load; look again once they settle. */
 const RESCAN_DELAY_MS = 1500;
@@ -345,5 +346,6 @@ async function listPlayer(tabId: number, frameId: number, frameUrl: string, mime
   }
 }
 
+watchSidePanelSetting();
 chrome.runtime.onStartup.addListener(() => void clearStaleRules());
 chrome.runtime.onInstalled.addListener(() => void clearStaleRules());

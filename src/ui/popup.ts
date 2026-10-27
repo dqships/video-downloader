@@ -12,6 +12,8 @@ import { icons } from "./icons";
 const strip = document.getElementById("strip")!;
 const pageHost = document.getElementById("page-host")!;
 const template = document.getElementById("frame-template") as HTMLTemplateElement;
+/** The side panel stays open across tabs, so it follows the active one. */
+const isPanel = document.body.classList.contains("vz-popup--panel");
 
 let settings: Settings = defaultSettings;
 let tabId = -1;
@@ -207,9 +209,13 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
   } else if (job?.state === "complete") {
     note.classList.add(job.subtitleError ? "is-error" : "is-done");
     note.textContent = job.subtitleError
-      ? `Saved as ${job.filename}, but the subtitles failed: ${job.subtitleError}`
-      : `Saved as ${job.filename}${job.subtitleFile ? " with subtitles" : ""}`;
+      ? `Saved as ${job.filename}, but the subtitles failed: ${job.subtitleError}. `
+      : `Saved as ${job.filename}${job.subtitleFile ? " with subtitles" : ""}. `;
     note.title = job.savedPath ?? job.filename;
+    if (job.chromeDownloadId !== undefined) {
+      note.classList.add("has-action");
+      note.append(showInFolder(job.chromeDownloadId));
+    }
   } else if (job?.state === "failed") {
     note.classList.add("is-error");
     note.textContent = `Download failed: ${job.error ?? "unknown error"}`;
@@ -224,6 +230,15 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
   } else {
     note.hidden = true;
   }
+}
+
+function showInFolder(downloadId: number): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "vz-text-btn";
+  button.textContent = "Show in folder";
+  button.addEventListener("click", () => chrome.downloads.show(downloadId));
+  return button;
 }
 
 function drmName(keySystem: string): string {
@@ -305,11 +320,54 @@ async function load(): Promise<void> {
   render();
 }
 
-async function main(): Promise<void> {
+/** Forgets what the user typed or picked; those belong to the previous tab. */
+async function switchTab(next: number): Promise<void> {
+  if (next === tabId) return;
+  tabId = next;
+  for (const map of [edited, pendingErrors, chosenVariant, chosenSubtitle]) map.clear();
+  strip.replaceChildren();
+  frames.clear();
+  await load();
+}
+
+function setupControls(): void {
   const options = document.querySelector<HTMLButtonElement>("#open-options")!;
   options.innerHTML = icons.gear;
   options.addEventListener("click", () => void chrome.runtime.openOptionsPage());
+
+  const panel = document.querySelector<HTMLButtonElement>("#open-panel")!;
+  panel.innerHTML = icons.sidePanel;
+  panel.hidden = isPanel || document.body.classList.contains("wide");
+  panel.addEventListener("click", async () => {
+    const win = await chrome.windows.getCurrent();
+    if (win.id !== undefined) await chrome.sidePanel.open({ windowId: win.id });
+    window.close();
+  });
+
+  const folder = document.querySelector<HTMLButtonElement>("#open-folder")!;
+  folder.innerHTML = `${icons.folder}<span>Downloads</span>`;
+  folder.title = "Open your Downloads folder";
+  folder.addEventListener("click", () => chrome.downloads.showDefaultFolder());
+
+  const history = document.querySelector<HTMLButtonElement>("#open-history")!;
+  history.innerHTML = `${icons.clock}<span>Saved files</span>`;
+  history.title = "Files Vidzilla saved, with Show in folder";
+  history.addEventListener("click", () => void chrome.tabs.create({ url: chrome.runtime.getURL("options.html#saved-files") }));
+
+  const clear = document.querySelector<HTMLButtonElement>("#clear-list")!;
+  clear.innerHTML = icons.trash;
+  clear.addEventListener("click", () => void sendCommand({ kind: "clear-tab", payload: { tabId } }));
+}
+
+async function main(): Promise<void> {
+  setupControls();
   [tabId, settings] = await Promise.all([resolveTabId(), loadSettings()]);
+  if (isPanel) {
+    const windowId = (await chrome.windows.getCurrent()).id;
+    chrome.tabs.onActivated.addListener((info) => {
+      if (info.windowId === windowId) void switchTab(info.tabId);
+    });
+  }
   chrome.storage.session.onChanged.addListener((changes) => {
     const tabKey = storageKeys.tab(tabId);
     if (tabKey in changes) tab = changes[tabKey]!.newValue as TabMedia | undefined;

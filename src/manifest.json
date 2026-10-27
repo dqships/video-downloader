@@ -13,6 +13,7 @@
     "webNavigation",
     "scripting",
     "declarativeNetRequest",
+    "sidePanel",
     "storage",
     "unlimitedStorage"
   ],
@@ -51,6 +52,9 @@
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
   },
   "action": {
     "default_title": "Vidzilla",

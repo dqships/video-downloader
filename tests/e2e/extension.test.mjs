@@ -145,6 +145,37 @@ test("popup lists the media and the download saves a playable file", async () =>
   await page.close();
 });
 
+test("popup keeps its width when Chrome opens it small, with head and foot controls in view", async () => {
+  const { tabId, page } = await visit("/page.html");
+  const popup = await context.newPage();
+  // Chrome opens a popup tiny and grows it to fit the body; the body must not follow the viewport.
+  await popup.setViewportSize({ width: 60, height: 60 });
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}&narrow`);
+  await popup.locator(".vz-frame").first().waitFor();
+  assert.equal(await popup.evaluate(() => document.body.getBoundingClientRect().width), 380);
+  await popup.setViewportSize({ width: 380, height: 600 });
+  for (const id of ["#open-panel", "#open-options", "#open-folder", "#open-history", "#clear-list"]) {
+    assert.ok(await popup.locator(id).isVisible(), `${id} visible`);
+  }
+  await popup.close();
+  await page.close();
+});
+
+test("side panel shows the active tab's media and the same controls", async () => {
+  const { tabId, page } = await visit("/page.html");
+  const panel = await context.newPage();
+  await panel.setViewportSize({ width: 320, height: 700 });
+  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html?tabId=${tabId}&narrow`);
+  await panel.locator(".vz-frame").first().waitFor();
+  assert.ok(await panel.locator("#open-folder").isVisible());
+  assert.ok(await panel.locator(".vz-frame .download").first().isVisible());
+  // Already in the panel: no button to open it again.
+  assert.equal(await panel.locator("#open-panel").isVisible(), false);
+  assert.ok(await panel.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await panel.close();
+  await page.close();
+});
+
 test("replays the page's Referer so a protected file downloads", async () => {
   const { tabId, page } = await visit("/protected.html");
   site.protectedLog.length = 0;

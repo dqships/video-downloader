@@ -27,6 +27,7 @@ function readForm(): Settings {
     maxLength: Number.isFinite(maxLength) ? Math.min(200, Math.max(20, maxLength)) : defaultSettings.maxLength,
     subfolder: field("subfolder").value.trim(),
     saveAs: field("saveAs").checked,
+    sidePanel: field("sidePanel").checked,
   };
 }
 
@@ -116,6 +117,7 @@ async function init(): Promise<void> {
   field("maxLength").value = String(s.maxLength);
   field("subfolder").value = s.subfolder;
   field("saveAs").checked = s.saveAs;
+  field("sidePanel").checked = s.sidePanel;
   showExample(s);
   form.addEventListener("input", () => showExample(readForm()));
   form.addEventListener("change", () => void save());
