@@ -1,0 +1,20 @@
+/* Options page layout only. The page, sections, fields, toggle and history
+   rows come from design/components.css. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+#saved {
+  margin: 0;
+}
+
+.vz-field-help output {
+  color: var(--color-text);
+}
+
+[hidden] {
+  display: none !important;
+}

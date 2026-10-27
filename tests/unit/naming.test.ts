@@ -57,3 +57,9 @@ describe("asciiFilename", () => {
     expect(asciiFilename("東京.mp4")).toBe("video.mp4");
   });
 });
+
+describe("siteLabel for addresses", () => {
+  it("keeps an IP address whole", () => {
+    expect(siteLabel("http://127.0.0.1:8080/page.html")).toBe("127.0.0.1");
+  });
+});

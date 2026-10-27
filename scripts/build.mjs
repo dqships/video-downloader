@@ -13,7 +13,7 @@ mkdirSync(out, { recursive: true });
 
 const copyStatic = () => {
   cpSync(join(root, "src/manifest.json"), join(out, "manifest.json"));
-  for (const f of ["popup.html", "popup.css"]) cpSync(join(root, "src/ui", f), join(out, f));
+  for (const f of ["popup.html", "popup.css", "options.html", "options.css"]) cpSync(join(root, "src/ui", f), join(out, f));
   // The shared design system: tokens, components and the bundled font.
   for (const f of ["tokens.css", "components.css", "fonts"]) {
     cpSync(join(root, "design", f), join(out, "design", f), { recursive: true });
@@ -28,6 +28,7 @@ const options = {
   entryPoints: {
     sw: join(root, "src/sw/main.ts"),
     popup: join(root, "src/ui/popup.ts"),
+    options: join(root, "src/ui/options.ts"),
     offscreen: join(root, "src/offscreen/offscreen.ts"),
     worker: join(root, "src/worker/main.ts"),
   },
