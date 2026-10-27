@@ -63,6 +63,12 @@ extension's reload button.
   its own. It is built from the shared Vidzilla design system (`design/`,
   `brand/`, see `DESIGN.md`), the same tokens and components the website uses,
   so the two can't drift apart.
+- **Website** (`site/`, plus `src/web/` for paste-a-link): static pages. The
+  paste box under the hero saves a pasted video file or `.m3u8` stream in the
+  browser with the same download worker the extension uses, when the site
+  hosting it allows other websites to read its files (CORS). Web pages, sites
+  that don't allow it, DASH and YouTube get a plain explanation instead; there
+  is no server. `pnpm site` builds a deployable copy into `site-dist/`.
 
 ## Tests
 
@@ -76,4 +82,5 @@ node scripts/screenshots.mjs out/   # popup in light and dark mode
 The end-to-end tests cover detection, real downloads verified with ffprobe
 (direct MP4; HLS plain, AES-128, fMP4 and two-quality with separate audio),
 Referer replay for a file and for every segment of a stream, and that live and
-DRM streams stay unavailable.
+DRM streams stay unavailable. `tests/e2e/site.test.mjs` does the same for the
+website's paste box, with the media on a separate origin.
