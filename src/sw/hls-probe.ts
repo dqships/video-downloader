@@ -30,6 +30,22 @@ export async function fetchWithReplay(url: string, sent: Record<string, string>)
   }
 }
 
+const RETRY_AFTER_MS = 1500;
+
+/**
+ * Probes run while the player is still loading, and some servers turn the
+ * same request away at that moment (Dailymotion's answers 403 for a second),
+ * so a failed first fetch is tried once more after a pause.
+ */
+export async function fetchForProbe(url: string, sent: Record<string, string>): Promise<string> {
+  try {
+    return await fetchWithReplay(url, sent);
+  } catch {
+    await new Promise((r) => setTimeout(r, RETRY_AFTER_MS));
+    return fetchWithReplay(url, sent);
+  }
+}
+
 function mediaFacts(pl: HlsMedia): Pick<HlsDetails, "durationSec" | "isLive" | "hasDrm"> {
   return {
     durationSec: pl.duration > 0 ? Math.round(pl.duration * 10) / 10 : undefined,
@@ -46,7 +62,7 @@ function mediaFacts(pl: HlsMedia): Pick<HlsDetails, "durationSec" | "isLive" | "
 export async function probeHls(url: string, sent: Record<string, string>): Promise<HlsDetails | null> {
   let text: string;
   try {
-    text = await fetchWithReplay(url, sent);
+    text = await fetchForProbe(url, sent);
   } catch {
     return {};
   }
@@ -66,7 +82,7 @@ export async function probeHls(url: string, sent: Record<string, string>): Promi
     const best = variants[0];
     if (!best) return { variants, childUrls, subtitles, hasDrm: sessionDrm };
     // The best quality's playlist tells us the length, liveness and keys.
-    const media = parseM3u8(await fetchWithReplay(best.url, sent), best.url);
+    const media = parseM3u8(await fetchForProbe(best.url, sent), best.url);
     const facts = media.kind === "media" ? mediaFacts(media) : { hasDrm: false };
     return { variants, childUrls, subtitles, ...facts, hasDrm: sessionDrm || facts.hasDrm };
   } catch {
