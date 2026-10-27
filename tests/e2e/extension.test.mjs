@@ -476,6 +476,27 @@ test("warns on encrypted media even without a DRM module", async () => {
   await page.close();
 });
 
+test("looks at the page again when the popup opens, for players added late", async () => {
+  const page = await context.newPage();
+  await page.goto(`${site.origin}/late-player.html`);
+  await page.waitForSelector("video", { timeout: 15000 });
+  const tabId = await waitFor(
+    () => sw.evaluate(async (url) => (await chrome.tabs.query({ url }))[0]?.id, `${site.origin}/late-player.html`),
+    "tab id",
+  );
+  // Both scans at load have run by now, before the video existed.
+  const before = await sw.evaluate(async (key) => (await chrome.storage.session.get(key))[key]?.media.length ?? 0, `tab:${tabId}`);
+  assert.equal(before, 0, "nothing played and the page had no video when it loaded");
+
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
+  await popup.locator(".vz-frame").first().waitFor();
+  const tab = await sw.evaluate(async (key) => (await chrome.storage.session.get(key))[key], `tab:${tabId}`);
+  assert.deepEqual(tab.media.map((m) => [m.sourceKind, new URL(m.url).pathname]), [["page", "/media/clip.mp4"]]);
+  await popup.close();
+  await page.close();
+});
+
 test("lists media a page declares before anything plays", async () => {
   const { page, tabId } = await visit("/declared.html");
   const tab = await waitFor(

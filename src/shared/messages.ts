@@ -7,6 +7,8 @@ export type Command =
   /** Ends a live recording and saves it. */
   | { kind: "stop"; payload: { jobId: string } }
   | { kind: "clear-tab"; payload: { tabId: number } }
+  /** The popup or side panel is showing this tab: list what its page declares now. */
+  | { kind: "scan-tab"; payload: { tabId: number } }
   /** From Settings: ask the website again whether this install paid to remove ads. */
   | { kind: "check-license" }
   /** From the content script: the page gave a media element DRM keys. */

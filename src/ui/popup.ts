@@ -350,6 +350,8 @@ function render(): void {
 }
 
 async function load(): Promise<void> {
+  // Players can add their video after the page loads; have the page read again.
+  void sendCommand({ kind: "scan-tab", payload: { tabId } }).catch(() => {});
   const tabKey = storageKeys.tab(tabId);
   const data = await chrome.storage.session.get([tabKey, storageKeys.jobs]);
   tab = data[tabKey] as TabMedia | undefined;
