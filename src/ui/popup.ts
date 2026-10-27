@@ -158,9 +158,9 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
   if (item.hasDrm) {
     download.disabled = true;
     note.innerHTML = `${icons.lock}<span>Protected by DRM. Not supported.</span>`;
-  } else if (item.type === "dash") {
+  } else if (item.variants?.length === 0) {
     download.disabled = true;
-    note.textContent = "DASH downloads arrive in the next update.";
+    note.textContent = "No quality in this stream can be saved yet (WebM streams arrive later).";
   } else if (item.isLive) {
     download.disabled = true;
     note.textContent = "Recording live streams arrives in a later update.";

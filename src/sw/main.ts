@@ -8,6 +8,7 @@ import type { FromOffscreenEnvelope } from "../shared/worker-protocol";
 import { classify } from "./classify";
 import { Downloads } from "./downloads";
 import { HeaderCache, replayableHeaders } from "./headers";
+import { probeDash } from "./dash-probe";
 import { probeHls } from "./hls-probe";
 import { Registry } from "./registry";
 import { clearStaleRules } from "./replay";
@@ -19,6 +20,18 @@ const headerCache = new HeaderCache();
 const registry = new Registry(updateBadge);
 const downloads = new Downloads();
 const metaRequested = new Set<number>();
+/** Manifest probes in flight, per tab. */
+const probing = new Map<number, Set<Promise<unknown>>>();
+
+function track(tabId: number, probe: Promise<unknown>): void {
+  const set = probing.get(tabId) ?? new Set();
+  probing.set(tabId, set);
+  set.add(probe);
+  void probe.finally(() => {
+    set.delete(probe);
+    if (!set.size && probing.get(tabId) === set) probing.delete(tabId);
+  });
+}
 
 function updateBadge(tab: TabMedia | undefined, tabId: number): void {
   const count = tab?.media.length ?? 0;
@@ -54,8 +67,18 @@ async function onResponse(details: chrome.webRequest.OnResponseStartedDetails): 
   const sentHeaders = headerCache.get(details.requestId) ?? {};
   const known = await registry.get(details.tabId);
   // Quality playlists of a listed master, and repeat sightings, need no probe.
-  if (known?.media.some((m) => m.childUrls?.includes(details.url) || (found.type === "hls" && m.url === details.url))) return;
-  const streamDetails = found.type === "hls" ? await probeHls(details.url, sentHeaders) : {};
+  const isStream = found.type !== "http";
+  if (known?.media.some((m) => m.childUrls?.includes(details.url) || (isStream && m.url === details.url))) return;
+  // Manifests still being read on this tab may turn out to own this URL (a
+  // player fetches the master, then its quality playlists or track files).
+  const earlier = [...(probing.get(details.tabId) ?? [])];
+  const probe =
+    found.type === "hls" ? probeHls(details.url, sentHeaders) : found.type === "dash" ? probeDash(details.url, sentHeaders) : Promise.resolve({});
+  track(details.tabId, probe);
+  const streamDetails = await probe;
+  await Promise.allSettled(earlier);
+  const now = await registry.get(details.tabId);
+  if (now?.media.some((m) => m.childUrls?.includes(details.url))) return;
   const item: MediaItem = {
     id: hash53(details.url),
     type: found.type,

@@ -79,15 +79,16 @@ function probe(file) {
 }
 
 /** Downloads the page's first stream and checks it is a ~6 s MP4 with sound. */
-async function downloadStream(path, prepare) {
+async function downloadStream(path, prepare, { audioOnly = false } = {}) {
   const { tabId, page, tab } = await visit(path);
   const { job, item } = await downloadFromPopup(tabId, prepare);
   assert.equal(job.state, "complete", job.error);
-  assert.match(job.filename, /\.mp4$/);
+  assert.match(job.filename, audioOnly ? /\.m4a$/ : /\.mp4$/, JSON.stringify({ job, variants: tab.media[0].variants }));
   const file = probe(item.filename);
   assert.match(file.format, /mp4/);
   assert.ok(Math.abs(file.duration - 6) < 0.5, `duration ${file.duration}`);
-  assert.equal(file.video?.codec_name, "h264");
+  if (audioOnly) assert.equal(file.video, undefined, "no picture in an audio-only file");
+  else assert.equal(file.video?.codec_name, "h264");
   assert.equal(file.audio?.codec_name, "aac");
   const rules = await sw.evaluate(() => chrome.declarativeNetRequest.getSessionRules());
   assert.equal(rules.length, 0, `replay rules are removed after the job: ${JSON.stringify(rules)}`);
@@ -181,7 +182,7 @@ test("downloads a fragmented MP4 (fMP4) stream", async () => {
 test("offers each quality once and saves the one picked", async () => {
   const { tab } = await downloadStream("/hls-multi.html", async (popup) => {
     const select = popup.locator(".vz-frame .vz-select select").first();
-    assert.deepEqual(await select.locator("option").allTextContents(), ["360p", "180p"]);
+    assert.deepEqual(await select.locator("option").allTextContents(), ["360p", "180p", "Audio only"]);
     await select.selectOption({ label: "180p" });
   });
   // The quality and audio playlists the player loaded are not listed apart.
@@ -194,6 +195,42 @@ test("saves the picked quality's picture size", async () => {
     popup.locator(".vz-frame .vz-select select").first().selectOption({ label: "180p" }),
   );
   assert.equal(file.video.height, 180);
+});
+
+const pick = (label) => (popup) => popup.locator(".vz-frame .vz-select select").first().selectOption({ label });
+
+test("saves only the sound of an HLS stream as .m4a", async () => {
+  await downloadStream("/hls-multi.html", pick("Audio only"), { audioOnly: true });
+});
+
+test("downloads DASH and saves the picked quality", async () => {
+  const { tab, file } = await downloadStream("/dash.html", async (popup) => {
+    const select = popup.locator(".vz-frame .vz-select select").first();
+    assert.deepEqual(await select.locator("option").allTextContents(), ["360p", "180p", "Audio only"]);
+    await select.selectOption({ label: "180p" });
+  });
+  assert.equal(tab.media.length, 1);
+  assert.equal(tab.media[0].type, "dash");
+  assert.equal(tab.media[0].durationSec, 6);
+  assert.equal(file.video.height, 180);
+});
+
+test("downloads DASH with a segment timeline", async () => {
+  await downloadStream("/dash-timeline.html");
+});
+
+test("downloads DASH segments given as byte ranges", async () => {
+  await downloadStream("/dash-single.html");
+});
+
+test("downloads DASH served as one indexed file per track", async () => {
+  const { tab } = await downloadStream("/dash-base.html");
+  // The player's byte-range reads of the track file are not listed as a video of their own.
+  assert.deepEqual(tab.media.map((m) => m.type), ["dash"]);
+});
+
+test("saves only the sound of a DASH stream as .m4a", async () => {
+  await downloadStream("/dash.html", pick("Audio only"), { audioOnly: true });
 });
 
 test("replays the page's Referer for every file of a stream", async () => {

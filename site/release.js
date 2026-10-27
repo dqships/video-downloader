@@ -10,8 +10,8 @@ export const release = {
   // "ready" | "next" | "coming". Set a format to "ready" when it ships.
   formats: {
     direct: "ready",
-    hls: "next",
-    dash: "coming",
+    hls: "ready",
+    dash: "next",
     audio: "coming",
     subtitles: "coming",
     live: "coming",

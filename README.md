@@ -18,7 +18,7 @@ downloaded.
 | 4. Live recording, subtitles, DRM detection everywhere | Planned |
 | 5. Site extractors (Vimeo, Facebook, Instagram, Kick, ...) | Planned |
 | 6. MSE fallback, settings, history | Planned |
-| 7. YouTube (optional) | Planned |
+| 7. YouTube | Not planned (Chrome Web Store policy) |
 
 DASH streams are already detected and listed, but can't be downloaded until
 milestone 3. Live HLS streams are listed and marked live; recording them comes
