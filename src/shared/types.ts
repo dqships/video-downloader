@@ -123,4 +123,25 @@ export interface DownloadJob {
   /** Absolute path of the saved file, once complete. */
   savedPath?: string;
   startedAt: number;
+  /** For history: where it came from and what it was called there. */
+  pageUrl?: string;
+  title?: string;
+  thumbnail?: string;
+}
+
+/** One saved file, kept in chrome.storage.local for the history list. */
+export interface HistoryEntry {
+  id: string;
+  filename: string;
+  /** Absolute path, as Chrome saved it. */
+  savedPath?: string;
+  chromeDownloadId?: number;
+  pageUrl: string;
+  title?: string;
+  thumbnail?: string;
+  bytes?: number;
+  /** "1080p", "Audio only"... */
+  quality?: string;
+  recorded?: boolean;
+  savedAt: number;
 }

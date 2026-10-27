@@ -5,6 +5,7 @@
 
 import { storageKeys } from "../shared/messages";
 import { asciiFilename, buildFilename, sanitizeFilename } from "../shared/naming";
+import { addHistory } from "../shared/history";
 import { loadSettings } from "../shared/settings";
 import { dataUrl, singleVariantMaster } from "../shared/hls";
 import type { DownloadJob, MediaItem, StreamVariant, TabMedia } from "../shared/types";
@@ -118,6 +119,9 @@ export class Downloads {
       saveAs: settings.saveAs,
       ruleIds: variant ? [] : await installReplay([fileUrl], item.sentHeaders),
       startedAt: Date.now(),
+      pageUrl: tab.pageUrl,
+      title: item.title ?? tab.title,
+      thumbnail: item.thumbnail ?? tab.thumbnail,
     };
     this.jobs.set(job.jobId, job);
     this.persist();
@@ -227,6 +231,19 @@ export class Downloads {
       job.state = "complete";
       job.savedPath = item?.filename;
       this.persist();
+      void addHistory({
+        id: job.jobId,
+        filename: job.filename,
+        savedPath: job.savedPath,
+        chromeDownloadId: job.chromeDownloadId,
+        pageUrl: job.pageUrl ?? "",
+        title: job.title,
+        thumbnail: job.thumbnail,
+        bytes: item?.fileSize || item?.totalBytes || job.bytesReceived || undefined,
+        quality: job.variantLabel,
+        recorded: job.recording,
+        savedAt: Date.now(),
+      }).catch(() => {});
       void toWorker({ type: "cleanup", jobId: job.jobId });
     } else if (state === "interrupted") {
       await this.fail(job, delta.error?.current === "USER_CANCELED" ? "Cancelled" : (delta.error?.current ?? "Saving failed"));
