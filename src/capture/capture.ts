@@ -13,6 +13,9 @@ interface Run {
   parts: ArrayBuffer[];
   bytes: number;
   media: number;
+  init: ArrayBuffer;
+  /** The SourceBuffer's timestampOffset for this run's media, in seconds. */
+  offset: number;
 }
 
 // Any page could load this frame, so the job id arrives privately from the
@@ -30,25 +33,32 @@ let port: MessagePort | undefined;
 const toSw = (message: FromWorker | { type: "saved"; jobId: string; downloadId: number; filename: string; bytes: number }) =>
   chrome.runtime.sendMessage({ target: "service-worker", message } as FromOffscreenEnvelope).catch(() => {});
 
-function add(track: number, init: boolean, bytes: ArrayBuffer): void {
+function add(track: number, init: boolean, bytes: ArrayBuffer, offset: number): void {
   const runs = tracks.get(track) ?? [];
   tracks.set(track, runs);
   let run = runs.at(-1);
   if (init) {
     // A new init segment opens a new run, unless the open one has no media yet.
-    if (!run || run.media > 0) runs.push((run = { parts: [], bytes: 0, media: 0 }));
+    if (!run || run.media > 0) runs.push((run = { parts: [], bytes: 0, media: 0, init: bytes, offset }));
     else {
       total -= run.bytes;
       run.parts = [];
       run.bytes = 0;
+      run.init = bytes;
     }
   } else if (!run) {
     return; // media before any init segment can't be read
   } else {
+    if (run.media > 0 && offset !== run.offset) {
+      // The player moved where this media plays (timestampOffset): a run of its own.
+      runs.push((run = { parts: [run.init], bytes: run.init.byteLength, media: 0, init: run.init, offset }));
+      total += run.init.byteLength;
+    }
+    run.offset = offset;
     run.media++;
   }
-  run!.parts.push(bytes);
-  run!.bytes += bytes.byteLength;
+  run.parts.push(bytes);
+  run.bytes += bytes.byteLength;
   total += bytes.byteLength;
   const now = Date.now();
   if (now - lastProgress > 500) {
@@ -61,7 +71,7 @@ async function finish(): Promise<void> {
   if (finishing) return;
   finishing = true;
   try {
-    const streams = [...tracks.values()].map((runs) => runs.filter((r) => r.media > 0).map((r) => new Blob(r.parts))).filter((runs) => runs.length > 0);
+    const streams = [...tracks.values()].map((runs) => runs.filter((r) => r.media > 0).map((r) => ({ blob: new Blob(r.parts), offset: r.offset }))).filter((runs) => runs.length > 0);
     if (streams.length === 0) throw new Error("Nothing was recorded. Play the video while recording.");
     const claim = await job;
     if (!claim.ok) throw new Error(claim.error);
@@ -92,8 +102,8 @@ window.addEventListener("message", async (e: MessageEvent) => {
   if (!(await job).ok) return;
   port = e.ports[0];
   port.onmessage = (m) => {
-    const msg = m.data as { type: string; track?: number; init?: boolean; bytes?: ArrayBuffer };
-    if (msg.type === "data" && !finishing && typeof msg.track === "number" && msg.bytes instanceof ArrayBuffer) add(msg.track, !!msg.init, msg.bytes);
+    const msg = m.data as { type: string; track?: number; init?: boolean; offset?: number; bytes?: ArrayBuffer };
+    if (msg.type === "data" && !finishing && typeof msg.track === "number" && msg.bytes instanceof ArrayBuffer) add(msg.track, !!msg.init, msg.bytes, Number(msg.offset) || 0);
     else if (msg.type === "stop" || msg.type === "ended") void finish();
     else if (msg.type === "cancel") tracks.clear();
   };

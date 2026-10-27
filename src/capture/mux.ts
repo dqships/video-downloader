@@ -38,7 +38,10 @@ interface Run {
   /** Runs with the same key can be joined into one track. */
   key: string;
   bytes: number;
+  /** Where its first packet plays, timestampOffset included. */
   start: number;
+  /** The SourceBuffer's timestampOffset while this run was appended. */
+  offset: number;
   /** H.264 parameter sets to repeat before each keyframe, when runs differ in them. */
   inband?: Uint8Array;
 }
@@ -83,7 +86,87 @@ export function avcParameterSets(description: AllowSharedBufferSource): { length
   return { lengthSize, nals: out };
 }
 
-async function readRun(blob: Blob, inputs: Input[]): Promise<Run | undefined> {
+/** One run as the capture page kept it. */
+export interface CapturedRun {
+  blob: Blob;
+  offset: number;
+}
+
+const EBML_MAGIC = 0x1a45dfa3;
+const WEBM_INDEXES = new Set([0x114d9b74 /* SeekHead */, 0x1c53bb6b /* Cues */]);
+const WEBM_CLUSTER = 0x1f43b675;
+
+function ebmlId(b: Uint8Array, at: number): [number, number] | undefined {
+  const first = b[at];
+  if (!first) return undefined;
+  const len = Math.clz32(first) - 23;
+  if (len < 1 || len > 4 || at + len > b.length) return undefined;
+  let id = 0;
+  for (let i = 0; i < len; i++) id = id * 256 + b[at + i]!;
+  return [id, len];
+}
+
+function ebmlSize(b: Uint8Array, at: number): [number, number] | undefined {
+  const first = b[at];
+  if (!first) return undefined;
+  const len = Math.clz32(first) - 23;
+  if (len < 1 || len > 8 || at + len > b.length) return undefined;
+  let size = first & (0xff >> len);
+  let unknown = size === 0xff >> len;
+  for (let i = 1; i < len; i++) {
+    size = size * 256 + b[at + i]!;
+    unknown &&= b[at + i] === 0xff;
+  }
+  return [unknown ? -1 : size, len];
+}
+
+/**
+ * A WebM init segment carries the index of the file it came from (SeekHead,
+ * Cues), whose byte positions mean nothing in the joined capture. They're
+ * blanked to Void elements of the same length, so nothing else moves.
+ */
+export function blankWebmIndexes(head: Uint8Array): void {
+  const top = ebmlId(head, 0);
+  if (!top || top[0] !== EBML_MAGIC) return;
+  const headerSize = ebmlSize(head, top[1]);
+  if (!headerSize || headerSize[0] < 0) return;
+  let at = top[1] + headerSize[1] + headerSize[0];
+  const segment = ebmlId(head, at);
+  if (!segment) return;
+  const segmentSize = ebmlSize(head, at + segment[1]);
+  if (!segmentSize) return;
+  at += segment[1] + segmentSize[1];
+  while (at < head.length) {
+    const id = ebmlId(head, at);
+    const size = id && ebmlSize(head, at + id[1]);
+    if (!id || !size || size[0] < 0 || id[0] === WEBM_CLUSTER) return;
+    const length = id[1] + size[1] + size[0];
+    if (at + length > head.length) return;
+    if (WEBM_INDEXES.has(id[0]) && length >= 9) {
+      // Void (0xEC) with an 8-byte size covering the rest.
+      head[at] = 0xec;
+      head[at + 1] = 0x01;
+      let rest = length - 9;
+      for (let i = 8; i >= 2; i--) {
+        head[at + i] = rest & 0xff;
+        rest = Math.floor(rest / 256);
+      }
+    }
+    at += length;
+  }
+}
+
+const WEBM_HEAD_BYTES = 1 << 20;
+
+async function withoutWebmIndexes(blob: Blob): Promise<Blob> {
+  const head = new Uint8Array(await blob.slice(0, Math.min(blob.size, WEBM_HEAD_BYTES)).arrayBuffer());
+  if (head[0] !== 0x1a || head[1] !== 0x45 || head[2] !== 0xdf || head[3] !== 0xa3) return blob;
+  blankWebmIndexes(head);
+  return new Blob([head, blob.slice(head.length)]);
+}
+
+async function readRun({ blob: raw, offset }: CapturedRun, inputs: Input[]): Promise<Run | undefined> {
+  const blob = await withoutWebmIndexes(raw);
   const input = new Input({ source: new BlobSource(blob), formats: ALL_FORMATS });
   inputs.push(input);
   const track: InputTrack | null = (await input.getPrimaryVideoTrack().catch(() => null)) ?? (await input.getPrimaryAudioTrack().catch(() => null));
@@ -101,7 +184,7 @@ async function readRun(blob: Blob, inputs: Input[]): Promise<Run | undefined> {
     // AAC LC and HE-AAC differ in the codec string, not in the codec name.
     key = `${config.codec}:${audio.sampleRate}:${audio.numberOfChannels}`;
   } else key = `${codec}:${hex(config.description)}`;
-  return { track, codec, config, key, bytes: blob.size, start: first.timestamp };
+  return { track, codec, config, key, bytes: blob.size, start: first.timestamp + offset, offset };
 }
 
 /**
@@ -131,7 +214,8 @@ function trackConfig(runs: Run[]): Run["config"] {
 
 /** Packets of one run, up to where the next run takes over (a later append replaces what it overlaps). */
 async function* runPackets(run: Run, until: number): AsyncGenerator<EncodedPacket> {
-  for await (const packet of new EncodedPacketSink(run.track).packets()) {
+  for await (const raw of new EncodedPacketSink(run.track).packets()) {
+    const packet = run.offset ? raw.clone({ timestamp: raw.timestamp + run.offset }) : raw;
     if (packet.timestamp >= until) {
       if (packet.type === "key") return;
       continue;
@@ -146,12 +230,12 @@ async function* runPackets(run: Run, until: number): AsyncGenerator<EncodedPacke
 }
 
 /** `tracks`: per SourceBuffer, its runs in the order they were appended. */
-export async function muxCaptured(tracks: Blob[][], onProgress?: (fraction: number) => void): Promise<MuxResult> {
+export async function muxCaptured(tracks: CapturedRun[][], onProgress?: (fraction: number) => void): Promise<MuxResult> {
   const inputs: Input[] = [];
   try {
     const chosen: Run[][] = [];
     for (const runs of tracks) {
-      const read = (await Promise.all(runs.map((blob) => readRun(blob, inputs)))).flatMap((r) => (r ? [r] : []));
+      const read = (await Promise.all(runs.map((run) => readRun(run, inputs)))).flatMap((r) => (r ? [r] : []));
       const joined = joinable(read);
       if (joined.length) chosen.push(joined);
     }
@@ -169,7 +253,7 @@ export async function muxCaptured(tracks: Blob[][], onProgress?: (fraction: numb
     });
 
     const base = Math.min(...picked.map((runs) => runs[0]!.start));
-    const ends = await Promise.all(picked.map((runs) => runs.at(-1)!.track.computeDuration()));
+    const ends = await Promise.all(picked.map(async (runs) => Math.max(...(await Promise.all(runs.map(async (r) => (await r.track.computeDuration()) + r.offset))))));
     const end = Math.max(...ends) - base;
 
     const writers = picked.map((runs) => {

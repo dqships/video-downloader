@@ -55,7 +55,7 @@ let nextId = 1;
  * wait in a small queue meanwhile. Then "recording" or "idle".
  */
 let state: "undecided" | "idle" | "recording" = "undecided";
-let queue: { track: number; mime: string; init: boolean; bytes: ArrayBuffer }[] = [];
+let queue: { track: number; mime: string; init: boolean; offset: number; bytes: ArrayBuffer }[] = [];
 let queued = 0;
 const MAX_QUEUED_BYTES = 64 * 1024 * 1024;
 const DECIDE_WITHIN_MS = 5000;
@@ -138,10 +138,10 @@ if (ms) {
         }
         if (state === "recording") {
           const bytes = copy(data);
-          post({ type: "mse-data", track: track.id, mime: track.mime, init, bytes }, [bytes]);
+          post({ type: "mse-data", track: track.id, mime: track.mime, init, offset: this.timestampOffset, bytes }, [bytes]);
         } else if (state === "undecided") {
           const bytes = copy(data);
-          queue.push({ track: track.id, mime: track.mime, init, bytes });
+          queue.push({ track: track.id, mime: track.mime, init, offset: this.timestampOffset, bytes });
           queued += bytes.byteLength;
           if (queued > MAX_QUEUED_BYTES) idle();
         }
@@ -178,7 +178,7 @@ function replayInits(): void {
     const track = tracks.get(sb);
     if (!track?.init) continue;
     const bytes = track.init.slice(0);
-    post({ type: "mse-data", track: track.id, mime: track.mime, init: true, bytes }, [bytes]);
+    post({ type: "mse-data", track: track.id, mime: track.mime, init: true, offset: sb.timestampOffset, bytes }, [bytes]);
   }
 }
 

@@ -31,6 +31,8 @@ export interface MediaItem {
   thumbnail?: string;
   /** MSE recordings: the frame whose player is recorded. */
   frameId?: number;
+  /** MSE recordings: one is running, so the entry stays listed whatever else is found. */
+  recording?: boolean;
   /** Listing order a site extractor chose (0 first); unset items follow. */
   rank?: number;
   /** Streams only: the qualities on offer, best first. */

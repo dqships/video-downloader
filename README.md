@@ -94,7 +94,9 @@ extension's reload button.
   an invisible extension frame, which joins the tracks into one file
   (Mediabunny, no re-encoding) and saves it. Quality switches are joined
   into one track (H.264 with differing parameter sets is written as avc3,
-  with them in each keyframe). The recording ends once every MediaSource
+  with them in each keyframe); each run is placed by the SourceBuffer's
+  timestampOffset, and WebM init segments lose the source file's index
+  (SeekHead, Cues). The recording ends once every MediaSource
   that got media has ended, so probe players and ads don't cut it short. Record reloads the page with
   the recording armed: the script holds the player's first buffers until
   the service worker answers, so the file starts at the beginning. The frame

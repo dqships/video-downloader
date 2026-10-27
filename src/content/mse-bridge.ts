@@ -12,7 +12,7 @@ const control = (type: "start" | "stop" | "idle") => window.postMessage({ [TAG]:
 
 window.addEventListener("message", (e: MessageEvent) => {
   if (e.source !== window || e.data?.[TAG] !== true) return;
-  const msg = e.data as { type: string; track?: number; mime?: string; init?: boolean; bytes?: ArrayBuffer };
+  const msg = e.data as { type: string; track?: number; mime?: string; init?: boolean; offset?: number; bytes?: ArrayBuffer };
   if (msg.type === "mse-used" && !used) {
     used = true;
     // The answer says whether Record armed this page before it loaded.
@@ -21,7 +21,7 @@ window.addEventListener("message", (e: MessageEvent) => {
       .then((res: { ok: boolean; jobId?: string } | undefined) => (res?.jobId ? startCapture(res.jobId) : control("idle")))
       .catch(() => control("idle"));
   } else if (msg.type === "mse-data" && port && msg.bytes instanceof ArrayBuffer) {
-    port.postMessage({ type: "data", track: msg.track, mime: msg.mime, init: !!msg.init, bytes: msg.bytes }, [msg.bytes]);
+    port.postMessage({ type: "data", track: msg.track, mime: msg.mime, init: !!msg.init, offset: Number(msg.offset) || 0, bytes: msg.bytes }, [msg.bytes]);
   } else if (msg.type === "mse-ended" && port) {
     port.postMessage({ type: "ended" });
   }

@@ -95,4 +95,11 @@ describe("mergeMedia with player recordings", () => {
     expect(mergeMedia([webm], player).list.map((m) => m.type)).toEqual(["dash", "mse"]);
     expect(mergeMedia([player], webm).list.map((m) => m.type)).toEqual(["mse", "dash"]);
   });
+
+  it("keeps a player that is being recorded when a stream shows up", () => {
+    const player = item({ id: "p", type: "mse", recording: true });
+    const hls = item({ id: "h", type: "hls", url: "https://cdn.x/master.m3u8" });
+    expect(mergeMedia([player], hls).list.map((m) => m.type)).toEqual(["mse", "hls"]);
+    expect(mergeMedia([hls], player).list.map((m) => m.type)).toEqual(["hls", "mse"]);
+  });
 });

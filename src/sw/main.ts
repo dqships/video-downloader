@@ -315,6 +315,7 @@ async function handle(cmd: Command, sender: chrome.runtime.MessageSender): Promi
  */
 const playerId = (tabId: number, frameId: number, frameUrl: string) => hash53(`mse:${tabId}:${frameId}:${frameUrl}`);
 
+/** `grace` false: the player is being recorded, so it's listed at once and stays. */
 async function listPlayer(tabId: number, frameId: number, frameUrl: string, mime: string, grace: boolean): Promise<void> {
   // Give the player's manifest a moment to be seen first (not when it's being recorded).
   if (grace) await new Promise((r) => setTimeout(r, PLAYER_GRACE_MS));
@@ -336,6 +337,7 @@ async function listPlayer(tabId: number, frameId: number, frameUrl: string, mime
     detectedAt: Date.now(),
     sourceKind: "sniffer",
     frameId,
+    recording: !grace || undefined,
   });
   if (added && !metaRequested.has(tabId)) {
     metaRequested.add(tabId);
