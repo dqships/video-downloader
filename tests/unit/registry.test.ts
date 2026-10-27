@@ -70,3 +70,12 @@ describe("mergeMedia with HLS masters", () => {
     expect(list.map((m) => m.id)).toEqual(["master", "other"]);
   });
 });
+
+describe("mergeMedia with page-declared media", () => {
+  it("takes the player's headers when it requests a URL the page declared", () => {
+    const declared = item({ id: "p", sourceKind: "page", title: "Storm", sentHeaders: { referer: "https://x/" } });
+    const sniffed = item({ id: "p", sentHeaders: { referer: "https://x/", cookie: "s=1" }, sizeBytes: 9 * MB });
+    const { list } = mergeMedia([declared], sniffed);
+    expect(list[0]).toMatchObject({ sourceKind: "sniffer", title: "Storm", sizeBytes: 9 * MB, sentHeaders: { cookie: "s=1" } });
+  });
+});

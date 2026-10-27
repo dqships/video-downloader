@@ -86,7 +86,7 @@ export class Downloads {
       : buildFilename({
           template: settings.template,
           maxLength: settings.maxLength,
-          title: tab.title,
+          title: item.title ?? tab.title,
           pageUrl: tab.pageUrl,
           mediaUrl: item.url,
           serverFilename: item.serverFilename,
