@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Vidzilla",
   "short_name": "Vidzilla",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Finds the video and audio a page plays and saves it to your computer.",
   "minimum_chrome_version": "116",
   "permissions": [

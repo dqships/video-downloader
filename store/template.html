@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Vidzilla store image</title>
+    <!-- Rendered by scripts/store-assets.mjs. Query: kind (shot | tile | marquee),
+         theme, n (frame number), title, lede, img (a capture beside the page). -->
+    <link rel="stylesheet" href="../design/tokens.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+      }
+      body {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        background: var(--color-bg);
+        color: var(--color-text);
+        font-family: var(--font-family);
+        font-size: var(--text-md);
+        line-height: var(--text-md-lh);
+      }
+
+      /* Film edges top and bottom: perforations and edge print. */
+      .edge {
+        display: flex;
+        align-items: center;
+        gap: var(--space-5);
+        padding: var(--space-3) var(--space-6);
+        background: var(--color-film);
+        color: var(--color-film-edge);
+        font-size: var(--text-xs);
+        line-height: var(--text-xs-lh);
+        font-weight: var(--weight-bold);
+        font-stretch: var(--stretch-condensed);
+        letter-spacing: var(--tracking-caps);
+        text-transform: uppercase;
+        font-variant-numeric: tabular-nums;
+      }
+      .holes {
+        flex: 1;
+        height: var(--space-3);
+        background: repeating-linear-gradient(
+          90deg,
+          var(--color-film-frame) 0 var(--space-4),
+          transparent var(--space-4) var(--space-6)
+        );
+        border-radius: var(--radius-sm);
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: var(--space-8);
+        padding: 0 var(--space-9);
+      }
+      .mark {
+        width: var(--space-7);
+        height: var(--space-7);
+        color: var(--color-primary);
+      }
+      h1 {
+        margin: var(--space-5) 0 var(--space-4);
+        font-size: var(--text-xl);
+        line-height: var(--text-xl-lh);
+        font-weight: var(--weight-heavy);
+        font-stretch: var(--stretch-condensed);
+        letter-spacing: var(--tracking-tight);
+        text-wrap: balance;
+      }
+      p {
+        margin: 0;
+        max-width: 30ch;
+        color: var(--color-text-muted);
+        font-size: var(--text-lg);
+        line-height: var(--text-lg-lh);
+        text-wrap: pretty;
+      }
+      .capture {
+        display: block;
+        border: var(--size-hairline) solid var(--color-border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-strip);
+      }
+
+      /* Promo tiles: the lockup alone, on film stock. */
+      body.tile,
+      body.marquee {
+        background: var(--color-film);
+        color: var(--color-film-text);
+      }
+      body.tile main,
+      body.marquee main {
+        grid-template-columns: auto;
+        justify-content: center;
+        justify-items: center;
+        align-content: center;
+        gap: var(--space-5);
+        padding: 0;
+      }
+      .lockup {
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+      }
+      .lockup .mark {
+        width: var(--space-8);
+        height: var(--space-8);
+      }
+      .word {
+        height: var(--space-7);
+        aspect-ratio: 3957 / 737;
+        color: var(--color-film-text);
+      }
+      .tag {
+        color: var(--color-film-muted);
+        font-size: var(--text-lg);
+        max-width: none;
+        text-align: center;
+      }
+      body.tile .edge,
+      body.marquee .edge {
+        padding: var(--space-2) var(--space-4);
+        background: var(--color-film-frame);
+      }
+      body.tile .holes,
+      body.marquee .holes {
+        background: repeating-linear-gradient(
+          90deg,
+          var(--color-film) 0 var(--space-4),
+          transparent var(--space-4) var(--space-6)
+        );
+      }
+      body.tile .lockup .mark {
+        width: var(--space-7);
+        height: var(--space-7);
+      }
+      body.tile .word {
+        height: var(--space-6);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="edge"><span id="edge-left">Vidzilla 400</span><span class="holes"></span><span id="edge-right"></span></div>
+    <main id="main"></main>
+    <div class="edge"><span class="holes"></span></div>
+    <script type="module">
+      const q = new URLSearchParams(location.search);
+      const kind = q.get("kind") ?? "shot";
+      document.documentElement.dataset.theme = q.get("theme") ?? "light";
+      document.body.className = kind;
+      document.getElementById("edge-right").textContent = `▸ ${String(q.get("n") ?? "1").padStart(2, "0")}`;
+      const main = document.getElementById("main");
+      const mark = `<svg class="mark" aria-hidden="true"><use href="../brand/symbols.svg#vz-mark" /></svg>`;
+      const el = (tag, cls, text) => Object.assign(document.createElement(tag), { className: cls, textContent: text });
+      if (kind === "shot") {
+        const copy = document.createElement("div");
+        copy.innerHTML = mark;
+        copy.append(el("h1", "", q.get("title")), el("p", "", q.get("lede")));
+        const img = Object.assign(document.createElement("img"), { className: "capture", src: q.get("img"), alt: "" });
+        img.style.width = `${q.get("w")}px`;
+        main.append(copy, img);
+      } else {
+        const lockup = el("div", "lockup");
+        lockup.innerHTML = `${mark}<svg class="word" aria-hidden="true"><use href="../brand/symbols.svg#vz-wordmark" /></svg>`;
+        main.append(lockup);
+        if (kind === "marquee") main.append(el("p", "tag", "Save the video you're watching."));
+      }
+      await document.fonts.ready;
+      await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
+      document.body.dataset.ready = "1";
+    </script>
+  </body>
+</html>

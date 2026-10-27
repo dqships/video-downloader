@@ -18,9 +18,18 @@ downloaded.
 | 4. Live recording, subtitles, DRM detection everywhere | Done |
 | 5. Media declared in page markup; site extractors (Twitch clips, X) | Done |
 | 6. Settings, history, player recording (MSE) | Done |
-| 7. YouTube | Not planned (Chrome Web Store policy) |
+| 7. WebM DASH, live DASH, silence for late audio | Done |
+| Store listing, screenshots, package, website on Vercel | Ready ([store/README.md](store/README.md)) |
+
+YouTube isn't supported (Chrome Web Store policy).
 
 Live HLS and DASH streams record until they end or you press stop.
+
+## Ship it
+
+`pnpm package` writes `release/vidzilla-<version>.zip` for the Chrome Web
+Store. [store/README.md](store/README.md) has the listing copy, permission
+justifications, store images and the Vercel steps for the website.
 
 ## Try it
 
