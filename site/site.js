@@ -3,6 +3,7 @@
 // (design/components.css), with a simulated download instead of a real one.
 
 import { release, statusLabel } from "./release.js";
+import { setupTheme } from "./theme.js";
 
 const ICONS = "../design/icons.svg";
 const icon = (name) => `<svg aria-hidden="true"><use href="${ICONS}#i-${name}"/></svg>`;
@@ -18,39 +19,6 @@ function setupRelease() {
     frame.querySelector("[data-status]").textContent = statusLabel[status];
     frame.classList.toggle("is-now", status === "ready");
   }
-}
-
-/* Theme ------------------------------------------------------------------ */
-
-function setupTheme() {
-  const root = document.documentElement;
-  const button = document.querySelector("[data-theme-toggle]");
-  const system = matchMedia("(prefers-color-scheme: dark)");
-  let saved = null;
-  try {
-    saved = localStorage.getItem("vz-theme");
-  } catch {}
-
-  const apply = (theme) => {
-    root.dataset.theme = theme;
-    button.setAttribute(
-      "aria-label",
-      theme === "dark" ? "Switch to the lightbox (light mode)" : "Switch to the darkroom (dark mode)",
-    );
-    document.dispatchEvent(new CustomEvent("vz-theme"));
-  };
-
-  apply(saved === "light" || saved === "dark" ? saved : system.matches ? "dark" : "light");
-  system.addEventListener("change", (e) => {
-    if (!saved) apply(e.matches ? "dark" : "light");
-  });
-  button.addEventListener("click", () => {
-    saved = root.dataset.theme === "dark" ? "light" : "dark";
-    try {
-      localStorage.setItem("vz-theme", saved);
-    } catch {}
-    apply(saved);
-  });
 }
 
 /* The clip: a kaiju walking past a harbour at night, drawn from the logo's shapes. */

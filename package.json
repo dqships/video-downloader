@@ -8,6 +8,8 @@
     "build": "node scripts/build.mjs",
     "watch": "node scripts/build.mjs --watch",
     "site": "node scripts/build-site.mjs",
+    "site:serve": "node scripts/build-site.mjs && node scripts/serve-site.mjs",
+    "og": "node scripts/make-og.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "pnpm build && node --test tests/e2e/*.test.mjs",
@@ -29,6 +31,7 @@
     "vitest": "^5.0.5"
   },
   "dependencies": {
+    "@vercel/functions": "3.10.4",
     "mediabunny": "1.62.1"
   },
   "engines": {

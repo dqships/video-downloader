@@ -1,0 +1,11 @@
+    <link rel="icon" href="../brand/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="../design/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin />
+    <!-- tokens.css, components.css and site.css, joined by the build -->
+    <link rel="stylesheet" href="/styles.css" />
+    <!-- Apply a saved theme before first paint. Falls back to the system theme. -->
+    <script>
+      try {
+        const t = localStorage.getItem("vz-theme");
+        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+      } catch {}
+    </script>

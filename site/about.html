@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>About Vidzilla, the free Chrome video downloader</title>
+    <meta
+      name="description"
+      content="Vidzilla is an independent, open-source Chrome extension that saves the video a page plays as a file. Why it exists, what it does, and what it leaves alone."
+    />
+    <!-- vz:meta -->
+    <!-- vz:assets -->
+  </head>
+  <body>
+    <!-- vz:header -->
+
+    <main id="main" class="prose">
+      <h1 class="section-title">About Vidzilla</h1>
+      <p class="vz-edge">Independent · Open source · Free</p>
+
+      <p>
+        Vidzilla is a Chrome extension that saves the video you're watching. Play a video on a page, click the Vidzilla
+        mark in Chrome's toolbar, and it lists what the page is playing: plain files, HLS and DASH streams, audio
+        tracks and subtitles. Pick a quality and the file lands in your Downloads folder, exactly as the site sent it.
+      </p>
+
+      <h2 class="prose-head">Why it exists</h2>
+      <p>
+        Saving a video you can already watch shouldn't mean pasting links into an ad-covered website, installing a
+        desktop app, or creating an account. Vidzilla does the job inside the browser you're already using, with the
+        same access the page already has, and nothing in between.
+      </p>
+
+      <h2 class="prose-head">How it's built</h2>
+      <p>
+        Everything runs in Chrome. Vidzilla watches the requests a page makes, keeps the ones that are video, and
+        fetches them the same way the page did. Streams are joined into one file without re-encoding, so the picture
+        and sound are untouched. There are no Vidzilla servers: nothing you watch or save passes through anyone else.
+      </p>
+      <p>
+        The code is public on <a href="https://github.com/dqships/video-downloader">GitHub</a>, including the
+        <a href="https://github.com/dqships/video-downloader/blob/main/DESIGN.md">design system</a> behind this site
+        and the extension's popup.
+      </p>
+
+      <h2 class="prose-head">What it leaves alone</h2>
+      <p>
+        Video protected by DRM, such as Netflix or Disney+, stays protected: Vidzilla shows it in the list and says it
+        can't be saved. It doesn't get around paywalls or sign-ins either. It saves what your browser already plays,
+        so please respect the sites you save from and the people who made the video.
+      </p>
+
+      <h2 class="prose-head">Get in touch</h2>
+      <p>
+        Found a site where it doesn't work, or have an idea? The <a href="/contact">contact page</a> says where to
+        send it. Vidzilla is <a href="/pricing">free</a>, and the <a href="/privacy">privacy policy</a> lists exactly
+        what it reads.
+      </p>
+    </main>
+
+    <!-- vz:footer -->
+
+    <script type="module" src="/page.js"></script>
+  </body>
+</html>
