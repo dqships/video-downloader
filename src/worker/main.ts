@@ -37,6 +37,7 @@ async function runJob(msg: JobMessage): Promise<void> {
             url: msg.url,
             file,
             signal: ctrl.signal,
+            audioOnly: msg.audioOnly,
             onProgress: (b, fraction) => post({ type: "progress", jobId: msg.jobId, bytes: b, fraction }),
           })
         : await fetchFile({

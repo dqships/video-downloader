@@ -11,6 +11,7 @@ const TYPES = {
   ".m3u8": "application/vnd.apple.mpegurl",
   ".ts": "video/mp2t",
   ".m4s": "video/iso.segment",
+  ".mpd": "application/dash+xml",
 };
 
 /** Plays a playlist the way a player would: master first, then its children. */
@@ -34,6 +35,14 @@ const pages = {
   "/hls-fmp4.html": `<title>Fragmented Stream</title>${player("/media/hls-fmp4/index.m3u8")}`,
   "/hls-multi.html": `<title>Two Qualities</title>${player("/media/hls-multi/master.m3u8", "/media/hls-multi/360p.m3u8", "/media/hls-multi/audio.m3u8")}`,
   "/hls-protected.html": `<title>Protected Stream</title>${player("/protected-hls/index.m3u8")}`,
+  "/dash.html": `<title>Dash Two Qualities</title>${player("/media/dash/manifest.mpd", "/media/dash/init-0.m4s")}`,
+  "/dash-timeline.html": `<title>Dash Timeline</title>${player("/media/dash-timeline/manifest.mpd")}`,
+  "/dash-single.html": `<title>Dash Byte Ranges</title>${player("/media/dash-single/manifest.mpd")}`,
+  // A player reading one file per track by byte range, as on Facebook.
+  "/dash-base.html": `<title>Dash One File</title><script>(async () => {
+    await fetch("/media/dash-base/manifest.mpd");
+    await fetch("/media/dash-base/video.mp4", { headers: { range: "bytes=0-1000000" } });
+  })()</script>`,
   "/live.html": `<title>Live Now</title>${player("/live/index.m3u8")}`,
   "/drm.html": `<title>Locked Stream</title>${player("/drm/index.m3u8")}`,
   "/mixed.html": `<title>Northern Lights Over Tromsø, Full Timelapse | Fixture Site</title>

@@ -203,7 +203,7 @@ export function audioFor(master: HlsMaster, variant: HlsVariant): HlsRendition |
   return group.find((r) => r.isDefault) ?? group.find((r) => r.autoselect) ?? group[0];
 }
 
-function mbps(bandwidth: number): string {
+export function mbps(bandwidth: number): string {
   return bandwidth >= 1e6 ? `${(bandwidth / 1e6).toFixed(1)} Mbps` : `${Math.round(bandwidth / 1e3)} kbps`;
 }
 
@@ -247,24 +247,52 @@ export function listVariants(master: HlsMaster): StreamVariant[] {
       ...(video === undefined && v.codecs && !v.height ? { label: "Audio only" } : {}),
     });
   }
-  // Labels: "720p", with the bitrate added when two variants share a height.
+  // A sound-only download: the separate audio playlist when there is one,
+  // otherwise the lightest variant with its picture dropped.
+  const lightest = [...out].sort((a, b) => (a.bandwidth ?? 0) - (b.bandwidth ?? 0))[0];
+  const hasAudioOnly = out.some((v) => v.label === "Audio only");
+  if (lightest && !hasAudioOnly && (lightest.audioUrl || codecHasAudio(lightest.codecs))) {
+    out.push({
+      id: "",
+      label: "Audio only",
+      audioOnly: true,
+      url: lightest.audioUrl ?? lightest.url,
+      audioLanguage: lightest.audioLanguage,
+      audioCodecs: lightest.audioCodecs,
+    });
+  }
+  const ranges = new Map(master.variants.map((m) => [m.uri, m.videoRange]));
+  return labelVariants(out, (v) => {
+    const range = ranges.get(v.url);
+    return range && range !== "SDR" ? ` ${range}` : "";
+  });
+}
+
+/** True when CODECS names an audio codec, or says nothing (assume muxed audio). */
+function codecHasAudio(codecs: string | undefined): boolean {
+  return !codecs || splitCodecs(codecs).audio !== undefined;
+}
+
+/**
+ * Numbers the variants and labels the unlabelled ones: "720p", with the
+ * bitrate added when two share a height, plus an optional suffix ("PQ").
+ */
+export function labelVariants(list: StreamVariant[], suffix: (v: StreamVariant) => string = () => ""): StreamVariant[] {
   const heights = new Map<number, number>();
-  for (const v of out) if (v.height) heights.set(v.height, (heights.get(v.height) ?? 0) + 1);
-  out.forEach((v, i) => {
+  for (const v of list) if (v.height) heights.set(v.height, (heights.get(v.height) ?? 0) + 1);
+  list.forEach((v, i) => {
     v.id = String(i);
     if (v.label) return;
     if (v.height) {
       const shared = (heights.get(v.height) ?? 0) > 1;
-      const range = master.variants.find((m) => m.uri === v.url)?.videoRange;
-      const hdr = range && range !== "SDR" ? ` ${range}` : "";
-      v.label = `${v.height}p${hdr}${shared && v.bandwidth ? ` · ${mbps(v.bandwidth)}` : ""}`;
+      v.label = `${v.height}p${suffix(v)}${shared && v.bandwidth ? ` · ${mbps(v.bandwidth)}` : ""}`;
     } else if (v.bandwidth) {
       v.label = mbps(v.bandwidth);
     } else {
       v.label = `Quality ${i + 1}`;
     }
   });
-  return out;
+  return list;
 }
 
 const quote = (s: string) => `"${s.replace(/"/g, "%22")}"`;

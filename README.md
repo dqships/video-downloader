@@ -14,15 +14,14 @@ downloaded.
 | --- | --- |
 | 1. Detection and direct files (mp4, webm, mp3...) | Done |
 | 2. HLS (m3u8), AES-128, quality picker, remux to MP4 | Done |
-| 3. DASH (mpd), audio-only | Next |
-| 4. Live recording, subtitles, DRM detection everywhere | Planned |
+| 3. DASH (mpd), audio-only | Done |
+| 4. Live recording, subtitles, DRM detection everywhere | Next |
 | 5. Site extractors (Vimeo, Facebook, Instagram, Kick, ...) | Planned |
 | 6. MSE fallback, settings, history | Planned |
-| 7. YouTube (optional) | Planned |
+| 7. YouTube | Not planned (Chrome Web Store policy) |
 
-DASH streams are already detected and listed, but can't be downloaded until
-milestone 3. Live HLS streams are listed and marked live; recording them comes
-in milestone 4.
+Live streams are listed and marked live; recording them comes in milestone 4.
+WebM-only DASH streams are listed but can't be saved yet.
 
 ## Try it
 
@@ -59,6 +58,14 @@ extension's reload button.
   directory its segments live in, and the worker remuxes it to MP4 with
   [Mediabunny](https://mediabunny.dev) (AES-128, fMP4 and separate audio
   included, no re-encoding), writing straight to OPFS.
+- **DASH** (`src/shared/dash.ts`, `src/shared/xml.ts`, `src/sw/dash-probe.ts`):
+  the manifest is read the same way (no DOMParser in a service worker, so a
+  small XML reader). SegmentTemplate (numbers or timeline), SegmentList with
+  byte ranges, and SegmentBase (the file's sidx is read for the ranges) all
+  become HLS media playlists with `EXT-X-MAP` and byte ranges, so the same
+  worker job remuxes DASH. Multi-period manifests use the longest period.
+- **Audio only**: every stream offers it; the picture is dropped and the file
+  is saved as `.m4a`.
 - **Popup** (`src/ui/`): reads storage and sends commands. It holds no state of
   its own. It is built from the shared Vidzilla design system (`design/`,
   `brand/`, see `DESIGN.md`), the same tokens and components the website uses,
@@ -80,7 +87,8 @@ node scripts/screenshots.mjs out/   # popup in light and dark mode
 ```
 
 The end-to-end tests cover detection, real downloads verified with ffprobe
-(direct MP4; HLS plain, AES-128, fMP4 and two-quality with separate audio),
+(direct MP4; HLS plain, AES-128, fMP4 and two-quality with separate audio;
+DASH numbered, timeline, byte-range and single indexed file; audio only),
 Referer replay for a file and for every segment of a stream, and that live and
 DRM streams stay unavailable. `tests/e2e/site.test.mjs` does the same for the
 website's paste box, with the media on a separate origin.
