@@ -26,7 +26,15 @@ export function mergeMedia(list: MediaItem[], item: MediaItem): { list: MediaIte
       supportsRanges: old.supportsRanges || item.supportsRanges,
       serverFilename: old.serverFilename ?? item.serverFilename,
       sentHeaders: Object.keys(old.sentHeaders).length ? old.sentHeaders : item.sentHeaders,
+      variants: old.variants ?? item.variants,
+      childUrls: old.childUrls ?? item.childUrls,
+      durationSec: old.durationSec ?? item.durationSec,
+      isLive: old.isLive ?? item.isLive,
+      hasDrm: old.hasDrm || item.hasDrm,
     };
+    for (const key of ["variants", "childUrls", "durationSec", "isLive"] as const) {
+      if (merged[key] === undefined) delete merged[key];
+    }
     const changed = JSON.stringify(merged) !== JSON.stringify(old);
     if (!changed) return { list, changed: false };
     const next = list.slice();
@@ -36,9 +44,15 @@ export function mergeMedia(list: MediaItem[], item: MediaItem): { list: MediaIte
 
   const hasDash = list.some((m) => m.type === "dash");
   if (hasDash && isLikelyDashSegment(item)) return { list, changed: false };
+  // A quality or audio playlist of a master we already list.
+  if (list.some((m) => m.childUrls?.includes(item.url))) return { list, changed: false };
 
   let next = [...list, item];
   if (item.type === "dash") next = next.filter((m) => !isLikelyDashSegment(m));
+  if (item.childUrls?.length) {
+    const children = new Set(item.childUrls);
+    next = next.filter((m) => !children.has(m.url));
+  }
   const sameType = next.filter((m) => m.type === item.type);
   if (sameType.length > MAX_PER_TYPE) {
     const drop = new Set(sameType.slice(0, sameType.length - MAX_PER_TYPE).map((m) => m.id));

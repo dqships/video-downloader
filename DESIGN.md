@@ -87,6 +87,7 @@ A logo-modernism mark: constructed from two geometric figures, no drawing.
 | `--color-film-frame` | `#241E19` | `#15110E` | A frame's image area on film |
 | `--color-film-edge` | `#E9A63E` | `#E9A63E` | Edge print on film |
 | `--color-film-text` | `#F2EADD` | `#F2EADD` | Text on film |
+| `--color-film-muted` | `#A89C8C` | `#A89C8C` | Secondary text on film |
 
 All text pairs meet WCAG AA (body text 4.5:1). Pages follow the system theme;
 setting `data-theme="light"` or `"dark"` on `<html>` overrides it. Masks use
@@ -125,7 +126,8 @@ only: `--space-7` 48 · `--space-8` 64 · `--space-9` 96 · `--space-10` 128 px.
 
 - Radius: `--radius-sm` 2 px (sprockets, badges, thumbnails: film corners are
   nearly square), `--radius-md` 6 px (buttons, icon buttons),
-  `--radius-lg` 10 px (the strip, the popup body).
+  `--radius-lg` 10 px (the strip, the popup body), `--radius-full` 50 % (dots
+  only, such as browser window dots in the site demo).
 - Shadow: `--shadow-strip` only, under a strip lying on the lightbox. Nothing
   else casts a shadow; separation comes from hairlines (`--size-hairline`).
 - Sizes: hit target `--size-hit` 32 px (popup), control height
@@ -145,6 +147,9 @@ only: `--space-7` 48 · `--space-8` 64 · `--space-9` 96 · `--space-10` 128 px.
   Download).
 - **Input** (`.vz-input`): a grease-pencil underline, never a box. Hairline at
   rest, muted on hover, vermilion on focus.
+- **Select** (`.vz-select` wrapping a native `<select>` and a `chevron.down`
+  icon): edge-print type, hairline box at `--radius-sm`, sits in a frame's meta
+  row next to the badge. Options read like `1080p · 4.0 Mbps`.
 - **Focus**: a 2 px vermilion outline offset 2 px on every interactive element.
 - **Disabled**: 40 % opacity, no motion.
 
@@ -155,7 +160,7 @@ Symbols' regular weight and metrics: 24-unit grid, 1.75 strokes, round caps and
 joins, filled shapes only for `*.fill` symbols. Files are named after the SF
 Symbol they stand in for (`arrow.down.circle`, `doc.on.doc`, `checkmark`,
 `xmark`, `lock`, `film`, `waveform`, `play.fill`, `pause.fill`,
-`arrow.up.right`, `chevron.right`, `sun.max`, `moon`, `folder`,
+`arrow.up.right`, `chevron.right`, `chevron.down`, `sun.max`, `moon`, `folder`,
 `exclamationmark.triangle`). Icons use `currentColor`. Add a new icon by drawing
 it to the same rules; never mix in another library, and never use a sparkles
 icon. Import them as text (esbuild `loader: { ".svg": "text" }`) or inline them.

@@ -24,6 +24,31 @@ export interface MediaItem {
   hasDrm: boolean;
   detectedAt: number;
   sourceKind: "sniffer";
+  /** Streams only: the qualities on offer, best first. */
+  variants?: StreamVariant[];
+  /** Streams only: child playlists of this master, hidden from the list. */
+  childUrls?: string[];
+  /** Streams only: length in seconds, when known. */
+  durationSec?: number;
+  /** Streams only: still being broadcast (no end marker yet). */
+  isLive?: boolean;
+}
+
+/** One downloadable quality of a stream: a video playlist plus its audio. */
+export interface StreamVariant {
+  id: string;
+  /** "1080p", "720p · 2.4 Mbps", "Audio only"... */
+  label: string;
+  height?: number;
+  width?: number;
+  bandwidth?: number;
+  codecs?: string;
+  /** The media playlist to download. */
+  url: string;
+  /** A separate audio playlist, when the stream keeps audio apart. */
+  audioUrl?: string;
+  audioCodecs?: string;
+  audioLanguage?: string;
 }
 
 export interface TabMedia {
@@ -47,6 +72,10 @@ export interface DownloadJob {
   phase: "fetching" | "saving";
   bytesReceived: number;
   totalBytes?: number;
+  /** Streams: fraction done, 0..1, since the final size isn't known up front. */
+  progress?: number;
+  /** Streams: the quality being downloaded. */
+  variantLabel?: string;
   error?: string;
   saveAs: boolean;
   /** Header-replay rules to remove when the job ends. */
