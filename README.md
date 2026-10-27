@@ -4,7 +4,6 @@ A personal Chrome extension (Manifest V3) that finds the video and audio a page
 plays and saves it to your computer. Everything runs in the browser, with no
 companion app.
 
-`VDH-handoff.md` is the study of Video DownloadHelper that this design follows.
 DRM-protected media (Widevine, PlayReady, FairPlay) is detected and never
 downloaded.
 
