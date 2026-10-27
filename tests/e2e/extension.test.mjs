@@ -486,11 +486,10 @@ test("records a player that hides its stream (Media Source Extensions)", async (
   await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
   const button = popup.locator(".vz-frame .download").first();
   assert.equal(await button.getAttribute("title"), "Record");
+  // The video has already played through; Record reloads the page to catch it all.
+  const reloaded = page.waitForEvent("load");
   await button.click();
-  // The capture frame joins the page; once it's in, let the player load its media.
-  await page.waitForSelector('iframe[src^="chrome-extension://"]', { state: "attached" });
-  await page.waitForTimeout(500);
-  await page.evaluate(() => window.go());
+  await reloaded;
   const job = await finishedJob(tabId, 30000);
   assert.equal(job.state, "complete", job.error);
   assert.equal(job.filename, "Hidden Stream Player.mp4");

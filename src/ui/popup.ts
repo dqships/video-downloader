@@ -189,7 +189,9 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
     note.textContent =
       job.phase === "saving"
         ? "Saving the recording to your Downloads folder"
-        : item.type === "mse"
+        : job.player?.armed
+          ? "Reloading the page to record the video from the start"
+          : item.type === "mse"
           ? `Recording what the player plays${job.bytesReceived ? ` · ${formatBytes(job.bytesReceived)}` : ""}. Stops when the video ends.`
           : `Recording ${formatDuration(job.recordedSec) || "0:00"}${job.bytesReceived ? ` · ${formatBytes(job.bytesReceived)}` : ""}`;
   } else if (job?.state === "running") {
@@ -221,7 +223,7 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
   } else if (item.isLive) {
     note.textContent = "Live. Records until the stream ends or you press stop.";
   } else if (item.type === "mse") {
-    note.textContent = "No file to fetch here. Press record, then play the video from the start: Vidzilla keeps what the player loads.";
+    note.textContent = "No file to fetch here. Record reloads the page and keeps what the player loads, from the start. Let the video play to the end.";
   } else {
     note.hidden = true;
   }

@@ -92,9 +92,12 @@ extension's reload button.
   hidden manifests). A page-world script notes Media Source Extensions use
   and, only while the user records, copies each buffer the player appends to
   an invisible extension frame, which joins the tracks into one file
-  (Mediabunny, no re-encoding) and saves it. The frame gets its job id
-  privately and claims it from the service worker once, so a page can't
-  make it save anything. Listed only when no HLS/DASH stream is on the page.
+  (Mediabunny, no re-encoding) and saves it. Record reloads the page with
+  the recording armed: the script holds the player's first buffers until
+  the service worker answers, so the file starts at the beginning. The frame
+  gets its job id privately and claims it from the service worker once, so
+  a page can't make it save anything. Listed only when no HLS/DASH stream
+  with a saveable quality is on the page.
 - **Settings and history** (`src/ui/options.*`, `src/shared/history.ts`):
   the gear in the popup opens a page for the filename template, length,
   folder and save dialog, and a list of saved files (show in folder, open

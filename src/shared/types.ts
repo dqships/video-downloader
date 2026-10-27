@@ -131,7 +131,8 @@ export interface DownloadJob {
   title?: string;
   thumbnail?: string;
   /** Player recordings: the frame recorded, and whether its capture frame has claimed the job. */
-  player?: { frameId: number; claimed?: boolean };
+  /** frameId is -1 while armed: the page reloads and its player hasn't spoken yet. */
+  player?: { frameId: number; claimed?: boolean; armed?: boolean };
 }
 
 /** One saved file, kept in chrome.storage.local for the history list. */

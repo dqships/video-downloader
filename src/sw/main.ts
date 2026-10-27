@@ -287,8 +287,12 @@ async function handle(cmd: Command, sender: chrome.runtime.MessageSender): Promi
     case "page-mse": {
       const tabId = sender.tab?.id;
       if (tabId === undefined || sender.frameId === undefined) return { ok: false, error: "Not from a tab" };
-      await listPlayer(tabId, sender.frameId, sender.url ?? sender.tab?.url ?? "", cmd.payload.mime);
-      return { ok: true };
+      const frameUrl = sender.url ?? sender.tab?.url ?? "";
+      const id = playerId(tabId, sender.frameId, frameUrl);
+      // Record reloaded this page: answer at once, the player is waiting to start.
+      const armed = await downloads.claimArmed(tabId, sender.frameId, id, sender.tab?.url ?? frameUrl);
+      void listPlayer(tabId, sender.frameId, frameUrl, cmd.payload.mime, !armed);
+      return armed ? { ok: true, jobId: armed.jobId } : { ok: true };
     }
     case "capture-job": {
       // Our own page (its host may be the dynamic id web-accessible pages get), not a content script.
@@ -309,15 +313,17 @@ async function handle(cmd: Command, sender: chrome.runtime.MessageSender): Promi
  * most such players load an HLS or DASH manifest we can download directly,
  * and the registry drops this entry once one shows up.
  */
-async function listPlayer(tabId: number, frameId: number, frameUrl: string, mime: string): Promise<void> {
-  // Give the player's manifest a moment to be seen first.
-  await new Promise((r) => setTimeout(r, PLAYER_GRACE_MS));
+const playerId = (tabId: number, frameId: number, frameUrl: string) => hash53(`mse:${tabId}:${frameId}:${frameUrl}`);
+
+async function listPlayer(tabId: number, frameId: number, frameUrl: string, mime: string, grace: boolean): Promise<void> {
+  // Give the player's manifest a moment to be seen first (not when it's being recorded).
+  if (grace) await new Promise((r) => setTimeout(r, PLAYER_GRACE_MS));
   await Promise.allSettled([...(handling.get(tabId) ?? [])]);
   const tab = await chrome.tabs.get(tabId).catch(() => undefined);
   if (!tab) return;
   const audioOnly = mime.startsWith("audio/");
   const added = await registry.add({
-    id: hash53(`mse:${tabId}:${frameId}:${frameUrl}`),
+    id: playerId(tabId, frameId, frameUrl),
     type: "mse",
     url: frameUrl,
     tabId,

@@ -53,8 +53,9 @@ export function mergeMedia(list: MediaItem[], item: MediaItem): { list: MediaIte
     return { list: next, changed: true };
   }
 
-  // A player recording is a last resort: never next to a stream we can fetch.
-  const isStream = (m: MediaItem) => m.type === "hls" || m.type === "dash";
+  // A player recording is a last resort: never next to a stream we can fetch
+  // (one whose qualities are all WebM, which we can't save yet, doesn't count).
+  const isStream = (m: MediaItem) => (m.type === "hls" || m.type === "dash") && m.variants?.length !== 0;
   if (item.type === "mse" && list.some(isStream)) return { list, changed: false };
   if (isStream(item)) list = list.filter((m) => m.type !== "mse");
 

@@ -88,4 +88,11 @@ describe("mergeMedia with player recordings", () => {
     const { list } = mergeMedia([player], hls);
     expect(list.map((m) => m.type)).toEqual(["hls"]);
   });
+
+  it("keeps the player next to a stream none of whose qualities can be saved (WebM-only DASH)", () => {
+    const player = item({ id: "p", type: "mse" });
+    const webm = item({ id: "d", type: "dash", url: "https://cdn.x/manifest.mpd", variants: [] });
+    expect(mergeMedia([webm], player).list.map((m) => m.type)).toEqual(["dash", "mse"]);
+    expect(mergeMedia([player], webm).list.map((m) => m.type)).toEqual(["mse", "dash"]);
+  });
 });

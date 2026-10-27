@@ -17,6 +17,16 @@ import { saveSubtitles } from "./subtitles";
 
 const OFFSCREEN_URL = "offscreen.html";
 const KEEP_FINISHED_JOBS = 50;
+/** How long a reloaded page has to start its player before an armed recording gives up. */
+const ARM_TIMEOUT_MS = 30_000;
+
+function sameOrigin(a: string, b: string): boolean {
+  try {
+    return new URL(a).origin === new URL(b).origin;
+  } catch {
+    return false;
+  }
+}
 
 let creatingOffscreen: Promise<void> | undefined;
 
@@ -186,16 +196,36 @@ export class Downloads {
       pageUrl: tab.pageUrl,
       title: item.title ?? tab.title,
       thumbnail: item.thumbnail ?? tab.thumbnail,
-      player: { frameId: item.frameId ?? 0 },
+      player: { frameId: -1, armed: true },
     };
     this.jobs.set(job.jobId, job);
     this.persist();
+    // Reloading lets the player be recorded from its very first buffer; the
+    // page's player asks for its job as soon as it starts (claimArmed).
     try {
-      await chrome.tabs.sendMessage(tab.tabId, { kind: "mse-start", jobId: job.jobId }, { frameId: item.frameId ?? 0 });
+      await chrome.tabs.reload(tab.tabId);
     } catch {
       await this.fail(job, "The page isn't reachable any more. Reload it and try again.");
+      return job.jobId;
     }
+    setTimeout(() => {
+      if (job.state === "running" && job.player?.armed)
+        void this.fail(job, "The player didn't start after the page reloaded. Play the video, then press Record again.");
+    }, ARM_TIMEOUT_MS);
     return job.jobId;
+  }
+
+  /** A player in a just-reloaded tab: the armed recording, now bound to its frame. */
+  async claimArmed(tabId: number, frameId: number, mediaId: string, pageUrl: string): Promise<DownloadJob | undefined> {
+    await this.loaded;
+    const job = [...this.jobs.values()].find((j) => j.tabId === tabId && j.state === "running" && j.player?.armed);
+    // The tab may have gone to another site meanwhile.
+    if (!job || !sameOrigin(job.pageUrl ?? "", pageUrl)) return undefined;
+    job.player = { frameId };
+    // Frame ids change across a reload, and the list entry with them.
+    job.mediaId = mediaId;
+    this.persist();
+    return job;
   }
 
   /** The capture frame asks for its job; each recording is handed out once. */
@@ -213,7 +243,7 @@ export class Downloads {
     if (!job || job.state !== "running") return;
     if (job.chromeDownloadId !== undefined) await chrome.downloads.cancel(job.chromeDownloadId).catch(() => {});
     else if (job.player) {
-      await chrome.tabs.sendMessage(job.tabId, { kind: "mse-cancel", jobId }, { frameId: job.player.frameId }).catch(() => {});
+      if (!job.player.armed) await chrome.tabs.sendMessage(job.tabId, { kind: "mse-cancel", jobId }, { frameId: job.player.frameId }).catch(() => {});
       await this.fail(job, "Cancelled");
     } else await toWorker({ type: "cancel", jobId });
   }
@@ -223,7 +253,8 @@ export class Downloads {
     await this.loaded;
     const job = this.jobs.get(jobId);
     if (job?.state !== "running" || !job.recording || job.phase !== "fetching") return;
-    if (job.player) await chrome.tabs.sendMessage(job.tabId, { kind: "mse-stop", jobId }, { frameId: job.player.frameId }).catch(() => {});
+    if (job.player?.armed) await this.fail(job, "Cancelled");
+    else if (job.player) await chrome.tabs.sendMessage(job.tabId, { kind: "mse-stop", jobId }, { frameId: job.player.frameId }).catch(() => {});
     else await toWorker({ type: "stop", jobId });
   }
 
@@ -286,6 +317,7 @@ export class Downloads {
       job.state = "complete";
       job.savedPath = item?.filename;
       this.persist();
+      const thumbnail = await this.latestThumbnail(job);
       void addHistory({
         id: job.jobId,
         filename: job.filename,
@@ -293,15 +325,32 @@ export class Downloads {
         chromeDownloadId: job.chromeDownloadId,
         pageUrl: job.pageUrl ?? "",
         title: job.title,
-        thumbnail: job.thumbnail,
+        thumbnail,
         bytes: item?.fileSize || item?.totalBytes || job.bytesReceived || undefined,
-        quality: job.variantLabel,
+        // "720p · 2.5 MB": the size is listed on its own.
+        quality: job.variantLabel?.split(" · ")[0],
         recorded: job.recording,
         savedAt: Date.now(),
       }).catch(() => {});
       void toWorker({ type: "cleanup", jobId: job.jobId });
     } else if (state === "interrupted") {
       await this.fail(job, delta.error?.current === "USER_CANCELED" ? "Cancelled" : (delta.error?.current ?? "Saving failed"));
+    }
+  }
+
+  /**
+   * Single-page apps often show a placeholder image (the site's logo) when a
+   * download starts and the video's own one later; take the newest while the
+   * tab still shows that page.
+   */
+  private async latestThumbnail(job: DownloadJob): Promise<string | undefined> {
+    try {
+      const key = storageKeys.tab(job.tabId);
+      const tab = (await chrome.storage.session.get(key))[key] as TabMedia | undefined;
+      if (!tab || tab.pageUrl !== job.pageUrl) return job.thumbnail;
+      return tab.media.find((m) => m.id === job.mediaId)?.thumbnail ?? tab.thumbnail ?? job.thumbnail;
+    } catch {
+      return job.thumbnail;
     }
   }
 

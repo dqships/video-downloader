@@ -69,14 +69,11 @@ const pages = {
   "/encrypted.html": `<title>Encrypted Player</title><video></video>${player("/media/hls/master.m3u8")}<script>
     setTimeout(() => document.querySelector("video").dispatchEvent(new Event("encrypted")), 300);
   </script>`,
-  // A player that feeds Media Source Extensions itself; media waits for window.go().
+  // A player that feeds Media Source Extensions itself.
   "/mse.html": `<title>Hidden Stream Player</title><video muted controls></video><script>
     const ms = new MediaSource();
     const video = document.querySelector("video");
     video.src = URL.createObjectURL(ms);
-    let release;
-    const gate = new Promise((r) => (release = r));
-    window.go = () => release();
     const get = (p) => fetch("/media/dash/" + p).then((r) => r.arrayBuffer());
     const append = (sb, data) => new Promise((r) => { sb.addEventListener("updateend", r, { once: true }); sb.appendBuffer(data); });
     ms.addEventListener("sourceopen", async () => {
@@ -84,7 +81,6 @@ const pages = {
       const a = ms.addSourceBuffer('audio/mp4; codecs="mp4a.40.2"');
       await append(v, await get("init-0.m4s"));
       await append(a, await get("init-2.m4s"));
-      await gate;
       for (const n of [1, 2, 3]) await append(v, await get("chunk-0-0000" + n + ".m4s"));
       for (const n of [1, 2, 3, 4]) await append(a, await get("chunk-2-0000" + n + ".m4s"));
       ms.endOfStream();

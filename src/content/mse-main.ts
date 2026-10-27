@@ -19,8 +19,26 @@ const tracks = new WeakMap<SourceBuffer, Track>();
 /** SourceBuffers can't be enumerated from a WeakMap; keep a weak list as well. */
 const buffers: WeakRef<SourceBuffer>[] = [];
 let nextId = 1;
-let recording = false;
+/**
+ * "undecided" until the extension answers whether a recording is armed for
+ * this page (Record reloads the page so the whole video is caught); appends
+ * wait in a small queue meanwhile. Then "recording" or "idle".
+ */
+let state: "undecided" | "idle" | "recording" = "undecided";
+let queue: { track: number; mime: string; init: boolean; bytes: ArrayBuffer }[] = [];
+let queued = 0;
+const MAX_QUEUED_BYTES = 64 * 1024 * 1024;
+const DECIDE_WITHIN_MS = 5000;
+const recording = () => state === "recording";
+
+function idle(): void {
+  state = "idle";
+  queue = [];
+  queued = 0;
+}
 let announced = false;
+/** The whole video loaded before the extension answered. */
+let endedEarly = false;
 
 const post = (msg: Record<string, unknown>, transfer: Transferable[] = []) => window.postMessage({ [TAG]: true, ...msg }, "*", transfer);
 
@@ -56,8 +74,12 @@ if (ms) {
       if (!announced) {
         announced = true;
         post({ type: "mse-used", mime });
+        setTimeout(() => state === "undecided" && idle(), DECIDE_WITHIN_MS);
       }
-      this.addEventListener("sourceended", () => recording && post({ type: "mse-ended" }));
+      this.addEventListener("sourceended", () => {
+        if (recording()) post({ type: "mse-ended" });
+        else if (state === "undecided") endedEarly = true;
+      });
     } catch {
       // Never break the page's player.
     }
@@ -72,9 +94,14 @@ if (ms) {
         const view = data instanceof ArrayBuffer ? new Uint8Array(data) : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
         const init = isInit(view);
         if (init) track.init = copy(data);
-        if (recording) {
+        if (state === "recording") {
           const bytes = copy(data);
           post({ type: "mse-data", track: track.id, mime: track.mime, init, bytes }, [bytes]);
+        } else if (state === "undecided") {
+          const bytes = copy(data);
+          queue.push({ track: track.id, mime: track.mime, init, bytes });
+          queued += bytes.byteLength;
+          if (queued > MAX_QUEUED_BYTES) idle();
         }
       }
     } catch {
@@ -86,12 +113,20 @@ if (ms) {
 
 window.addEventListener("message", (e: MessageEvent) => {
   if (e.source !== window || e.data?.[TAG] !== "control") return;
-  if (e.data.type === "start" && !recording) {
-    recording = true;
-    // Media appended from here on needs the init segments seen before.
-    replayInits();
-  } else if (e.data.type === "stop") {
-    recording = false;
+  if (e.data.type === "start" && state !== "recording") {
+    if (state === "undecided") {
+      // Armed before the page loaded: everything the player appended so far.
+      for (const m of queue) post({ type: "mse-data", ...m }, [m.bytes]);
+      if (endedEarly) setTimeout(() => post({ type: "mse-ended" }));
+    } else {
+      // Started mid-stream: what's appended from now needs the init segments seen before.
+      replayInits();
+    }
+    queue = [];
+    queued = 0;
+    state = "recording";
+  } else if (e.data.type === "stop" || e.data.type === "idle") {
+    idle();
   }
 });
 
