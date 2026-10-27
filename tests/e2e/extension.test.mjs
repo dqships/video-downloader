@@ -224,6 +224,11 @@ test("downloads DASH and saves the picked quality", async () => {
   assert.equal(file.video.height, 180);
 });
 
+test("downloads DASH whose length names one segment too many", async () => {
+  const { file } = await downloadStream("/dash-tail.html");
+  assert.equal(file.video.height, 360);
+});
+
 test("downloads DASH with a segment timeline", async () => {
   await downloadStream("/dash-timeline.html");
 });
