@@ -771,22 +771,8 @@ code {
   color: var(--color-text-muted);
 }
 
-.leader-code {
-  margin: var(--space-3) 0 0;
-  font-family: var(--font-family);
-  padding: var(--space-4);
-  overflow-x: auto;
-  border-radius: var(--radius-sm);
-  background: var(--color-film);
-  color: var(--color-film-text);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm-lh);
-}
-
-.leader-code code {
-  padding: 0;
-  background: none;
-  font-stretch: var(--stretch-condensed);
+.leader-cta {
+  margin-top: var(--space-4);
 }
 
 .leader-start {
@@ -836,4 +822,42 @@ code {
 .foot-links svg {
   width: var(--text-sm-lh);
   height: var(--text-sm-lh);
+}
+
+/* Prose pages (privacy policy) ------------------------------------------ */
+
+.prose {
+  display: grid;
+  gap: var(--space-4);
+  max-width: var(--size-prose);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4) var(--space-9);
+}
+
+.prose > p:not(.vz-edge) {
+  color: var(--color-text-muted);
+}
+
+.prose-head {
+  margin: var(--space-5) 0 0;
+  font-size: var(--text-md);
+  line-height: var(--text-md-lh);
+  font-weight: var(--weight-bold);
+  font-stretch: var(--stretch-wide);
+}
+
+.prose-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.prose-list dt {
+  margin-top: var(--space-3);
+  font-weight: var(--weight-bold);
+}
+
+.prose-list dd {
+  margin: 0;
+  color: var(--color-text-muted);
 }
