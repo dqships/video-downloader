@@ -337,7 +337,19 @@ test("warns when the page plays DRM-protected video (EME)", async () => {
   await page.close();
 });
 
-/** Starts recording a live page from the popup; returns what's needed to stop and check it. */
+test("warns on encrypted media even without a DRM module", async () => {
+  const { tabId, page } = await visit("/encrypted.html");
+  await waitFor(
+    () => sw.evaluate(async (key) => (await chrome.storage.session.get(key))[key]?.drmKeySystem, `tab:${tabId}`),
+    "encrypted media to be noticed",
+  );
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
+  assert.match(await popup.locator(".vz-frame-note").first().textContent(), /DRM-protected/);
+  await popup.close();
+  await page.close();
+});
+
 test("lists media a page declares before anything plays", async () => {
   const { page, tabId } = await visit("/declared.html");
   const tab = await waitFor(
@@ -380,6 +392,7 @@ test("looks again when a single-page app swaps the video", async () => {
   await page.close();
 });
 
+/** Starts recording a live page from the popup; returns what's needed to stop and check it. */
 async function startRecording(run) {
   const { tabId, tab, page } = await visit(`/live-page/${run}.html`);
   assert.equal(tab.media[0].isLive, true);

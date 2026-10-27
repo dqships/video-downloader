@@ -2,6 +2,7 @@
 // Chrome wakes the worker for network traffic and messages.
 
 import { hash53 } from "../shared/hash";
+import { cleanTitle } from "../shared/titles";
 import type { Command, CommandResult } from "../shared/messages";
 import type { MediaItem, SubtitleTrack, TabMedia } from "../shared/types";
 import type { FromOffscreenEnvelope } from "../shared/worker-protocol";
@@ -11,6 +12,7 @@ import { HeaderCache, replayableHeaders } from "./headers";
 import { probeDash } from "./dash-probe";
 import { probeHls } from "./hls-probe";
 import { checkCandidate, scanTab } from "./page-probe";
+import { enrich } from "./sites";
 import { Registry } from "./registry";
 import { clearStaleRules } from "./replay";
 
@@ -131,6 +133,7 @@ async function list(input: {
     ...streamDetails,
   };
   if (item.durationSec === undefined) delete item.durationSec;
+  for (const [key, value] of Object.entries(await enrich(item))) if (value !== undefined) Object.assign(item, { [key]: value });
   const added = await registry.add(item);
   const drm = pendingDrm.get(tabId);
   if (added && drm) {
@@ -189,7 +192,9 @@ async function readPageMeta(tabId: number): Promise<void> {
           }
         };
         return {
-          title: document.title.trim() || meta('meta[property="og:title"]') || meta('meta[name="twitter:title"]'),
+          docTitle: document.title.trim(),
+          ogTitle: meta('meta[property="og:title"]') || meta('meta[name="twitter:title"]'),
+          siteName: meta('meta[property="og:site_name"]'),
           thumbnail:
             abs(document.querySelector("video[poster]")?.getAttribute("poster")) ??
             abs(meta('meta[property="og:image"]')) ??
@@ -205,14 +210,15 @@ async function readPageMeta(tabId: number): Promise<void> {
       },
     });
     if (res?.result) {
-      const { tracks, ...meta } = res.result;
+      const { tracks, docTitle, ogTitle, siteName, ...meta } = res.result;
+      const title = cleanTitle({ docTitle, ogTitle, siteName, host: new URL(meta.pageUrl).hostname });
       const subtitles: SubtitleTrack[] = tracks.map((t, i) => ({
         id: `page-${i}`,
         label: t.label || t.lang || `Subtitles ${i + 1}`,
         lang: t.lang || undefined,
         source: { kind: "file", url: t.url },
       }));
-      await registry.update(tabId, { ...meta, ...(subtitles.length ? { subtitles } : {}) });
+      await registry.update(tabId, { ...meta, title, ...(subtitles.length ? { subtitles } : {}) });
     }
   } catch {
     // Restricted pages (chrome://, the Web Store) refuse scripts; keep going.
@@ -233,7 +239,8 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 chrome.tabs.onUpdated.addListener((tabId, change) => {
-  if (change.title) void registry.get(tabId).then((t) => t && registry.update(tabId, { title: change.title }));
+  // Read the page again rather than trust the raw tab title, which carries the site's name.
+  if (change.title) void registry.get(tabId).then((t) => t && readPageMeta(tabId));
 });
 
 chrome.runtime.onMessage.addListener((msg: Command | FromOffscreenEnvelope, sender, respond) => {
