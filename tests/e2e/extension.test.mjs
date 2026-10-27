@@ -176,7 +176,13 @@ test("skips .m3u8 and .mpd URLs that answer with something else", async () => {
   await page.close();
 });
 
-test("reads a playlist the server turned away once", async () => {
+test("reads a playlist from the page when the server refuses the extension", async () => {
+  const { tab, page } = await visit("/page-only.html");
+  assert.equal(tab.media[0].durationSec, 2);
+  await page.close();
+});
+
+test("reads a playlist the server turned away twice", async () => {
   const { tab, page } = await visit("/flaky.html");
   assert.equal(tab.media[0].durationSec, 2);
   assert.equal(tab.media[0].isLive, false);

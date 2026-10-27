@@ -30,20 +30,54 @@ export async function fetchWithReplay(url: string, sent: Record<string, string>)
   }
 }
 
-const RETRY_AFTER_MS = 1500;
+/** The frame that loaded a URL, which can read it again as the page would. */
+export interface FrameRef {
+  tabId: number;
+  frameId: number;
+}
+
+/** Pauses before each new round of tries of a probe fetch. */
+const RETRY_DELAYS_MS = [1000, 3000];
+
+/**
+ * Reads a URL from inside the frame that loaded it, so the request carries
+ * the page's own origin, cookies and fetch metadata.
+ */
+async function fetchInFrame(url: string, frame: FrameRef): Promise<string> {
+  const [res] = await chrome.scripting.executeScript({
+    target: { tabId: frame.tabId, frameIds: [frame.frameId] },
+    func: async (u: string) => {
+      const r = await fetch(u, { cache: "no-store", credentials: "include" });
+      return { status: r.status, text: r.ok ? await r.text() : "" };
+    },
+    args: [url],
+  });
+  const out = res?.result;
+  if (!out || out.status < 200 || out.status >= 300) throw new Error(`The server answered ${out?.status ?? "nothing"} for the playlist`);
+  if (out.text.length > MAX_PLAYLIST_BYTES) throw new Error("The playlist is too large");
+  return out.text;
+}
 
 /**
  * Probes run while the player is still loading, and some servers turn the
- * same request away at that moment (Dailymotion's answers 403 for a second),
- * so a failed first fetch is tried once more after a pause.
+ * extension's reads away while answering the page's (Dailymotion's refuses
+ * a few in every ten, sometimes many in a row). So a failed read is tried
+ * from the page's frame, then both again after growing pauses.
  */
-export async function fetchForProbe(url: string, sent: Record<string, string>): Promise<string> {
-  try {
-    return await fetchWithReplay(url, sent);
-  } catch {
-    await new Promise((r) => setTimeout(r, RETRY_AFTER_MS));
-    return fetchWithReplay(url, sent);
+export async function fetchForProbe(url: string, sent: Record<string, string>, frame?: FrameRef): Promise<string> {
+  const tries = [() => fetchWithReplay(url, sent), ...(frame ? [() => fetchInFrame(url, frame)] : [])];
+  let last: unknown;
+  for (const delay of [0, ...RETRY_DELAYS_MS]) {
+    if (delay) await new Promise((r) => setTimeout(r, delay));
+    for (const attempt of tries) {
+      try {
+        return await attempt();
+      } catch (err) {
+        last = err;
+      }
+    }
   }
+  throw last;
 }
 
 function mediaFacts(pl: HlsMedia): Pick<HlsDetails, "durationSec" | "isLive" | "hasDrm"> {
@@ -59,10 +93,10 @@ function mediaFacts(pl: HlsMedia): Pick<HlsDetails, "durationSec" | "isLive" | "
  * null when the server answered with something that is not a playlist at
  * all (ad servers reply to .m3u8 URLs with VAST XML), so it isn't listed.
  */
-export async function probeHls(url: string, sent: Record<string, string>): Promise<HlsDetails | null> {
+export async function probeHls(url: string, sent: Record<string, string>, frame?: FrameRef): Promise<HlsDetails | null> {
   let text: string;
   try {
-    text = await fetchForProbe(url, sent);
+    text = await fetchForProbe(url, sent, frame);
   } catch {
     return {};
   }
@@ -82,7 +116,7 @@ export async function probeHls(url: string, sent: Record<string, string>): Promi
     const best = variants[0];
     if (!best) return { variants, childUrls, subtitles, hasDrm: sessionDrm };
     // The best quality's playlist tells us the length, liveness and keys.
-    const media = parseM3u8(await fetchForProbe(best.url, sent), best.url);
+    const media = parseM3u8(await fetchForProbe(best.url, sent, frame), best.url);
     const facts = media.kind === "media" ? mediaFacts(media) : { hasDrm: false };
     return { variants, childUrls, subtitles, ...facts, hasDrm: sessionDrm || facts.hasDrm };
   } catch {

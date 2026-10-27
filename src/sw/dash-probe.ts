@@ -5,7 +5,7 @@
 import { dashChildUrls, hlsMediaPlaylist, listDashSubtitles, listDashVariants, parseMpd, resolveSegments, type ByteRange, type DashManifest, type SegmentRef } from "../shared/dash";
 import { dataUrl, singleVariantMaster } from "../shared/hls";
 import type { StreamVariant } from "../shared/types";
-import type { HlsDetails } from "./hls-probe";
+import type { FrameRef, HlsDetails } from "./hls-probe";
 import { fetchForProbe, fetchWithReplay } from "./hls-probe";
 import { installReplay, removeReplay } from "./replay";
 
@@ -16,10 +16,10 @@ async function readManifest(url: string, sent: Record<string, string>): Promise<
 }
 
 /** Never throws: an unreadable manifest just lists without details; null when it isn't a manifest. */
-export async function probeDash(url: string, sent: Record<string, string>): Promise<HlsDetails | null> {
+export async function probeDash(url: string, sent: Record<string, string>, frame?: FrameRef): Promise<HlsDetails | null> {
   let text: string;
   try {
-    text = await fetchForProbe(url, sent);
+    text = await fetchForProbe(url, sent, frame);
   } catch {
     return {};
   }
