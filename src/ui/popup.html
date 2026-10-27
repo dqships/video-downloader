@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vidzilla</title>
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="masthead">
+      <h1 class="masthead-title">Vidzilla</h1>
+      <p class="masthead-sub" id="page-host"></p>
+    </header>
+    <main id="strip" class="strip" aria-live="polite"></main>
+    <template id="frame-template">
+      <article class="frame">
+        <div class="rail" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="thumb"></div>
+        <div class="body">
+          <input class="name" type="text" spellcheck="false" aria-label="File name" />
+          <p class="meta"></p>
+          <p class="note" hidden></p>
+        </div>
+        <div class="actions">
+          <button class="icon-btn copy" type="button" title="Copy link"></button>
+          <button class="icon-btn primary download" type="button" title="Download"></button>
+        </div>
+        <div class="progress" hidden><span></span></div>
+      </article>
+    </template>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

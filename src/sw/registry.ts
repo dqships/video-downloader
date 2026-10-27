@@ -1,0 +1,121 @@
+// Per-tab list of detected media. Lives in memory, mirrored to
+// chrome.storage.session (debounced) so it survives service-worker restarts
+// and so the UI can simply read storage.
+
+import { storageKeys } from "../shared/messages";
+import type { MediaItem, TabMedia } from "../shared/types";
+
+const MAX_PER_TYPE = 10;
+/** With a DASH manifest on the page, small direct files are its segments. */
+const DASH_SEGMENT_BYTES = 20 * 1024 * 1024;
+const WRITE_DELAY_MS = 300;
+
+function isLikelyDashSegment(item: MediaItem): boolean {
+  return item.type === "http" && (item.sizeBytes ?? 0) < DASH_SEGMENT_BYTES;
+}
+
+/** Pure merge rules, kept apart from storage so they can be tested. */
+export function mergeMedia(list: MediaItem[], item: MediaItem): { list: MediaItem[]; changed: boolean } {
+  const existing = list.findIndex((m) => m.id === item.id);
+  if (existing >= 0) {
+    const old = list[existing]!;
+    // Keep the first sighting but fill in anything we learned since.
+    const merged: MediaItem = {
+      ...old,
+      sizeBytes: old.sizeBytes ?? item.sizeBytes,
+      supportsRanges: old.supportsRanges || item.supportsRanges,
+      serverFilename: old.serverFilename ?? item.serverFilename,
+      sentHeaders: Object.keys(old.sentHeaders).length ? old.sentHeaders : item.sentHeaders,
+    };
+    const changed = JSON.stringify(merged) !== JSON.stringify(old);
+    if (!changed) return { list, changed: false };
+    const next = list.slice();
+    next[existing] = merged;
+    return { list: next, changed: true };
+  }
+
+  const hasDash = list.some((m) => m.type === "dash");
+  if (hasDash && isLikelyDashSegment(item)) return { list, changed: false };
+
+  let next = [...list, item];
+  if (item.type === "dash") next = next.filter((m) => !isLikelyDashSegment(m));
+  const sameType = next.filter((m) => m.type === item.type);
+  if (sameType.length > MAX_PER_TYPE) {
+    const drop = new Set(sameType.slice(0, sameType.length - MAX_PER_TYPE).map((m) => m.id));
+    next = next.filter((m) => !drop.has(m.id));
+  }
+  return { list: next, changed: true };
+}
+
+export class Registry {
+  private tabs = new Map<number, TabMedia>();
+  private dirty = new Set<number>();
+  private removed = new Set<number>();
+  private timer: ReturnType<typeof setTimeout> | undefined;
+
+  constructor(private onChange: (tab: TabMedia | undefined, tabId: number) => void = () => {}) {}
+
+  async get(tabId: number): Promise<TabMedia | undefined> {
+    const cached = this.tabs.get(tabId);
+    if (cached) return cached;
+    const key = storageKeys.tab(tabId);
+    const stored = (await chrome.storage.session.get(key))[key] as TabMedia | undefined;
+    if (stored && !this.tabs.has(tabId)) this.tabs.set(tabId, stored);
+    return this.tabs.get(tabId);
+  }
+
+  /** Returns true when the item is new or changed something. */
+  async add(item: MediaItem): Promise<boolean> {
+    const tab = (await this.get(item.tabId)) ?? { tabId: item.tabId, pageUrl: item.pageUrl, media: [] };
+    const { list, changed } = mergeMedia(tab.media, item);
+    if (!changed) return false;
+    this.put({ ...tab, media: list });
+    return true;
+  }
+
+  async update(tabId: number, patch: Partial<Pick<TabMedia, "title" | "thumbnail" | "pageUrl">>): Promise<void> {
+    const tab = await this.get(tabId);
+    if (tab) this.put({ ...tab, ...patch });
+  }
+
+  async findMedia(tabId: number, mediaId: string): Promise<{ tab: TabMedia; item: MediaItem } | undefined> {
+    const tab = await this.get(tabId);
+    const item = tab?.media.find((m) => m.id === mediaId);
+    return tab && item ? { tab, item } : undefined;
+  }
+
+  clear(tabId: number): void {
+    this.tabs.delete(tabId);
+    this.dirty.delete(tabId);
+    this.removed.add(tabId);
+    this.onChange(undefined, tabId);
+    this.schedule();
+  }
+
+  private put(tab: TabMedia): void {
+    this.tabs.set(tab.tabId, tab);
+    this.removed.delete(tab.tabId);
+    this.dirty.add(tab.tabId);
+    this.onChange(tab, tab.tabId);
+    this.schedule();
+  }
+
+  private schedule(): void {
+    if (this.timer) return;
+    this.timer = setTimeout(() => void this.flush(), WRITE_DELAY_MS);
+  }
+
+  async flush(): Promise<void> {
+    this.timer = undefined;
+    const writes: Record<string, TabMedia> = {};
+    for (const id of this.dirty) {
+      const tab = this.tabs.get(id);
+      if (tab) writes[storageKeys.tab(id)] = tab;
+    }
+    const removes = [...this.removed].map(storageKeys.tab);
+    this.dirty.clear();
+    this.removed.clear();
+    if (Object.keys(writes).length) await chrome.storage.session.set(writes);
+    if (removes.length) await chrome.storage.session.remove(removes);
+  }
+}
