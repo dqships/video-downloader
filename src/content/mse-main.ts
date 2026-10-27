@@ -40,6 +40,13 @@ function copy(data: BufferSource): ArrayBuffer {
 
 const ms = window.MediaSource ?? (window as unknown as { ManagedMediaSource?: typeof MediaSource }).ManagedMediaSource;
 if (ms) {
+  // Players that can run Media Source in a worker (Facebook) do, where this
+  // script can't see them. Saying it isn't supported keeps them on this page.
+  try {
+    Object.defineProperty(ms, "canConstructInDedicatedWorker", { value: false, configurable: true });
+  } catch {
+    // Never break the page's player.
+  }
   const addSourceBuffer = ms.prototype.addSourceBuffer;
   ms.prototype.addSourceBuffer = function (this: MediaSource, mime: string) {
     const sb = addSourceBuffer.call(this, mime);

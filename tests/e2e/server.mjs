@@ -90,6 +90,25 @@ const pages = {
       ms.endOfStream();
     });
   </script>`,
+  // Like Facebook: Media Source runs in a worker when the browser allows it.
+  "/mse-worker.html": `<title>Worker Player</title><video muted></video><script>
+    const video = document.querySelector("video");
+    const player = async (ms, init) => {
+      const sb = ms.addSourceBuffer('video/mp4; codecs="avc1.64001e"');
+      sb.appendBuffer(await (await fetch(init)).arrayBuffer());
+    };
+    const init = location.origin + "/media/dash/init-0.m4s";
+    if (MediaSource.canConstructInDedicatedWorker) {
+      const code = "const ms = new MediaSource(); postMessage(ms.handle, [ms.handle]);" +
+        "ms.addEventListener('sourceopen', async () => (" + player + ")(ms, " + JSON.stringify(init) + "));";
+      const worker = new Worker(URL.createObjectURL(new Blob([code], { type: "text/javascript" })));
+      worker.onmessage = (e) => (video.srcObject = e.data);
+    } else {
+      const ms = new MediaSource();
+      video.src = URL.createObjectURL(ms);
+      ms.addEventListener("sourceopen", () => player(ms, init));
+    }
+  </script>`,
   "/declared.html": `<title>Morning Bulletin | Fixture News</title>
     <meta property="og:title" content="Morning Bulletin">
     <meta property="og:video" content="/embed/7"><meta property="og:video:type" content="text/html">
