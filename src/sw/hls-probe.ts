@@ -21,7 +21,7 @@ export async function fetchPlaylistText(url: string): Promise<string> {
 }
 
 /** Fetches a playlist with header replay scoped to it for the duration. */
-async function fetchWithReplay(url: string, sent: Record<string, string>): Promise<string> {
+export async function fetchWithReplay(url: string, sent: Record<string, string>): Promise<string> {
   const rules = await installReplay([url], sent);
   try {
     return await fetchPlaylistText(url);

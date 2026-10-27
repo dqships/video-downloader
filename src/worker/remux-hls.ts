@@ -9,6 +9,8 @@ export interface RemuxHlsOptions {
   url: string;
   file: FileSystemFileHandle;
   signal: AbortSignal;
+  /** Keep the sound only. */
+  audioOnly?: boolean;
   onProgress: (bytes: number, fraction: number) => void;
 }
 
@@ -17,7 +19,7 @@ const PROGRESS_EVERY_MS = 500;
 const PARALLEL_SEGMENTS = 4;
 
 /** Returns the size of the finished MP4. */
-export async function remuxHls({ url, file, signal, onProgress }: RemuxHlsOptions): Promise<number> {
+export async function remuxHls({ url, file, signal, audioOnly, onProgress }: RemuxHlsOptions): Promise<number> {
   signal.throwIfAborted();
   const handle = await file.createSyncAccessHandle();
   handle.truncate(0);
@@ -44,7 +46,12 @@ export async function remuxHls({ url, file, signal, onProgress }: RemuxHlsOption
   const abort = () => void conversion?.cancel();
   signal.addEventListener("abort", abort, { once: true });
   try {
-    conversion = await Conversion.init({ input, output, showWarnings: false });
+    conversion = await Conversion.init({
+      input,
+      output,
+      video: audioOnly ? { discard: true } : undefined,
+      showWarnings: false,
+    });
     if (!conversion.isValid) {
       const reasons = [...new Set(conversion.discardedTracks.map((t) => t.reason))].join(", ");
       throw new Error(`This stream can't be saved as MP4 (${reasons || "no usable tracks"})`);

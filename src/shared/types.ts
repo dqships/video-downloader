@@ -49,6 +49,11 @@ export interface StreamVariant {
   audioUrl?: string;
   audioCodecs?: string;
   audioLanguage?: string;
+  /** Save the sound only (an .m4a); the picture is dropped. */
+  audioOnly?: boolean;
+  /** DASH: representations to download, as `adaptationSet:representation`. */
+  videoRep?: string;
+  audioRep?: string;
 }
 
 export interface TabMedia {
