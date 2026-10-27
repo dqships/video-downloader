@@ -122,7 +122,8 @@ Please only save media you have the right to keep.
 | `webNavigation` | Clears a tab's media list when it goes to another page, including pages that change address without reloading. |
 | `scripting` | Reads the page's title, thumbnail and the media it declares in its markup, to name files and list media the network doesn't show. When a server only answers the page itself, reads the stream's playlist from inside the page. |
 | `offscreen` | Runs the download worker that fetches stream segments and joins them into one file, which a service worker can't do for long downloads. |
-| `storage` | Keeps the media list, settings and saved-file history on the user's device. |
+| `sidePanel` | Offers the same media list in Chrome's side panel, for users who want it to stay open while they browse. |
+| `storage` | Keeps the media list, settings and saved-file history on the user's device, and a random install ID in synced storage that the daily ad-free check sends to vidzilla.followusai.com. |
 | `unlimitedStorage` | Large videos are assembled in the extension's private storage before saving, which can exceed the default quota. |
 
 - **In-app purchases:** in the item's Store listing settings, mark that it
@@ -133,7 +134,10 @@ Please only save media you have the right to keep.
   see `docs/house-ads.md`. Reviewers may ask.)
 - **Data usage:** tick **Web history** (the addresses of pages and media are
   kept on the device for the media list and history) and **Website content**
-  (page titles and thumbnails). Then tick all three certifications: no sale
+  (page titles and thumbnails). Leave **Financial and payment information**
+  and **Personally identifiable information** unticked: payment happens on
+  Stripe's page, never in the extension, and the install ID is a random
+  number tied to no person. Then tick all three certifications: no sale
   of data, no use for unrelated purposes, no use for creditworthiness.
 - **Privacy policy URL:** `https://vidzilla.followusai.com/privacy`
 
