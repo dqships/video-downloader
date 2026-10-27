@@ -100,3 +100,21 @@ export function buildFilename(input: NamingInput): string {
   });
   return `${sanitizeFilename(base, input.maxLength)}.${input.ext}`;
 }
+
+/** "Café/Tromsø – Nordlys.mp4" -> "Cafe/Troms - Nordlys.mp4". */
+export function asciiFilename(path: string): string {
+  return path
+    .split("/")
+    .map((part) => {
+      const dot = part.lastIndexOf(".");
+      const [base, ext] = dot > 0 ? [part.slice(0, dot), part.slice(dot)] : [part, ""];
+      const plain = base
+        .normalize("NFKD")
+        .replace(/[\u2010-\u2015]/g, "-")
+        .replace(/[^\x20-\x7e]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      return (plain || "video") + ext;
+    })
+    .join("/");
+}

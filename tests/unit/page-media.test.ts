@@ -28,8 +28,8 @@ describe("pageCandidates", () => {
       { key: "twitter:player:stream", value: "https://cdn.example/9.mp4" },
     ];
     expect(pageCandidates(scan({ metas }))).toEqual([
-      { url: "https://cdn.example/9/master.m3u8", title: "Clip", thumbnail: "https://news.example/poster.jpg", mime: "application/x-mpegurl" },
-      { url: "https://cdn.example/9.mp4", title: "Clip", thumbnail: "https://news.example/poster.jpg", mime: undefined },
+      { url: "https://cdn.example/9/master.m3u8", mime: "application/x-mpegurl" },
+      { url: "https://cdn.example/9.mp4", mime: undefined },
     ]);
   });
 
@@ -38,6 +38,6 @@ describe("pageCandidates", () => {
     const out = pageCandidates(
       scan({ jsonLd: [ld], metas: [{ key: "og:title", value: "Page title" }], videoSrcs: [{ url: "https://cdn.example/a.mp4", type: "video/mp4" }, { url: "javascript:x" }] }),
     );
-    expect(out).toEqual([{ url: "https://cdn.example/a.mp4", durationSec: 12, title: "Page title", thumbnail: undefined, mime: "video/mp4" }]);
+    expect(out).toEqual([{ url: "https://cdn.example/a.mp4", durationSec: 12, title: undefined, thumbnail: undefined, mime: "video/mp4" }]);
   });
 });

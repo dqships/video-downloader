@@ -42,7 +42,9 @@ async function resolveTabId(): Promise<number> {
 
 function sorted(media: MediaItem[]): MediaItem[] {
   return [...media].sort(
-    (a, b) => TYPE_ORDER[a.type] - TYPE_ORDER[b.type] || (b.sizeBytes ?? 0) - (a.sizeBytes ?? 0) || b.detectedAt - a.detectedAt,
+    (a, b) =>
+      (a.rank ?? Infinity) - (b.rank ?? Infinity) ||
+      TYPE_ORDER[a.type] - TYPE_ORDER[b.type] || (b.sizeBytes ?? 0) - (a.sizeBytes ?? 0) || b.detectedAt - a.detectedAt,
   );
 }
 
@@ -231,7 +233,13 @@ function drmName(keySystem: string): string {
 function updateSubtitles(frame: HTMLElement, item: MediaItem): void {
   const wrap = frame.querySelector<HTMLElement>(".subtitles")!;
   const select = wrap.querySelector("select")!;
-  const tracks = [...(item.subtitles ?? []), ...(tab?.subtitles ?? [])];
+  // Players often list a language twice (two caption groups, a <track> echoing
+  // the stream); offer each language once.
+  const seen = new Set<string>();
+  const tracks = [...(item.subtitles ?? []), ...(tab?.subtitles ?? [])].filter((t) => {
+    const key = (t.lang || t.label).toLowerCase();
+    return !seen.has(key) && seen.add(key);
+  });
   wrap.hidden = tracks.length === 0;
   if (wrap.hidden) return;
   const signature = tracks.map((t) => `${t.id}:${t.label}`).join("|");
