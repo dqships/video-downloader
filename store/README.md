@@ -59,6 +59,7 @@ tabs as below.
 - **Category:** Tools
 - **Language:** English
 - **Homepage URL:** `https://vidzilla.followusai.com`
+- **Support URL:** `https://vidzilla.followusai.com/support`
 - **Support email:** `support@followusai.com`
 - **Description:**
 

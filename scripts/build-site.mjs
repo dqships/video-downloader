@@ -180,7 +180,7 @@ ${pages
 `,
 );
 const describe = (file) => read(`site/${file}.html`).match(/<meta\s+name="description"\s+content="([^"]*)"/)[1];
-const label = { index: "Home", about: "About", pricing: "Pricing", contact: "Contact", privacy: "Privacy policy" };
+const label = { index: "Home", about: "About", pricing: "Pricing", contact: "Contact", support: "Support", privacy: "Privacy policy", terms: "Terms of use" };
 writeFileSync(
   new URL("llms.txt", out),
   `# Vidzilla
