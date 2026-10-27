@@ -7,6 +7,9 @@
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createRequire } from "node:module";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -17,20 +20,23 @@ import { origin as siteOrigin, pages } from "../../site/pages.mjs";
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_PATH ?? "playwright");
 
-let site, browser;
+let dist, site, browser;
 const get = (path, headers = {}) => fetch(site.origin + path, { headers, redirect: "manual" });
 const local = (url) => url.replace(siteOrigin, site.origin);
 const attr = (html, re) => html.match(re)?.[1];
 
 before(async () => {
-  execFileSync("node", [fileURLToPath(new URL("../../scripts/build-site.mjs", import.meta.url))]);
-  site = await serveSite();
+  // Each test file builds its own copy, so files running in parallel don't clear each other's.
+  dist = mkdtempSync(join(tmpdir(), "vz-site-"));
+  execFileSync("node", [fileURLToPath(new URL("../../scripts/build-site.mjs", import.meta.url)), dist]);
+  site = await serveSite(0, dist);
   browser = await chromium.launch();
 });
 
 after(async () => {
   await browser?.close();
   site?.server.close();
+  if (dist) rmSync(dist, { recursive: true, force: true });
 });
 
 test("every page has a complete head", async () => {

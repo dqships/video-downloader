@@ -12,7 +12,7 @@ Saving a video you can already watch shouldn't mean pasting links into an ad-cov
 
 Everything runs in Chrome. Vidzilla watches the requests a page makes, keeps the ones that are video, and fetches them the same way the page did. Streams are joined into one file without re-encoding, so the picture and sound are untouched. There are no Vidzilla servers: nothing you watch or save passes through anyone else.
 
-The code is public on [GitHub]({{repoUrl}}), including the [design system]({{repoUrl}}/blob/main/DESIGN.md) behind this site and the extension's popup.
+The code is public on [GitHub]({{repoUrl}}), for the extension and for this site.
 
 ## What it leaves alone
 
