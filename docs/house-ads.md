@@ -19,7 +19,7 @@ Manifest V3 rules require.
 ```json
 {
   "schedule": { "firstAfter": 5, "every": 4, "minHours": 6, "seconds": 15 },
-  "upgradeUrl": "",
+  "upgradeUrl": "https://vidzilla.followusai.com/upgrade",
   "ads": [
     {
       "id": "webtomarkdown",
@@ -69,9 +69,10 @@ four a day.
 
 ### Remove ads
 
-`upgradeUrl` is the page that sells the ad-free upgrade. While it's empty, the
-ad has no "Remove ads" link. See [ad-free-upgrade.md](ad-free-upgrade.md) for
-setting up payments.
+`upgradeUrl` is the page that sells the ad-free upgrade
+(`https://vidzilla.followusai.com/upgrade`); the ad's "Remove ads" link opens
+it with the install's ID. Empty hides the link. See
+[ad-free-upgrade.md](ad-free-upgrade.md).
 
 ## How an ad behaves
 

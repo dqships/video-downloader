@@ -15,6 +15,7 @@ import { checkCandidate, scanTab } from "./page-probe";
 import { enrich } from "./sites";
 import { Registry } from "./registry";
 import { clearStaleRules } from "./replay";
+import { refreshLicense, refreshLicenseIfStale, watchThanksPage } from "./license";
 import { watchSidePanelSetting } from "./side-panel";
 
 /** Single-page apps swap videos without a page load; look again once they settle. */
@@ -306,6 +307,9 @@ async function handle(cmd: Command, sender: chrome.runtime.MessageSender): Promi
     case "clear-tab":
       registry.clear(cmd.payload.tabId);
       return { ok: true };
+    case "check-license":
+      await refreshLicense();
+      return { ok: true };
   }
 }
 
@@ -347,5 +351,9 @@ async function listPlayer(tabId: number, frameId: number, frameUrl: string, mime
 }
 
 watchSidePanelSetting();
-chrome.runtime.onStartup.addListener(() => void clearStaleRules());
+watchThanksPage();
+chrome.runtime.onStartup.addListener(() => {
+  void clearStaleRules();
+  void refreshLicenseIfStale();
+});
 chrome.runtime.onInstalled.addListener(() => void clearStaleRules());

@@ -958,3 +958,9 @@
   min-width: calc(3 * var(--size-control));
   font-variant-numeric: tabular-nums;
 }
+
+/* Buttons set their own display, which would beat the hidden attribute. */
+.vz-btn[hidden],
+.vz-text-btn[hidden] {
+  display: none;
+}

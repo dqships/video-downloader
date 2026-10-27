@@ -49,11 +49,31 @@
 
       <h2 class="prose-head">What Vidzilla sends</h2>
       <p>
-        Nothing about you or what you save. Vidzilla makes two kinds of requests. Most go to the sites that host the
-        media you choose to save, the same requests the page itself made. The other, every few hours, downloads the
-        list of ads (vidzilla.followusai.com/ads.json, text and links only) from our website. That request carries no
-        cookies and no information about you or your downloads; like any web request it reaches our host, Vercel,
-        from your IP address, which we don't use to identify you. Seeing or clicking an ad isn't reported anywhere.
+        Nothing about you or what you save. Most of Vidzilla's requests go to the sites that host the media you choose
+        to save, the same requests the page itself made. Two small ones go to our website, vidzilla.followusai.com:
+      </p>
+      <dl class="prose-list">
+        <dt>The list of ads</dt>
+        <dd>Every few hours it downloads ads.json, the text and links of the current ads. Seeing or clicking an ad isn't reported anywhere.</dd>
+        <dt>The ad-free check</dt>
+        <dd>
+          Once a day it sends your copy's install ID, a random code made when Vidzilla was installed and synced with
+          your Chrome profile, and gets back whether that ID paid to remove ads. That is the only reason our server
+          exists. It asks Stripe and answers yes or no, and keeps no records of its own.
+        </dd>
+      </dl>
+      <p>
+        These requests carry no cookies and nothing about you or your downloads. Like any web request they reach our
+        host, Vercel, from your IP address, which we don't use to identify you.
+      </p>
+
+      <h2 class="prose-head">If you pay to remove ads</h2>
+      <p>
+        Payment happens on Stripe's checkout page. Stripe receives your card details and email address to take the
+        payment and send your receipt, under <a href="https://stripe.com/privacy">Stripe's privacy policy</a>; we never
+        see your card number. Stripe keeps the purchase with your install ID attached, which is how Vidzilla knows to
+        stop the ads. We see the purchase in our Stripe account (email, plan, amount, date) and use it only for
+        receipts, refunds and support.
       </p>
 
       <h2 class="prose-head">Why it asks for its permissions</h2>
@@ -65,7 +85,7 @@
         <dt>Tabs and navigation</dt>
         <dd>To keep each tab's list of media separate and clear it when you leave the page.</dd>
         <dt>Storage</dt>
-        <dd>To keep the media list, your settings, your download history and in-progress downloads on your device.</dd>
+        <dd>To keep the media list, your settings, your download history and in-progress downloads on your device, and the install ID in Chrome's synced storage.</dd>
       </dl>
 
       <h2 class="prose-head">Protected video</h2>

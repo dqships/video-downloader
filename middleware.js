@@ -5,8 +5,8 @@ import { rewrite } from "@vercel/functions";
 import { notFoundMarkdown, pages } from "./site/pages.mjs";
 
 export const config = {
-  // Skip the asset folders; other files are skipped below.
-  matcher: ["/((?!design/|brand/).*)"],
+  // Skip the asset folders and the API; other files are skipped below.
+  matcher: ["/((?!design/|brand/|api/).*)"],
 };
 
 const byPath = new Map(pages.map((p) => [p.path, p.file]));

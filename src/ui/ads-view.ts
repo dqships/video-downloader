@@ -6,6 +6,7 @@
 // Everything shown comes from the ad list as text, never as HTML.
 
 import { adClosed, adWatched, emptyAdState, type AdFeed, type AdState } from "../shared/ads";
+import { upgradeLink } from "../shared/license";
 import { storageKeys } from "../shared/messages";
 
 const TICK_MS = 250;
@@ -103,7 +104,7 @@ export function bindAd(doc: Document): void {
       }
     }
     remove.hidden = !upgradeUrl;
-    if (upgradeUrl) remove.href = upgradeUrl;
+    if (upgradeUrl) void upgradeLink(upgradeUrl).then((href) => (remove.href = href));
     paint();
     if (!timer) {
       lastTick = performance.now();
