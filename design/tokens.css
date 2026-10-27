@@ -1,0 +1,152 @@
+/*
+ * Vidzilla design tokens. The single source for the website and the
+ * extension. See DESIGN.md before adding or changing anything here.
+ * Screens use these variables only: never a raw colour, size, spacing,
+ * radius, shadow or easing.
+ */
+
+@font-face {
+  font-family: "Archivo";
+  src: url("fonts/archivo.woff2") format("woff2");
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+
+  /* Colour: the lightbox (light mode). */
+  --color-bg: #f3eee4;
+  --color-surface: #fbf8f2;
+  --color-surface-sunken: #e6dfd1;
+  --color-border: #d5ccbb;
+  --color-text: #1b1713;
+  --color-text-muted: #675e52;
+  --color-primary: #c43716;
+  --color-primary-soft: rgb(196 55 22 / 0.1);
+  --color-on-primary: #fff7ef;
+  --color-accent: #93590a;
+  --color-success: #2e6f45;
+  --color-danger: #a8203f;
+  /* Film stock stays dark in both modes; its edge print is always amber. */
+  --color-film: #17130f;
+  --color-film-frame: #241e19;
+  --color-film-edge: #e9a63e;
+  --color-film-text: #f2eadd;
+
+  /* Type: one family, Archivo, with a width axis. */
+  --font-family: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --text-xs: 11px;
+  --text-xs-lh: 14px;
+  --text-sm: 13px;
+  --text-sm-lh: 18px;
+  --text-md: 16px;
+  --text-md-lh: 24px;
+  --text-lg: clamp(22px, 1.4rem + 0.8vw, 32px);
+  --text-lg-lh: 1.15;
+  --text-xl: clamp(44px, 1.6rem + 6.4vw, 112px);
+  --text-xl-lh: 0.92;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+  --stretch-condensed: 75%;
+  --stretch-normal: 100%;
+  --stretch-wide: 125%;
+  --tracking-tight: -0.03em;
+  --tracking-normal: 0;
+  --tracking-caps: 0.08em;
+
+  /* Spacing. 1-6 are the component scale; 7-10 are layout steps. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
+
+  /* Shape and depth. */
+  --radius-sm: 2px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --shadow-strip: 0 1px 0 rgb(27 23 19 / 0.06), 0 12px 32px -12px rgb(27 23 19 / 0.28);
+
+  /* Motion: one spring (k 210, c 22, overshoot 2.6%). Only durations vary. */
+  --ease-spring: linear(0, 0.0445 4.2%, 0.1504 8.3%, 0.285 12.5%, 0.4262 16.7%, 0.5597 20.8%, 0.6775 25%, 0.7761 29.2%, 0.8548 33.3%, 0.9148 37.5%, 0.9585 41.7%, 0.9887 45.8%, 1.008 50%, 1.0192 54.2%, 1.0244 58.3%, 1.0256 62.5%, 1.0243 66.7%, 1.0214 70.8%, 1.0179 75%, 1.0143 79.2%, 1.0109 83.3%, 1.008 87.5%, 1.0055 91.7%, 1.0035 95.8%, 1);
+  --duration-fast: 240ms;
+  --duration-base: 540ms;
+
+  /* Sizes. */
+  --size-hairline: 1px;
+  --size-focus: 2px;
+  --size-icon: 20px;
+  --size-hit: 32px;
+  --size-control: 44px;
+  --size-popup-width: 380px;
+  --size-thumb-w: 72px;
+  --size-thumb-h: 44px;
+  --size-rail: 16px;
+  --size-sprocket: 6px;
+  --size-perf: 6px;
+  --size-perf-gap: 4px;
+  --size-content: 1120px;
+  --size-prose: 620px;
+
+  /* Opacity. */
+  --opacity-disabled: 0.4;
+  --opacity-fogged: 0.45;
+}
+
+/* Colour: the darkroom (dark mode). Follows the system unless a page sets data-theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg: #0e0c0a;
+    --color-surface: #191512;
+    --color-surface-sunken: #070605;
+    --color-border: #2d2722;
+    --color-text: #f2eadd;
+    --color-text-muted: #a2978a;
+    --color-primary: #ff6633;
+    --color-primary-soft: rgb(255 102 51 / 0.14);
+    --color-on-primary: #1c0a03;
+    --color-accent: #eda746;
+    --color-success: #72c48f;
+    --color-danger: #ff7d93;
+    --color-film: #050403;
+    --color-film-frame: #15110e;
+    --shadow-strip: 0 1px 0 rgb(0 0 0 / 0.5), 0 12px 32px -12px rgb(0 0 0 / 0.7);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0e0c0a;
+  --color-surface: #191512;
+  --color-surface-sunken: #070605;
+  --color-border: #2d2722;
+  --color-text: #f2eadd;
+  --color-text-muted: #a2978a;
+  --color-primary: #ff6633;
+  --color-primary-soft: rgb(255 102 51 / 0.14);
+  --color-on-primary: #1c0a03;
+  --color-accent: #eda746;
+  --color-success: #72c48f;
+  --color-danger: #ff7d93;
+  --color-film: #050403;
+  --color-film-frame: #15110e;
+  --shadow-strip: 0 1px 0 rgb(0 0 0 / 0.5), 0 12px 32px -12px rgb(0 0 0 / 0.7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+  }
+}

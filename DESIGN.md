@@ -1,86 +1,189 @@
-# Design
+# Vidzilla design system
 
-> **Provisional.** The Vidzilla brand, logo and website are being designed separately, and this file will be replaced by that design system. The extension's popup will then be restyled to match the website. Until then, these tokens keep the popup consistent.
+This file is the source of truth for every Vidzilla surface: the website in
+`site/` and the extension's popup and side panel. Read it before building,
+revising or reviewing any screen. Need something that isn't here? Add it to this
+file first, then to `design/tokens.css`, then use it.
 
-## Concept: the darkroom
+| File | What it holds |
+| --- | --- |
+| `design/tokens.css` | Every colour, type, spacing, radius, shadow, size and motion value, as CSS custom properties, with the font face |
+| `design/components.css` | Shared components (buttons, inputs, edge print, the strip and its frames, perforated progress). The site and the popup both use these classes, so they can't drift apart |
+| `design/icons/*.svg` | The only icon set |
+| `design/fonts/` | Archivo (variable, latin subset) and its licence. Bundled, never loaded from a CDN |
+| `brand/` | Logo files and app/toolbar icons; regenerate with `node scripts/make-brand.mjs` |
 
-Every surface comes from a photographer's darkroom. The popup is a strip of
-film laid on a light table: each detected video is one frame, with sprocket
-holes down its left edge. The only strong colour is the amber of a darkroom
-safelight. It marks what you can act on and shows progress. In light mode the
-strip becomes a contact sheet on paper and the amber reads as a grease-pencil
-mark.
+## The world: film on a lightbox
 
-Rules that follow from the concept:
+Vidzilla catches the video a page is playing and hands it to you as a file. The
+product is built from one material: **35 mm film stock**, the thing video used
+to be before it was a stream.
 
-- Frames, not cards. A media item is a flat frame on the strip, separated by
-  hairlines and the sprocket rail. There are no floating card stacks and no
-  gradients.
-- Amber is only for action and progress. Everything else is neutral.
-- A protected (DRM) frame is "fogged": dimmed, with a lock and plain words.
+- **A detected video is a frame on a strip.** The popup list is a run of film:
+  sprocket holes down the left edge, one frame per video, hairlines between
+  frames. Never a stack of floating cards.
+- **Metadata is edge print.** Film stock carries tiny condensed codes along its
+  edge (stock, roll, frame number). Format, resolution, size and status use the
+  same treatment: condensed caps, amber, tabular numbers (`.vz-edge`,
+  `.vz-badge`).
+- **Progress is perforation.** A download fills a row of perforations with
+  safelight (`.vz-perf`), not a smooth bar.
+- **Protected video is fogged film.** DRM frames are dimmed with a lock and a
+  plain sentence. Vidzilla doesn't touch them.
+- **Light mode is the lightbox, dark mode is the darkroom.** The lightbox is
+  warm backlit paper; the darkroom is near black lit only by a vermilion
+  safelight. Film itself (`--color-film`) stays dark in both, with amber edge
+  print.
+- **Install is a countdown leader.** The 3, 2, 1 of a film leader numbers the
+  install steps on the site.
 
-## Tokens
+What follows from the concept: one strong colour (safelight vermilion) reserved
+for action and progress; amber only for edge print; everything else neutral
+paper or ink. No gradients, no glass, no tinted icon circles, no eyebrow pills
+above headings, no three-column feature grids, no sparkles.
 
-All values live in `src/ui/tokens.css` as CSS custom properties. Screens use
-only tokens: never a raw colour, size, spacing, radius, shadow or easing.
+## Logo
 
-### Colour
+A logo-modernism mark: constructed from two geometric figures, no drawing.
 
-| Token | Light (contact sheet) | Dark (darkroom) | Use |
+- **Construction.** An equilateral triangle pointing down (the play symbol
+  turned toward the ground: download) is cut by a chevron parallel to its
+  sides. The cut leaves a **V** (for Vidzilla, and the jaw that grabs) and a
+  **rhombus** made of two equilateral triangles (the piece you take away).
+- **Grid.** 96 units. Triangle from (4, 14) to (92, 14) to (48, 90.2). Rhombus
+  half-width `a` = 12. Cut width `g` = 5 measured square to the cut. Toolbar
+  and favicon sizes open the cut (`g` = 7 at 32 px, 9 at 16 px) so it survives
+  the pixel grid. Geometry lives in `scripts/make-brand.mjs`.
+- **Wordmark.** "vidzilla", lowercase, Archivo at width 125 and weight 800,
+  tracking -0.03 em, outlined to paths (`brand/source/` holds the outline
+  script and data).
+- **Lockup.** Mark left of the wordmark, mark spanning ascender to baseline,
+  gap of 0.36 × the mark height.
+- **Colour.** Vermilion on paper (`mark.svg`, `lockup.svg`), bright vermilion on
+  the darkroom (`mark-dark.svg`, `lockup-dark.svg`), or ink when only one colour
+  is possible (`mark-ink.svg`). App icon: bright vermilion mark on a film tile.
+- **Clear space** equals the rhombus height on all sides. Minimum size 16 px
+  for the mark, 96 px wide for the lockup.
+- Never redraw, outline, rotate, add effects to, or recolour the mark outside
+  these colours. Never replace it with a generic SVG.
+
+## Colour
+
+| Token | Lightbox (light) | Darkroom (dark) | Use |
 | --- | --- | --- | --- |
-| `--color-bg` | `#F4F1EA` paper | `#121110` | Page background |
-| `--color-surface` | `#FFFDF8` | `#1C1A18` | Frames |
-| `--color-surface-sunken` | `#E9E4D8` | `#0B0A09` | Sprocket rail, thumbnails |
-| `--color-border` | `#D9D2C3` | `#2E2A26` | Hairlines |
-| `--color-text` | `#1F1B16` | `#F2ECE2` | Primary text |
-| `--color-text-muted` | `#6E665A` | `#A39A8C` | Secondary text |
-| `--color-primary` | `#B5650F` | `#F0A23B` | Safelight: actions, progress |
-| `--color-on-primary` | `#FFFFFF` | `#1A1205` | Text and icons on primary |
-| `--color-accent` | `#B23A2E` | `#E2604F` | Errors and DRM |
-| `--color-success` | `#2F7A4B` | `#6CC08A` | Saved |
+| `--color-bg` | `#F3EEE4` | `#0E0C0A` | Page background |
+| `--color-surface` | `#FBF8F2` | `#191512` | Frames, the strip, raised areas |
+| `--color-surface-sunken` | `#E6DFD1` | `#070605` | Sprocket rail, empty perforations |
+| `--color-border` | `#D5CCBB` | `#2D2722` | Hairlines |
+| `--color-text` | `#1B1713` | `#F2EADD` | Primary text, ink |
+| `--color-text-muted` | `#675E52` | `#A2978A` | Secondary text |
+| `--color-primary` | `#C43716` | `#FF6633` | Safelight vermilion: actions, progress, focus |
+| `--color-primary-soft` | primary at 10 % | primary at 14 % | Hover fills |
+| `--color-on-primary` | `#FFF7EF` | `#1C0A03` | Text and icons on primary |
+| `--color-accent` | `#93590A` | `#EDA746` | Edge print amber |
+| `--color-success` | `#2E6F45` | `#72C48F` | Saved |
+| `--color-danger` | `#A8203F` | `#FF7D93` | Errors |
+| `--color-film` | `#17130F` | `#050403` | Film stock, thumbnails (dark in both modes) |
+| `--color-film-frame` | `#241E19` | `#15110E` | A frame's image area on film |
+| `--color-film-edge` | `#E9A63E` | `#E9A63E` | Edge print on film |
+| `--color-film-text` | `#F2EADD` | `#F2EADD` | Text on film |
 
-### Type
+All text pairs meet WCAG AA (body text 4.5:1). Pages follow the system theme;
+setting `data-theme="light"` or `"dark"` on `<html>` overrides it. Masks use
+alpha (`#000` / `transparent` in `mask` gradients); that is not a colour and is
+the one place a literal appears.
 
-One family: the system UI font (`-apple-system`, `BlinkMacSystemFont`,
-`Segoe UI`, `Roboto`, sans-serif), with tabular numbers for sizes and
-progress.
+## Type
+
+One family: **Archivo** (Omnibus-Type, SIL OFL), variable on weight (100–900)
+and width (62–125). The width axis does the work other systems use a second
+font for: wide for display and buttons, condensed for edge print.
 
 | Token | Size / line height | Use |
 | --- | --- | --- |
-| `--text-xs` | 11 / 14 | Badges |
-| `--text-sm` | 12 / 16 | Metadata |
-| `--text-md` | 13 / 18 | Body, filenames |
-| `--text-lg` | 15 / 20 | Section titles |
-| `--text-xl` | 17 / 22 | Popup title |
+| `--text-xs` | 11 / 14 px | Edge print, badges |
+| `--text-sm` | 13 / 18 px | Popup body and filenames, metadata, captions |
+| `--text-md` | 16 / 24 px | Site body, buttons, popup title |
+| `--text-lg` | 22 → 32 px fluid / 1.15 | Section headings |
+| `--text-xl` | 44 → 112 px fluid / 0.92 | Hero headline only |
 
-### Spacing, radius, shadow, motion
+- Weights: `--weight-regular` 400, `--weight-medium` 500, `--weight-bold` 700,
+  `--weight-heavy` 800.
+- Widths: `--stretch-condensed` 75 % (edge print), `--stretch-normal` 100 %
+  (body), `--stretch-wide` 125 % (headlines, buttons, wordmark).
+- Tracking: `--tracking-tight` -0.03 em on wide headlines, `--tracking-caps`
+  0.08 em on condensed caps.
+- Numbers that change (sizes, progress) use tabular figures.
 
-- Spacing: `--space-1` 4, `--space-2` 8, `--space-3` 12, `--space-4` 16,
-  `--space-5` 24, `--space-6` 32 (px).
-- Radius: `--radius-sm` 4 (badges, sprockets), `--radius-md` 8 (buttons,
-  thumbnails), `--radius-lg` 12 (the strip).
-- Shadow: `--shadow-strip`, a single soft shadow under the film strip. Nothing
-  else casts a shadow.
-- Motion: one spring, `--ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1)`,
-  with `--duration-fast` 160 ms and `--duration-base` 260 ms. Respect
-  `prefers-reduced-motion`.
+## Spacing
 
-### Controls
+`--space-1` 4 · `--space-2` 8 · `--space-3` 12 · `--space-4` 16 ·
+`--space-5` 24 · `--space-6` 32 px for components. Layout steps for the site
+only: `--space-7` 48 · `--space-8` 64 · `--space-9` 96 · `--space-10` 128 px.
 
-- Icon button: 32 × 32 hit area, a 20 px icon, `--radius-md`. At rest it is
-  text-coloured with no fill. On hover it gets a 12 % primary fill. The primary
-  icon button (Download) is filled `--color-primary` with `--color-on-primary`
-  icons.
-- Text input (filename): `--text-md`, a 1 px `--color-border` underline only.
-  It turns primary on focus.
-- Badge: `--text-xs`, uppercase, `--radius-sm`, a 1 px border in
-  `--color-border`, muted text.
-- Progress: a 2 px bar along the bottom edge of the frame in primary.
+## Shape and depth
 
-### Icons
+- Radius: `--radius-sm` 2 px (sprockets, badges, thumbnails: film corners are
+  nearly square), `--radius-md` 6 px (buttons, icon buttons),
+  `--radius-lg` 10 px (the strip, the popup body).
+- Shadow: `--shadow-strip` only, under a strip lying on the lightbox. Nothing
+  else casts a shadow; separation comes from hairlines (`--size-hairline`).
+- Sizes: hit target `--size-hit` 32 px (popup), control height
+  `--size-control` 44 px (site and touch), icon `--size-icon` 20 px, popup width
+  `--size-popup-width` 380 px, thumbnail 72 × 44, rail 16 px, sprocket 6 px,
+  perforation 6 px with 4 px gaps, content width 1120 px, prose width 620 px.
 
-Icons are drawn in `src/ui/icons.ts` to match SF Symbols' regular weight: a
-24 px grid, 1.75 px strokes, round caps and joins, no fills except small
-dots. The set is download (arrow in a circle), copy (two sheets), check, close,
-lock, film and waveform. No other icon library is used, and there is no sparkles
-icon.
+## Controls
+
+- **Primary button** (`.vz-btn`): filled vermilion, `--radius-md`, label in
+  `--text-md` bold at wide width, 44 px tall. Hover darkens toward ink; press
+  scales to 0.97 on the spring.
+- **Quiet button** (`.vz-btn--quiet`): hairline border, ink label, vermilion
+  border and soft fill on hover. `.vz-btn--small` is 32 px tall at `--text-sm`.
+- **Icon button** (`.vz-icon-btn`): 32 × 32, 20 px icon, no fill at rest, soft
+  vermilion fill on hover. `.vz-icon-btn--primary` is filled (the popup's
+  Download).
+- **Input** (`.vz-input`): a grease-pencil underline, never a box. Hairline at
+  rest, muted on hover, vermilion on focus.
+- **Focus**: a 2 px vermilion outline offset 2 px on every interactive element.
+- **Disabled**: 40 % opacity, no motion.
+
+## Icons
+
+SF Symbols can't ship on the web, so `design/icons/` holds one set drawn to SF
+Symbols' regular weight and metrics: 24-unit grid, 1.75 strokes, round caps and
+joins, filled shapes only for `*.fill` symbols. Files are named after the SF
+Symbol they stand in for (`arrow.down.circle`, `doc.on.doc`, `checkmark`,
+`xmark`, `lock`, `film`, `waveform`, `play.fill`, `pause.fill`,
+`arrow.up.right`, `chevron.right`, `sun.max`, `moon`, `folder`,
+`exclamationmark.triangle`). Icons use `currentColor`. Add a new icon by drawing
+it to the same rules; never mix in another library, and never use a sparkles
+icon. Import them as text (esbuild `loader: { ".svg": "text" }`) or inline them.
+
+## Motion
+
+One spring everywhere: `--ease-spring`, a `linear()` sampling of a damped spring
+(stiffness 210, damping 22, mass 1; 2.6 % overshoot, settles in 540 ms).
+Durations: `--duration-base` 540 ms for movement (frames arriving, progress),
+`--duration-fast` 240 ms for hover and press. With
+`prefers-reduced-motion`, both durations drop to 0.
+
+## Illustration and image style
+
+Build assets in code first: the mark, film strips, frames, edge print and the
+countdown leader are all drawn with CSS and SVG. If an image ever has to be
+generated (Replicate), use this prompt and change only the scene:
+
+> Flat logo-modernism illustration, 1960s corporate identity style. Built only
+> from equilateral triangles, rhombuses, circles and straight film strips with
+> sprocket holes. Two inks: vermilion #C43716 and warm black #1B1713, on warm
+> paper #F3EEE4, no gradients, no texture, no shading, no text. Scene: {scene}.
+
+Use `brand/app-icon-512.png` as the reference image so the mark stays
+identical. No stock photos, no mixed styles.
+
+## Checking work
+
+Before calling any screen done: screenshots at phone (390 px) and desktop
+(1440 px) widths for the site, at 380 px and as a tab for the popup, in both
+light and dark, with nothing overflowing or clipped.
