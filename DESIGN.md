@@ -151,8 +151,39 @@ only: `--space-7` 48 · `--space-8` 64 · `--space-9` 96 · `--space-10` 128 px.
   icon): edge-print type, hairline box at `--radius-sm`, sits in a frame's meta
   row next to the badge. Options read like `1080p · 4.0 Mbps`. A frame can
   carry two: quality, then subtitles.
+- **Toggle** (`.vz-toggle`, an `<input type="checkbox" role="switch">`): a
+  small gate with one square sprocket that slides across on the spring. Off:
+  sunken track, muted sprocket. On: vermilion track, `--color-on-primary`
+  sprocket.
 - **Focus**: a 2 px vermilion outline offset 2 px on every interactive element.
 - **Disabled**: 40 % opacity, no motion.
+
+## Extension pages
+
+The options page opens in a full tab and is built from the same parts as the
+popup, laid out like a lab's log book.
+
+- **Page** (`.vz-page` on `<body>`): one column, `--size-prose` + 128 px wide,
+  centred. `.vz-page-head` holds the mark (`.vz-popup-mark`), the
+  `.vz-page-title` and, on the right, `.vz-page-nav` (icon buttons or quiet
+  small buttons).
+- **Section** (`.vz-section`): a `.vz-section-head` with a `.vz-section-title`
+  and an optional action on the right (for example "Clear history" as a quiet
+  small button), then its content.
+- **Settings** (`.vz-fields` holding `.vz-field` rows): one surface with
+  hairlines between rows. Each row has `.vz-field-text` (a `.vz-field-label`
+  and an optional `.vz-field-help`) on the left and its control on the right.
+  Template variables in help text are `<code>` and print as amber edge type.
+  `.vz-field--wide` puts the control under the label (the filename template);
+  `.vz-input--short` is for numbers (max length). Rows stack under 560 px.
+- **History** (`.vz-history` list of `.vz-history-row`): a contact sheet.
+  Thumbnail (`.vz-thumb`), then `.vz-history-title`, `.vz-history-file` and a
+  `.vz-history-meta.vz-edge` line (site · date · size), then
+  `.vz-frame-actions` with icon buttons: `folder` (Show in folder) and
+  `arrow.up.right` (Open page). `.is-missing` fogs a row whose file was
+  moved or deleted. Thumbnails hide under 480 px.
+- **Entry point**: a `gearshape` `.vz-icon-btn` at the right end of
+  `.vz-popup-head` opens the options page.
 
 ## Icons
 
@@ -162,7 +193,7 @@ joins, filled shapes only for `*.fill` symbols. Files are named after the SF
 Symbol they stand in for (`arrow.down.circle`, `doc.on.doc`, `checkmark`,
 `xmark`, `lock`, `film`, `waveform`, `play.fill`, `pause.fill`,
 `arrow.up.right`, `chevron.right`, `chevron.down`, `sun.max`, `moon`, `folder`,
-`exclamationmark.triangle`, `stop.fill`, `record.circle`). Icons use `currentColor`. Add a new icon by drawing
+`exclamationmark.triangle`, `gearshape`, `clock`, `trash`, `stop.fill`, `record.circle`). Icons use `currentColor`. Add a new icon by drawing
 it to the same rules; never mix in another library, and never use a sparkles
 icon. Import them as text (esbuild `loader: { ".svg": "text" }`) or inline them.
 
