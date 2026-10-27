@@ -160,6 +160,16 @@ extension's reload button.
   with the page's markdown at the same URL, or a markdown 404. Missing pages get
   `404.html` with a real 404 status. The domain lives in `site/pages.mjs`
   (`origin`); `brand/og-image.png` is made by `pnpm og`.
+- **Vercel deploys only for website changes** (`scripts/vercel-ignore.mjs`,
+  the `ignoreCommand` in `vercel.json`): a push that touches nothing the site
+  is built from (`scripts/site-inputs.mjs`: `site/`, `design/`, `brand/`,
+  `api/`, the Vercel and package config, and the extension modules the
+  paste box bundles, found by following imports) skips the deployment, and
+  Vercel marks it ignored. It compares with the branch's last deployment, or
+  with `main` on a branch's first. Redeploying a commit always builds. If
+  the site build starts reading a new file, add it to `sitePaths`; a unit test
+  fails when a bundled file isn't covered. Try it with
+  `node scripts/vercel-ignore.mjs <commit>`.
 
 ## Tests
 
