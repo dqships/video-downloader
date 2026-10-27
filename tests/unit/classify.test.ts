@@ -66,6 +66,8 @@ describe("dispositionFilename", () => {
     expect(classify(res({ url: "https://redirector.gvt1.com/api/manifest/hls_variant/requiressl/yes/source/dclk_video_ads/id/9a/itag/0/x.m3u8", ...hls }))).toBeNull();
     expect(classify(res({ url: "https://delivery-cdn-cf.adswizz.com/proxidigital/spot.wav", headers: { "Content-Type": "audio/x-wav", "Content-Length": String(8 * MB) } }))).toBeNull();
     expect(classify(res({ url: "https://imasdk.googleapis.com/js/core/bridge.mp4" }))).toBeNull();
+    expect(classify(res({ url: "https://staticassets-creator-design.criteo.net/design/dt/6832/1/holiday_30s.mp4" }))).toBeNull();
+    expect(classify(res({ url: "https://crcdn09.adnxs-simple.com/creative20/p/15410/a_768_432_1700k.mp4" }))).toBeNull();
     // A site whose name merely contains an ad network's name still counts.
     expect(classify(res({ url: "https://notdoubleclick.net.example.com/v.mp4" }))).not.toBeNull();
   });
