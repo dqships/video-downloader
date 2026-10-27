@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFilename, expandTemplate, nameFromUrl, sanitizeFilename, siteLabel } from "../../src/shared/naming";
+import { asciiFilename, buildFilename, expandTemplate, nameFromUrl, sanitizeFilename, siteLabel } from "../../src/shared/naming";
 
 describe("siteLabel", () => {
   it("takes the registrable label", () => {
@@ -48,5 +48,12 @@ describe("buildFilename", () => {
     expect(buildFilename({ ...base, serverFilename: "talk.webm" })).toBe("talk.mp4");
     expect(buildFilename(base)).toBe("my clip.mp4");
     expect(nameFromUrl("https://x.com/")).toBe("");
+  });
+});
+
+describe("asciiFilename", () => {
+  it("drops accents and other non-ASCII characters but keeps folders and the extension", () => {
+    expect(asciiFilename("Vidzilla/Northern Lights Over Tromsø – Café.mp4")).toBe("Vidzilla/Northern Lights Over Troms - Cafe.mp4");
+    expect(asciiFilename("東京.mp4")).toBe("video.mp4");
   });
 });

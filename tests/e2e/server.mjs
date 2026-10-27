@@ -66,6 +66,9 @@ const pages = {
   "/eme.html": `<title>Protected Player</title><video></video>${player("/media/hls/master.m3u8")}<script>
     setTimeout(() => document.querySelector("video").setMediaKeys({ keySystem: "com.widevine.alpha" }).catch(() => {}), 300);
   </script>`,
+  "/encrypted.html": `<title>Encrypted Player</title><video></video>${player("/media/hls/master.m3u8")}<script>
+    setTimeout(() => document.querySelector("video").dispatchEvent(new Event("encrypted")), 300);
+  </script>`,
   "/declared.html": `<title>Morning Bulletin | Fixture News</title>
     <meta property="og:title" content="Morning Bulletin">
     <meta property="og:video" content="/embed/7"><meta property="og:video:type" content="text/html">

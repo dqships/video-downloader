@@ -20,6 +20,17 @@ if (original) {
   };
 }
 
+// Encrypted media announces itself with an "encrypted" event when its init
+// data arrives, even where no CDM is installed and setMediaKeys never runs.
+// The event doesn't bubble, so listen in the capture phase.
+window.addEventListener(
+  "encrypted",
+  (e) => {
+    if (e.target instanceof HTMLMediaElement) window.postMessage({ __vidzilla: "eme", keySystem: "encrypted" }, "*");
+  },
+  true,
+);
+
 // MediaKeys doesn't expose its key system; remember it from the access object.
 const keySystems = new WeakMap<MediaKeys, string>();
 const request = navigator.requestMediaKeySystemAccess?.bind(navigator);
