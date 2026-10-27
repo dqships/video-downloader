@@ -2,8 +2,9 @@
 // Vercel middleware (markdown versions). Each page is site/<file>.html, with
 // its markdown twin in site/md/<file>.md.
 
-// TODO: replace with the production domain once it's chosen.
-export const origin = "https://vidzilla.app";
+export const origin = "https://vidzilla.followusai.com";
+
+export const supportEmail = "support@followusai.com";
 
 export const pages = [
   { path: "/", file: "index" },

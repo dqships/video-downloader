@@ -13,7 +13,7 @@ import { createHash } from "node:crypto";
 import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
-import { notFoundMarkdown, origin, pages, repoUrl } from "../site/pages.mjs";
+import { notFoundMarkdown, origin, pages, repoUrl, supportEmail } from "../site/pages.mjs";
 import { release } from "../site/release.js";
 
 const root = new URL("../", import.meta.url);
@@ -28,7 +28,7 @@ mkdirSync(out, { recursive: true });
 const partials = Object.fromEntries(
   readdirSync(new URL("site/partials/", root)).map((f) => [f.replace(/\.html$/, ""), read(`site/partials/${f}`).trimEnd()]),
 );
-const fill = (text) => text.replaceAll("{{origin}}", origin).replaceAll("{{repoUrl}}", repoUrl).replaceAll("{{storeUrl}}", release.storeUrl);
+const fill = (text) => text.replaceAll("{{origin}}", origin).replaceAll("{{supportEmail}}", supportEmail).replaceAll("{{repoUrl}}", repoUrl).replaceAll("{{storeUrl}}", release.storeUrl);
 const escape = (text) => text.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
 const pageUrl = (path) => origin + path;
 
@@ -61,10 +61,13 @@ function structuredData(page, title, description) {
         name: "Vidzilla",
         url: `${origin}/`,
         logo: `${origin}/brand/app-icon-512.png`,
+        email: supportEmail,
+        address: { "@type": "PostalAddress", addressRegion: "MI", addressCountry: "US" },
         sameAs: [repoUrl],
         contactPoint: {
           "@type": "ContactPoint",
           contactType: "customer support",
+          email: supportEmail,
           url: `${origin}/contact`,
           availableLanguage: "en",
         },
