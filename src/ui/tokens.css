@@ -1,0 +1,83 @@
+/* Design tokens. See DESIGN.md. Screens use only these variables. */
+
+:root {
+  color-scheme: light dark;
+
+  --color-bg: #f4f1ea;
+  --color-surface: #fffdf8;
+  --color-surface-sunken: #e9e4d8;
+  --color-border: #d9d2c3;
+  --color-text: #1f1b16;
+  --color-text-muted: #6e665a;
+  --color-primary: #b5650f;
+  --color-primary-soft: rgb(181 101 15 / 0.12);
+  --color-on-primary: #ffffff;
+  --color-accent: #b23a2e;
+  --color-success: #2f7a4b;
+
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --text-xs: 11px;
+  --text-xs-lh: 14px;
+  --text-sm: 12px;
+  --text-sm-lh: 16px;
+  --text-md: 13px;
+  --text-md-lh: 18px;
+  --text-lg: 15px;
+  --text-lg-lh: 20px;
+  --text-xl: 17px;
+  --text-xl-lh: 22px;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-strip: 0 1px 2px rgb(31 27 22 / 0.06), 0 8px 24px rgb(31 27 22 / 0.08);
+
+  --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --duration-fast: 160ms;
+  --duration-base: 260ms;
+
+  --size-popup-width: 380px;
+  --size-icon: 20px;
+  --size-hit: 32px;
+  --size-thumb-w: 72px;
+  --size-thumb-h: 44px;
+  --size-sprocket: 6px;
+  --size-rail: 16px;
+  --size-progress: 2px;
+  --size-hairline: 1px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #121110;
+    --color-surface: #1c1a18;
+    --color-surface-sunken: #0b0a09;
+    --color-border: #2e2a26;
+    --color-text: #f2ece2;
+    --color-text-muted: #a39a8c;
+    --color-primary: #f0a23b;
+    --color-primary-soft: rgb(240 162 59 / 0.14);
+    --color-on-primary: #1a1205;
+    --color-accent: #e2604f;
+    --color-success: #6cc08a;
+    --shadow-strip: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+  }
+}
