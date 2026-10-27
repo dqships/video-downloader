@@ -7,6 +7,7 @@ import { formatBytes, formatDuration } from "../shared/format";
 import { dataUrl, singleVariantMaster } from "../shared/hls";
 import { buildFilename, nameFromUrl, siteLabel } from "../shared/naming";
 import { defaultSettings } from "../shared/settings";
+import type { StreamVariant } from "../shared/types";
 import type { FromWorker, ToWorker } from "../shared/worker-protocol";
 import { icons } from "../ui/icons";
 import { lookup, type Lookup } from "./lookup";
@@ -128,11 +129,21 @@ function createFrame(media: Media): Entry {
   return entry;
 }
 
+/** The quality picked for a stream, the best one by default. */
+function chosenVariant(entry: Entry): StreamVariant | undefined {
+  if (entry.media.kind !== "hls") return undefined;
+  const chosen = entry.frame.querySelector<HTMLSelectElement>(".vz-select select")!.value;
+  return entry.media.variants.find((v) => v.id === chosen) ?? entry.media.variants[0];
+}
+
 function filenameFor(entry: Entry): string {
-  const ext = entry.media.kind === "file" ? entry.media.ext : "mp4";
+  // Sound-only stream downloads are saved as .m4a.
+  const ext = entry.media.kind === "file" ? entry.media.ext : chosenVariant(entry)?.audioOnly ? "m4a" : "mp4";
   const typed = entry.frame.querySelector<HTMLInputElement>(".vz-frame-name")!.value.trim();
-  if (!typed) return defaultName(entry.media);
-  return typed.toLowerCase().endsWith(`.${ext}`) ? typed : `${typed}.${ext}`;
+  const name = typed || defaultName(entry.media);
+  // Swap a stream's .mp4/.m4a for the one this quality saves as.
+  const base = entry.media.kind === "file" ? name.replace(new RegExp(`\\.${ext}$`, "i"), "") : name.replace(/\.(mp4|m4a)$/i, "");
+  return `${base}.${ext}`;
 }
 
 function start(entry: Entry): void {
@@ -145,11 +156,10 @@ function start(entry: Entry): void {
   entries.set(jobId, entry);
   const { media } = entry;
   if (media.kind === "hls") {
-    const chosen = entry.frame.querySelector<HTMLSelectElement>(".vz-select select")!.value;
-    const variant = media.variants.find((v) => v.id === chosen) ?? media.variants[0]!;
-    // A media playlist is read as is; a master is narrowed to the chosen quality.
-    const url = variant.url === media.url ? media.url : dataUrl(singleVariantMaster(variant));
-    toWorker({ type: "fetch-hls", jobId, url });
+    const variant = chosenVariant(entry)!;
+    // Media playlists are read as is; a master is narrowed to the chosen quality.
+    const url = variant.url === media.url || variant.audioOnly ? variant.url : dataUrl(singleVariantMaster(variant));
+    toWorker({ type: "fetch-hls", jobId, url, audioOnly: variant.audioOnly });
   } else {
     toWorker({ type: "fetch-file", jobId, url: media.url, expectedBytes: media.sizeBytes, supportsRanges: media.supportsRanges });
   }

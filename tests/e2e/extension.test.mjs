@@ -187,7 +187,7 @@ test("offers each quality once and saves the one picked", async () => {
   });
   // The quality and audio playlists the player loaded are not listed apart.
   assert.equal(tab.media.length, 1);
-  assert.equal(tab.media[0].variants.length, 2);
+  assert.equal(tab.media[0].variants.length, 3);
 });
 
 test("saves the picked quality's picture size", async () => {
