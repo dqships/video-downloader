@@ -4,12 +4,13 @@
 
 import { formatBytes, formatDuration } from "../shared/format";
 import { sendCommand, storageKeys } from "../shared/messages";
-import { buildFilename } from "../shared/naming";
+import { buildFilename, savedExt } from "../shared/naming";
 import { defaultSettings, loadSettings, type Settings } from "../shared/settings";
-import type { DownloadJob, MediaItem, TabMedia } from "../shared/types";
+import type { DownloadJob, MediaItem, StreamVariant, TabMedia } from "../shared/types";
 import { setOpenMode } from "../shared/open-mode";
 import { bindAd } from "./ads-view";
 import { bindAsk, bindAskButtons } from "./asks-view";
+import { bindHistory } from "./history-view";
 import { icons } from "./icons";
 import { bindSettingsForm } from "./settings-form";
 
@@ -54,6 +55,12 @@ function sorted(media: MediaItem[]): MediaItem[] {
   );
 }
 
+/** The stream quality that Download will save: the one picked, or the best. */
+function chosenStream(item: MediaItem): StreamVariant | undefined {
+  if (item.type !== "hls" && item.type !== "dash") return undefined;
+  return item.variants?.find((v) => v.id === chosenVariant.get(item.id)) ?? item.variants?.[0];
+}
+
 function defaultName(item: MediaItem): string {
   return buildFilename({
     template: settings.template,
@@ -62,7 +69,7 @@ function defaultName(item: MediaItem): string {
     pageUrl: tab?.pageUrl ?? item.pageUrl,
     mediaUrl: item.url,
     serverFilename: item.serverFilename,
-    ext: item.ext,
+    ext: savedExt(item, chosenStream(item)),
   });
 }
 
@@ -72,11 +79,10 @@ function latestJob(mediaId: string): DownloadJob | undefined {
     .sort((a, b) => b.startedAt - a.startedAt)[0];
 }
 
+/** The format of the file Download saves; HLS and DASH streams are joined into one MP4 (or M4A, or WebM). */
 function typeLabel(item: MediaItem): string {
-  if (item.type === "hls") return "HLS";
-  if (item.type === "dash") return "DASH";
   if (item.type === "mse") return "PLAYER";
-  return item.ext.toUpperCase();
+  return savedExt(item, chosenStream(item)).toUpperCase();
 }
 
 function renderEmpty(): void {
@@ -99,7 +105,10 @@ function createFrame(item: MediaItem): HTMLElement {
 
   for (const wrap of frame.querySelectorAll(".vz-select")) wrap.insertAdjacentHTML("beforeend", icons.chevronDown);
   const quality = frame.querySelector<HTMLSelectElement>(".quality select")!;
-  quality.addEventListener("change", () => chosenVariant.set(item.id, quality.value));
+  quality.addEventListener("change", () => {
+    chosenVariant.set(item.id, quality.value);
+    render(); // the badge and file name follow the quality (Audio only saves an .m4a)
+  });
   const subtitles = frame.querySelector<HTMLSelectElement>(".subtitles select")!;
   subtitles.addEventListener("change", () => chosenSubtitle.set(item.id, subtitles.value));
 
@@ -131,29 +140,30 @@ function createFrame(item: MediaItem): HTMLElement {
 function updateFrame(frame: HTMLElement, item: MediaItem): void {
   const thumb = frame.querySelector<HTMLElement>(".vz-thumb")!;
   const poster = item.thumbnail ?? tab?.thumbnail;
-  if (poster) {
-    thumb.style.backgroundImage = `url(${JSON.stringify(poster)})`;
-    thumb.innerHTML = "";
-  } else {
-    thumb.style.backgroundImage = "";
-    thumb.innerHTML = item.mime.startsWith("audio/") ? icons.waveform : icons.film;
+  const look = poster ?? (item.mime.startsWith("audio/") ? "waveform" : "film");
+  if (thumb.dataset.look !== look) {
+    thumb.dataset.look = look;
+    thumb.style.backgroundImage = poster ? `url(${JSON.stringify(poster)})` : "";
+    thumb.innerHTML = poster ? "" : item.mime.startsWith("audio/") ? icons.waveform : icons.film;
   }
 
   const name = frame.querySelector<HTMLInputElement>(".vz-frame-name")!;
   if (!edited.has(item.id) && document.activeElement !== name) name.value = defaultName(item);
   name.title = name.value;
 
-  frame.querySelector(".vz-badge")!.textContent = typeLabel(item);
+  setText(frame.querySelector(".vz-badge")!, typeLabel(item));
   const details = [
     item.isLive ? "Live" : formatDuration(item.durationSec),
     formatBytes(item.sizeBytes),
     new URL(item.url).hostname,
   ].filter(Boolean);
-  frame.querySelector(".meta-text")!.textContent = details.join(" · ");
+  setText(frame.querySelector(".meta-text")!, details.join(" · "));
   updateQuality(frame, item);
   updateSubtitles(frame, item);
 
-  const note = frame.querySelector<HTMLElement>(".vz-frame-note")!;
+  // The note is drawn on a scratch copy and only then put in place when it
+  // changed, so progress updates don't keep rebuilding the frame.
+  const note = document.createElement("p");
   const download = frame.querySelector<HTMLButtonElement>(".download")!;
   const progress = frame.querySelector<HTMLElement>(".vz-perf")!;
   const job = latestJob(item.id);
@@ -174,16 +184,14 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
   }
   frame.classList.toggle("is-fogged", item.hasDrm);
   note.className = "vz-frame-note";
-  note.hidden = false;
-  progress.hidden = true;
-  frame.classList.remove("has-progress");
-  download.disabled = false;
+  let showProgress = false;
+  let disabled = false;
 
   if (item.hasDrm) {
-    download.disabled = true;
+    disabled = true;
     note.innerHTML = `${icons.lock}<span>Protected by DRM. Not supported.</span>`;
   } else if (item.variants?.length === 0) {
-    download.disabled = true;
+    disabled = true;
     note.textContent = "No quality in this stream can be saved.";
   } else if (pendingErrors.has(item.id)) {
     note.classList.add("is-error");
@@ -198,8 +206,7 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
           ? `Recording what the player plays${job.bytesReceived ? ` · ${formatBytes(job.bytesReceived)}` : ""}. Stops when the video ends.`
           : `Recording ${formatDuration(job.recordedSec) || "0:00"}${job.bytesReceived ? ` · ${formatBytes(job.bytesReceived)}` : ""}`;
   } else if (job?.state === "running") {
-    progress.hidden = false;
-    frame.classList.add("has-progress");
+    showProgress = true;
     const fraction = job.progress ?? (job.totalBytes ? job.bytesReceived / job.totalBytes : 0);
     progress.style.setProperty("--vz-perf-value", `${Math.min(100, fraction * 100)}%`);
     const quality = job.variantLabel ? ` ${job.variantLabel}` : "";
@@ -234,6 +241,22 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
   } else {
     note.hidden = true;
   }
+  download.disabled = disabled;
+  progress.hidden = !showProgress;
+  frame.classList.toggle("has-progress", showProgress);
+  placeNote(frame.querySelector<HTMLElement>(".vz-frame-note")!, note);
+}
+
+function setText(el: Element, text: string): void {
+  if (el.textContent !== text) el.textContent = text;
+}
+
+/** Moves a freshly drawn note into the frame, touching only what differs. */
+function placeNote(current: HTMLElement, next: HTMLElement): void {
+  if (current.className !== next.className) current.className = next.className;
+  current.hidden = next.hidden;
+  current.title = next.title;
+  if (current.innerHTML !== next.innerHTML) current.replaceChildren(...next.childNodes);
 }
 
 function showInFolder(downloadId: number): HTMLButtonElement {
@@ -241,6 +264,7 @@ function showInFolder(downloadId: number): HTMLButtonElement {
   button.type = "button";
   button.className = "vz-text-btn";
   button.textContent = "Show in folder";
+  button.dataset.download = String(downloadId); // a new download of the same video gets a new button
   button.addEventListener("click", () => chrome.downloads.show(downloadId));
   return button;
 }
@@ -305,6 +329,7 @@ function render(): void {
       frames.delete(id);
     }
   }
+  let previous: HTMLElement | undefined;
   for (const item of media) {
     let frame = frames.get(item.id);
     if (!frame) {
@@ -312,7 +337,15 @@ function render(): void {
       frames.set(item.id, frame);
     }
     updateFrame(frame, item);
-    strip.append(frame); // re-append keeps DOM order equal to sort order
+    // Keep DOM order equal to sort order, but move a frame only when it's out
+    // of place: inserting it again replays its arrival animation (a flash on
+    // every progress update).
+    const expected = previous ? previous.nextElementSibling : strip.firstElementChild;
+    if (expected !== frame) {
+      if (previous) previous.after(frame);
+      else strip.prepend(frame);
+    }
+    previous = frame;
   }
 }
 
@@ -336,17 +369,25 @@ async function switchTab(next: number): Promise<void> {
 
 let windowId: number | undefined;
 
-/** Swaps the strip for the settings form, in place. */
-function showSettings(open: boolean): void {
+type View = "videos" | "settings" | "saved";
+let view: View = "videos";
+
+/** Swaps the strip for the settings form or the saved files, in place. */
+function showView(next: View): void {
+  view = next;
+  const open = next !== "videos";
   const button = document.querySelector<HTMLButtonElement>("#toggle-settings")!;
-  document.querySelector<HTMLElement>("#settings-view")!.hidden = !open;
+  document.querySelector<HTMLElement>("#settings-view")!.hidden = next !== "settings";
+  document.querySelector<HTMLElement>("#saved-view")!.hidden = next !== "saved";
   strip.hidden = open;
   document.querySelector<HTMLElement>(".vz-popup-foot")!.hidden = open;
-  document.body.classList.toggle("is-settings", open);
+  document.body.classList.toggle("has-view", open);
   button.innerHTML = open ? icons.close : icons.gear;
   button.title = open ? "Back to the videos" : "Settings";
   button.setAttribute("aria-label", button.title);
+  button.setAttribute("aria-controls", next === "saved" ? "saved-view" : "settings-view");
   button.setAttribute("aria-expanded", String(open));
+  document.querySelector("#open-history")!.setAttribute("aria-expanded", String(next === "saved"));
 }
 
 /** Popup to side panel and back. The choice is saved, so the toolbar button keeps opening it. */
@@ -366,9 +407,10 @@ async function switchMode(): Promise<void> {
 
 function setupControls(): void {
   const settingsButton = document.querySelector<HTMLButtonElement>("#toggle-settings")!;
-  settingsButton.addEventListener("click", () => showSettings(settingsButton.getAttribute("aria-expanded") !== "true"));
-  showSettings(false);
+  settingsButton.addEventListener("click", () => showView(view === "videos" ? "settings" : "videos"));
+  showView("videos");
   bindSettingsForm(document);
+  bindHistory(document);
   bindAskButtons(document);
   bindAsk(document);
   bindAd(document);
@@ -387,7 +429,7 @@ function setupControls(): void {
   const history = document.querySelector<HTMLButtonElement>("#open-history")!;
   history.innerHTML = `${icons.clock}<span>Saved files</span>`;
   history.title = "Files Vidzilla saved, with Show in folder";
-  history.addEventListener("click", () => void chrome.tabs.create({ url: chrome.runtime.getURL("options.html#saved-files") }));
+  history.addEventListener("click", () => showView("saved"));
 
   const clear = document.querySelector<HTMLButtonElement>("#clear-list")!;
   clear.innerHTML = icons.trash;

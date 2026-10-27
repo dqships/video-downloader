@@ -50,7 +50,10 @@ extension's reload button.
 - **Service worker** (`src/sw/`): watches network responses with `webRequest`
   and classifies media (`classify.ts`). It also records the request headers
   the page sent (`headers.ts`) and keeps a per-tab list in
-  `chrome.storage.session` (`registry.ts`).
+  `chrome.storage.session` (`registry.ts`). The list shows the video playing
+  now: media the player loads 15 s or more after the last means the page
+  moved on to another video (BBC plays them back to back), so the older
+  entries go, unless one is downloading.
 - **Header replay** (`src/sw/replay.ts`): Chrome won't let an extension set
   Cookie, Referer or Origin itself, so each job adds `declarativeNetRequest`
   session rules that set them for the media's URL directory. The rules are
@@ -128,11 +131,12 @@ extension's reload button.
   gets its job id privately and claims it from the service worker once, so
   a page can't make it save anything. Listed only when no HLS/DASH stream
   with a saveable quality is on the page.
-- **Settings and history** (`src/ui/options.*`, `src/shared/history.ts`):
-  the gear in the popup opens a page for the filename template, length,
-  folder and save dialog, and a list of saved files (show in folder, open
-  the page it came from). History lives in `chrome.storage.local`, capped
-  at 300 entries.
+- **Settings and history** (`src/ui/settings-*`, `src/ui/history-view.ts`,
+  `src/shared/history.ts`): the gear in the popup opens the filename
+  template, length, folder and save dialog in place (also on the options
+  page), and Saved files lists what Vidzilla saved (show in folder, open the
+  page it came from) inside the popup or side panel. History lives in
+  `chrome.storage.local`, capped at 300 entries.
 - **Popup** (`src/ui/`): reads storage and sends commands. It holds no state of
   its own. It is built from the shared Vidzilla design system (`design/`,
   `brand/`, see `DESIGN.md`), the same tokens and components the website uses,

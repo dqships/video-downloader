@@ -4,7 +4,7 @@
 // chrome.storage.session for the UI and to survive service-worker restarts.
 
 import { storageKeys } from "../shared/messages";
-import { asciiFilename, buildFilename, mimeForFilename, sanitizeFilename } from "../shared/naming";
+import { asciiFilename, buildFilename, mimeForFilename, sanitizeFilename, savedExt } from "../shared/naming";
 import { addHistory } from "../shared/history";
 import { loadSettings } from "../shared/settings";
 import { dataUrl, singleVariantMaster } from "../shared/hls";
@@ -94,8 +94,7 @@ export class Downloads {
       if (!variant) throw new Error("Couldn't read this stream's playlist. Reload the page and try again.");
     }
 
-    // Sound-only stream downloads are saved as .m4a; Vorbis only fits in WebM.
-    const ext = variant?.webm ? "webm" : variant?.audioOnly ? "m4a" : item.ext;
+    const ext = savedExt(item, variant);
     const settings = await loadSettings();
     const name = filenameOverride
       ? `${sanitizeFilename(filenameOverride.replace(/\.[a-z0-9]{1,5}$/i, ""), settings.maxLength)}.${ext}`
@@ -218,6 +217,12 @@ export class Downloads {
         void this.fail(job, "The player didn't start after the page reloaded. Play the video, then press Record again.");
     }, ARM_TIMEOUT_MS);
     return job.jobId;
+  }
+
+  /** Media on this tab with a download running, which stays listed whatever the page plays next. */
+  async busyMedia(tabId: number): Promise<Set<string>> {
+    await this.loaded;
+    return new Set([...this.jobs.values()].filter((j) => j.tabId === tabId && j.state === "running").map((j) => j.mediaId));
   }
 
   /** A player in a just-reloaded tab: the armed recording, now bound to its frame. */

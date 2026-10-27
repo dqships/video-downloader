@@ -14,7 +14,7 @@ const SAVE_MS = 1000;
 
 export function bindAd(doc: Document): void {
   const section = doc.querySelector<HTMLElement>("#ad")!;
-  const settingsView = doc.querySelector<HTMLElement>("#settings-view")!;
+  const views = [...doc.querySelectorAll<HTMLElement>("#settings-view, #saved-view")];
   const icon = section.querySelector<HTMLElement>(".vz-ad-icon")!;
   const name = section.querySelector<HTMLElement>(".vz-ad-name")!;
   const line = section.querySelector<HTMLElement>(".vz-ad-line")!;
@@ -33,7 +33,7 @@ export function bindAd(doc: Document): void {
   let sinceSave = 0;
   let timer: ReturnType<typeof setInterval> | undefined;
 
-  const visible = () => Boolean(state.due) && !state.adFree && settingsView.hidden === true;
+  const visible = () => Boolean(state.due) && !state.adFree && views.every((v) => v.hidden);
   const remaining = () => Math.max(0, (state.due?.remainingMs ?? 0) - unsaved);
 
   async function save(): Promise<void> {
@@ -117,8 +117,9 @@ export function bindAd(doc: Document): void {
     await chrome.storage.local.set({ [storageKeys.ads]: adClosed(stored, Date.now()) });
   });
 
-  // Settings swap the strip out; the ad steps aside with it and comes back after.
-  new MutationObserver(render).observe(settingsView, { attributes: true, attributeFilter: ["hidden"] });
+  // Settings and saved files swap the strip out; the ad steps aside with it and comes back after.
+  const observer = new MutationObserver(render);
+  for (const v of views) observer.observe(v, { attributes: true, attributeFilter: ["hidden"] });
   doc.addEventListener("visibilitychange", () => {
     lastTick = performance.now();
     if (doc.visibilityState === "hidden") void save();

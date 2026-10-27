@@ -47,7 +47,7 @@
     </section>
     <footer class="vz-popup-foot">
       <button class="vz-btn vz-btn--quiet vz-btn--small" id="open-folder" type="button"></button>
-      <button class="vz-btn vz-btn--quiet vz-btn--small" id="open-history" type="button"></button>
+      <button class="vz-btn vz-btn--quiet vz-btn--small" id="open-history" type="button" aria-controls="saved-view"></button>
       <button class="vz-icon-btn" id="clear-list" type="button" title="Clear this list" aria-label="Clear this list"></button>
       <button class="vz-btn vz-btn--quiet vz-btn--small" id="rate" type="button"></button>
       <button class="vz-btn vz-btn--quiet vz-btn--small" id="share" type="button"></button>
@@ -61,6 +61,29 @@
         <!-- settings-fields -->
       </form>
     </section>
+    <section id="saved-view" class="vz-popup-saved" aria-labelledby="saved-title" hidden>
+      <div class="vz-section-head">
+        <h2 id="saved-title" class="vz-section-title">Saved files</h2>
+        <button id="clear-history" class="vz-btn vz-btn--quiet vz-btn--small" type="button" hidden></button>
+      </div>
+      <ol id="history" class="vz-history" hidden></ol>
+      <p id="history-empty" class="vz-field-help" hidden>Nothing saved yet. Files you save with Vidzilla show up here.</p>
+    </section>
+    <template id="history-row">
+      <li class="vz-history-row">
+        <div class="vz-thumb"></div>
+        <div class="vz-history-body">
+          <p class="vz-history-title"></p>
+          <p class="vz-history-file"></p>
+          <p class="vz-history-meta vz-edge"></p>
+        </div>
+        <div class="vz-frame-actions">
+          <button class="vz-icon-btn show" type="button" title="Show in folder"></button>
+          <a class="vz-icon-btn page" target="_blank" rel="noopener" title="Open the page it came from"></a>
+          <button class="vz-icon-btn remove" type="button" title="Remove from list"></button>
+        </div>
+      </li>
+    </template>
     <template id="frame-template">
       <article class="vz-frame">
         <div class="vz-rail" aria-hidden="true"><span></span><span></span><span></span></div>
