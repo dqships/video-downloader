@@ -1,0 +1,37 @@
+<!-- The settings rows. The build puts them into options.html and the popup
+     (see scripts/build.mjs); settings-form.ts reads and saves them. -->
+        <label class="vz-field vz-field--wide">
+          <span class="vz-field-text">
+            <span class="vz-field-label">File name</span>
+            <span class="vz-field-help"><code>%title</code>, <code>%hostname</code> and <code>%date</code> are filled in. Example: <output class="vz-settings-example"></output></span>
+          </span>
+          <input class="vz-input" name="template" type="text" spellcheck="false" />
+        </label>
+        <label class="vz-field">
+          <span class="vz-field-text">
+            <span class="vz-field-label">Longest name</span>
+            <span class="vz-field-help">Characters, before the extension.</span>
+          </span>
+          <input class="vz-input vz-input--short" name="maxLength" type="number" min="20" max="200" step="1" />
+        </label>
+        <label class="vz-field">
+          <span class="vz-field-text">
+            <span class="vz-field-label">Folder</span>
+            <span class="vz-field-help">Inside your Downloads folder. Empty saves straight into Downloads.</span>
+          </span>
+          <input class="vz-input" name="subfolder" type="text" spellcheck="false" placeholder="None" />
+        </label>
+        <label class="vz-field">
+          <span class="vz-field-text">
+            <span class="vz-field-label">Ask where to save</span>
+            <span class="vz-field-help">Chrome shows its save dialog for every file.</span>
+          </span>
+          <input class="vz-toggle" name="saveAs" type="checkbox" role="switch" />
+        </label>
+        <label class="vz-field">
+          <span class="vz-field-text">
+            <span class="vz-field-label">Open in the side panel</span>
+            <span class="vz-field-help">The toolbar button opens Vidzilla beside the page and it follows the tab you're on.</span>
+          </span>
+          <input class="vz-toggle" name="sidePanel" type="checkbox" role="switch" />
+        </label>

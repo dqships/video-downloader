@@ -1,5 +1,5 @@
 // Bundles the extension into dist/. `--watch` rebuilds on change.
-import { cpSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
@@ -13,7 +13,15 @@ mkdirSync(out, { recursive: true });
 
 const copyStatic = () => {
   cpSync(join(root, "src/manifest.json"), join(out, "manifest.json"));
-  for (const f of ["popup.html", "popup.css", "options.html", "options.css"]) cpSync(join(root, "src/ui", f), join(out, f));
+  for (const f of ["popup.css", "options.css"]) cpSync(join(root, "src/ui", f), join(out, f));
+  // The settings rows live in one file and go into every page that shows them.
+  const fields = readFileSync(join(root, "src/ui/settings-fields.html"), "utf8").replace(/^<!--[\s\S]*?-->\n/, "");
+  const page = (f) => readFileSync(join(root, "src/ui", f), "utf8").replace(/^ *<!-- settings-fields -->\n/m, fields);
+  writeFileSync(join(out, "options.html"), page("options.html"));
+  const popupHtml = page("popup.html");
+  writeFileSync(join(out, "popup.html"), popupHtml);
+  // The side panel is the popup with a fluid layout that follows the active tab.
+  writeFileSync(join(out, "sidepanel.html"), popupHtml.replace('<body class="vz-popup">', '<body class="vz-popup vz-popup--panel">'));
   // The shared design system: tokens, components and the bundled font.
   for (const f of ["tokens.css", "components.css", "fonts"]) {
     cpSync(join(root, "design", f), join(out, "design", f), { recursive: true });

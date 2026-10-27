@@ -132,7 +132,8 @@ only: `--space-7` 48 · `--space-8` 64 · `--space-9` 96 · `--space-10` 128 px.
   else casts a shadow; separation comes from hairlines (`--size-hairline`).
 - Sizes: hit target `--size-hit` 32 px (popup), control height
   `--size-control` 44 px (site and touch), icon `--size-icon` 20 px, popup width
-  `--size-popup-width` 380 px, thumbnail 72 × 44, rail 16 px, sprocket 6 px,
+  `--size-popup-width` 380 px, popup height cap `--size-popup-max-height` 600 px
+  (Chrome's own limit), thumbnail 72 × 44, rail 16 px, sprocket 6 px,
   perforation 6 px with 4 px gaps, content width 1120 px, prose width 620 px.
 
 ## Controls
@@ -155,6 +156,10 @@ only: `--space-7` 48 · `--space-8` 64 · `--space-9` 96 · `--space-10` 128 px.
   small gate with one square sprocket that slides across on the spring. Off:
   sunken track, muted sprocket. On: vermilion track, `--color-on-primary`
   sprocket.
+- **Text button** (`.vz-text-btn`): an action inside a sentence, such as
+  "Saved as clip.mp4. **Show in folder**". Vermilion, bold, hairline
+  underline that thickens on hover. A note holding one gets `.has-action` so it
+  reads as one line of text.
 - **Focus**: a 2 px vermilion outline offset 2 px on every interactive element.
 - **Disabled**: 40 % opacity, no motion.
 
@@ -185,6 +190,35 @@ popup, laid out like a lab's log book.
 - **Entry point**: a `gearshape` `.vz-icon-btn` at the right end of
   `.vz-popup-head` opens the options page.
 
+## Popup and side panel
+
+One page, two shells. `popup.html` is the popup; the build writes
+`sidepanel.html` from it with `.vz-popup--panel` on `<body>`.
+
+- **Head** (`.vz-popup-head`): mark, wordmark, the page's host as edge print,
+  then icon buttons: the mode switch (`sidebar.right` "Switch to the side
+  panel" in the popup, `rectangle.inset.topright.filled` "Switch to the popup"
+  in the panel) and `gearshape` (settings, which turns into `xmark` while
+  they are open).
+- **Settings view** (`.vz-popup-settings`): the gear swaps the strip and foot
+  for the same `.vz-fields` rows as the options page, in place, never in a new
+  tab. The rows live once in `src/ui/settings-fields.html` and the build puts
+  them in both pages.
+- **Strip**: the only part that scrolls. The head and foot never move, so every
+  control stays in view however many videos a page has.
+- **Foot** (`.vz-popup-foot`): the tail of the roll. Quiet small buttons
+  `folder` **Downloads** (opens the Downloads folder) and `clock`
+  **Saved files** (the options page's history), then a `trash` icon button
+  that clears the list for this tab.
+- **Sizing**: the popup is `--size-popup-width` wide and at most
+  `--size-popup-max-height` tall. Never size it with `vw` or `vh`: Chrome opens
+  a popup tiny and grows it to fit the page, so viewport units collapse it and
+  clip the controls. The side panel fills Chrome's panel (`100vh`) and follows
+  the active tab.
+- **Mode**: whichever the user picks, popup or side panel, sticks. Opening
+  the side panel makes it the toolbar button's target until the user switches
+  back with the head button or the "Open in the side panel" setting.
+
 ## Icons
 
 SF Symbols can't ship on the web, so `design/icons/` holds one set drawn to SF
@@ -193,7 +227,8 @@ joins, filled shapes only for `*.fill` symbols. Files are named after the SF
 Symbol they stand in for (`arrow.down.circle`, `doc.on.doc`, `checkmark`,
 `xmark`, `lock`, `film`, `waveform`, `play.fill`, `pause.fill`,
 `arrow.up.right`, `chevron.right`, `chevron.down`, `sun.max`, `moon`, `folder`,
-`exclamationmark.triangle`, `gearshape`, `clock`, `trash`, `stop.fill`, `record.circle`). Icons use `currentColor`. Add a new icon by drawing
+`exclamationmark.triangle`, `gearshape`, `clock`, `trash`, `stop.fill`, `record.circle`,
+`sidebar.right`, `rectangle.inset.topright.filled`). Icons use `currentColor`. Add a new icon by drawing
 it to the same rules; never mix in another library, and never use a sparkles
 icon. Import them as text (esbuild `loader: { ".svg": "text" }`) or inline them.
 

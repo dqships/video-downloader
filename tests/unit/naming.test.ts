@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { asciiFilename, buildFilename, expandTemplate, nameFromUrl, sanitizeFilename, siteLabel } from "../../src/shared/naming";
+import { asciiFilename, buildFilename, expandTemplate, mimeForFilename, nameFromUrl, sanitizeFilename, siteLabel } from "../../src/shared/naming";
 
 describe("siteLabel", () => {
   it("takes the registrable label", () => {
@@ -61,5 +61,17 @@ describe("asciiFilename", () => {
 describe("siteLabel for addresses", () => {
   it("keeps an IP address whole", () => {
     expect(siteLabel("http://127.0.0.1:8080/page.html")).toBe("127.0.0.1");
+  });
+});
+
+describe("mimeForFilename", () => {
+  it("types saved files by extension so Chrome keeps it", () => {
+    expect(mimeForFilename("Clip.mp4")).toBe("video/mp4");
+    expect(mimeForFilename("folder/Song.M4A")).toBe("audio/mp4");
+    expect(mimeForFilename("Talk.webm")).toBe("video/webm");
+  });
+  it("never leaves a blob untyped", () => {
+    expect(mimeForFilename("no-extension")).toBe("application/octet-stream");
+    expect(mimeForFilename("odd.xyz")).toBe("application/octet-stream");
   });
 });

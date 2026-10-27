@@ -4,7 +4,7 @@
 // chrome.storage.session for the UI and to survive service-worker restarts.
 
 import { storageKeys } from "../shared/messages";
-import { asciiFilename, buildFilename, sanitizeFilename } from "../shared/naming";
+import { asciiFilename, buildFilename, mimeForFilename, sanitizeFilename } from "../shared/naming";
 import { addHistory } from "../shared/history";
 import { loadSettings } from "../shared/settings";
 import { dataUrl, singleVariantMaster } from "../shared/hls";
@@ -135,6 +135,7 @@ export class Downloads {
     };
     this.jobs.set(job.jobId, job);
     this.persist();
+    const mime = mimeForFilename(name);
     try {
       if (variant) {
         if (item.type === "dash") {
@@ -142,21 +143,22 @@ export class Downloads {
           // tracks, or (WebM) as the tracks' files to join.
           const plan = await planDash(item.url, variant, item.sentHeaders);
           job.ruleIds = await installReplay(replayScopes([item.url, ...plan.urls]), item.sentHeaders);
-          if (plan.kind === "live") await toWorker({ type: "record-live-dash", jobId: job.jobId, manifestUrl: item.url, reps: plan.reps });
-          else if (plan.kind === "tracks") await toWorker({ type: "fetch-tracks", jobId: job.jobId, tracks: plan.tracks });
-          else await toWorker({ type: "fetch-hls", jobId: job.jobId, url: plan.url, audioOnly: variant.audioOnly });
+          if (plan.kind === "live") await toWorker({ type: "record-live-dash", jobId: job.jobId, mime, manifestUrl: item.url, reps: plan.reps });
+          else if (plan.kind === "tracks") await toWorker({ type: "fetch-tracks", jobId: job.jobId, mime, tracks: plan.tracks });
+          else await toWorker({ type: "fetch-hls", jobId: job.jobId, mime, url: plan.url, audioOnly: variant.audioOnly });
         } else {
           const urls = await variantUrls(variant, item.sentHeaders);
           // Media playlists are read as is; a master is narrowed to the chosen quality.
           const url = variant.url === item.url || variant.audioOnly ? variant.url : dataUrl(singleVariantMaster(variant));
           // Replay the page's headers on every directory the stream lives in.
           job.ruleIds = await installReplay(replayScopes([item.url, ...urls]), item.sentHeaders);
-          await toWorker({ type: item.isLive ? "record-live" : "fetch-hls", jobId: job.jobId, url, audioOnly: variant.audioOnly });
+          await toWorker({ type: item.isLive ? "record-live" : "fetch-hls", jobId: job.jobId, mime, url, audioOnly: variant.audioOnly });
         }
       } else {
         await toWorker({
           type: "fetch-file",
           jobId: job.jobId,
+          mime,
           url: fileUrl,
           expectedBytes: fileBytes,
           supportsRanges: item.supportsRanges,
