@@ -13,6 +13,7 @@ import { variantUrls } from "./hls-probe";
 import { installReplay, removeReplay, replayScopes } from "./replay";
 
 const OFFSCREEN_URL = "offscreen.html";
+const KEEP_FINISHED_JOBS = 50;
 
 let creatingOffscreen: Promise<void> | undefined;
 
@@ -204,11 +205,13 @@ export class Downloads {
     void toWorker({ type: "cleanup", jobId: job.jobId }).catch(() => {});
   }
 
-  /** Debounced write of every job (finished ones stay listed for the UI). */
+  /** Debounced write of every job (recent finished ones stay listed for the UI). */
   private persist(): void {
     if (this.writeTimer) return;
     this.writeTimer = setTimeout(() => {
       this.writeTimer = undefined;
+      const finished = [...this.jobs.values()].filter((j) => j.state !== "running").sort((a, b) => b.startedAt - a.startedAt);
+      for (const old of finished.slice(KEEP_FINISHED_JOBS)) this.jobs.delete(old.jobId);
       void chrome.storage.session.set({ [storageKeys.jobs]: Object.fromEntries(this.jobs) });
     }, 200);
   }

@@ -8,14 +8,14 @@
     <link rel="stylesheet" href="design/components.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
-  <body>
-    <header class="masthead">
-      <picture class="masthead-mark">
-        <source srcset="brand/mark-dark.svg" media="(prefers-color-scheme: dark)" />
-        <img src="brand/mark.svg" alt="" />
-      </picture>
-      <h1 class="masthead-title">Vidzilla</h1>
-      <p class="masthead-host vz-edge" id="page-host"></p>
+  <body class="vz-popup">
+    <header class="vz-popup-head">
+      <svg class="vz-popup-mark" viewBox="4 14 88 76.21" aria-hidden="true">
+        <path fill="currentColor" d="M4 14H92L62.89 64.43L48 38.64L33.11 64.43Z" />
+        <path fill="currentColor" d="M48 48.64L60 69.43L48 90.21L36 69.43Z" />
+      </svg>
+      <h1 class="vz-popup-title">vidzilla</h1>
+      <p class="vz-popup-host vz-edge" id="page-host"></p>
     </header>
     <main id="strip" class="vz-strip" aria-live="polite"></main>
     <template id="frame-template">
@@ -24,7 +24,7 @@
         <div class="vz-thumb"></div>
         <div class="vz-frame-body">
           <input class="vz-input vz-frame-name" type="text" spellcheck="false" aria-label="File name" />
-          <p class="vz-frame-meta"></p>
+          <p class="vz-frame-meta"><span class="vz-badge"></span><span class="vz-select" hidden><select aria-label="Quality"></select></span><span class="meta-text"></span></p>
           <p class="vz-frame-note" hidden></p>
         </div>
         <div class="vz-frame-actions">

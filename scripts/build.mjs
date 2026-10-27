@@ -18,7 +18,7 @@ const copyStatic = () => {
   for (const f of ["tokens.css", "components.css", "fonts"]) {
     cpSync(join(root, "design", f), join(out, "design", f), { recursive: true });
   }
-  for (const f of ["mark.svg", "mark-dark.svg", "icon-16.png", "icon-32.png", "icon-48.png", "icon-128.png"]) {
+  for (const f of ["icon-16.png", "icon-32.png", "icon-48.png", "icon-128.png"]) {
     cpSync(join(root, "brand", f), join(out, "brand", f));
   }
   cpSync(join(root, "src/offscreen/offscreen.html"), join(out, "offscreen.html"));
