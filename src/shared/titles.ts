@@ -37,6 +37,9 @@ function strip(title: string, src: TitleSources): string {
     if (!m || !isSiteName(t.slice(m.index + m[0].length), src)) break;
     t = t.slice(0, m.index).trim();
   }
+  // "Clip title on Vimeo"
+  const on = /\s+on\s+(\S+)$/.exec(t);
+  if (on && on.index > 0 && isSiteName(on[1]!, src)) t = t.slice(0, on.index).trim();
   return t;
 }
 

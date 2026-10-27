@@ -9,6 +9,7 @@ describe("cleanTitle", () => {
     ["Budget explained - BBC News", "www.bbc.com", "BBC News", "Budget explained"],
     ['SpaceX on X: "Liftoff of Starship!" / X', "x.com", undefined, "SpaceX: Liftoff of Starship!"],
     ["(3) Real-time demo - Fixture", "fixture.test", undefined, "Real-time demo"],
+    ["The New Vimeo Player (You Know, For Videos) on Vimeo", "vimeo.com", undefined, "The New Vimeo Player (You Know, For Videos)"],
     ["Cats - the musical", "example.com", undefined, "Cats - the musical"],
   ])("%s", (docTitle, host, siteName, expected) => {
     expect(cleanTitle({ docTitle, host, siteName })).toBe(expected);
