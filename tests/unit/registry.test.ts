@@ -79,3 +79,35 @@ describe("mergeMedia with page-declared media", () => {
     expect(list[0]).toMatchObject({ sourceKind: "sniffer", title: "Storm", sizeBytes: 9 * MB, sentHeaders: { cookie: "s=1" } });
   });
 });
+
+describe("mergeMedia with player recordings", () => {
+  it("lists a player recording only while no stream is found, and drops it when one is", () => {
+    const player = item({ id: "p", type: "mse" });
+    const hls = item({ id: "h", type: "hls", url: "https://cdn.x/master.m3u8" });
+    expect(mergeMedia([hls], player).changed).toBe(false);
+    const { list } = mergeMedia([player], hls);
+    expect(list.map((m) => m.type)).toEqual(["hls"]);
+  });
+
+  it("keeps the player next to a stream none of whose qualities can be saved (WebM-only DASH)", () => {
+    const player = item({ id: "p", type: "mse" });
+    const webm = item({ id: "d", type: "dash", url: "https://cdn.x/manifest.mpd", variants: [] });
+    expect(mergeMedia([webm], player).list.map((m) => m.type)).toEqual(["dash", "mse"]);
+    expect(mergeMedia([player], webm).list.map((m) => m.type)).toEqual(["mse", "dash"]);
+  });
+
+  it("keeps a player that is being recorded when a stream shows up", () => {
+    const player = item({ id: "p", type: "mse", recording: true });
+    const hls = item({ id: "h", type: "hls", url: "https://cdn.x/master.m3u8" });
+    expect(mergeMedia([player], hls).list.map((m) => m.type)).toEqual(["mse", "hls"]);
+    expect(mergeMedia([hls], player).list.map((m) => m.type)).toEqual(["hls", "mse"]);
+  });
+
+  it("lists a manifest once when a player fails over to another CDN with the same path", () => {
+    const a = item({ id: "a", type: "dash", url: "https://vod-dash-ww-live.akamaized.net/usp/auth/vod/piff_abr_full_hd/p0pj5lg2/pc_hd_abr_v2.mpd?s=1" });
+    const b = item({ id: "b", type: "dash", url: "https://vod-dash-ww.live.cf.md.bbci.co.uk/usp/auth/vod/piff_abr_full_hd/p0pj5lg2/pc_hd_abr_v2.mpd?s=2" });
+    expect(mergeMedia([a], b).changed).toBe(false);
+    const other = item({ id: "c", type: "dash", url: "https://cdn.other.net/manifest.mpd" });
+    expect(mergeMedia([item({ id: "d", type: "dash", url: "https://cdn.x.net/manifest.mpd" })], other).changed).toBe(true);
+  });
+});

@@ -17,7 +17,7 @@ downloaded.
 | 3. DASH (mpd), audio-only | Done |
 | 4. Live recording, subtitles, DRM detection everywhere | Done |
 | 5. Media declared in page markup; site extractors (Twitch clips, X) | Done |
-| 6. Settings, history; MSE fallback | In progress |
+| 6. Settings, history, player recording (MSE) | Done |
 | 7. YouTube | Not planned (Chrome Web Store policy) |
 
 Live HLS streams record until they end or you press stop; live DASH recording
@@ -87,6 +87,24 @@ extension's reload button.
   detection, never replacing it. Twitch clips offer every height the CDN
   has; X names each video after its own post and lists the page's main post
   first. Titles drop the site's name (`src/shared/titles.ts`).
+- **Player recording** (`src/content/mse-*.ts`, `src/capture/`): a last
+  resort for players whose stream can't be fetched (custom transports,
+  hidden manifests). A page-world script notes Media Source Extensions use
+  and, only while the user records, copies each buffer the player appends to
+  an invisible extension frame, which joins the tracks into one file
+  (Mediabunny, no re-encoding) and saves it. Quality switches are joined
+  into one track by Media Source's own rule (a later append replaces what
+  it overlaps, the rest stays), so re-appends and switches back and forth
+  come out as the player had them (H.264 with differing parameter sets is written as avc3,
+  with them in each keyframe); each run is placed by the SourceBuffer's
+  timestampOffset, and WebM init segments lose the source file's index
+  (SeekHead, Cues). The recording ends once every MediaSource
+  that got media has ended, so probe players and ads don't cut it short. Record reloads the page with
+  the recording armed: the script holds the player's first buffers until
+  the service worker answers, so the file starts at the beginning. The frame
+  gets its job id privately and claims it from the service worker once, so
+  a page can't make it save anything. Listed only when no HLS/DASH stream
+  with a saveable quality is on the page.
 - **Settings and history** (`src/ui/options.*`, `src/shared/history.ts`):
   the gear in the popup opens a page for the filename template, length,
   folder and save dialog, and a list of saved files (show in folder, open

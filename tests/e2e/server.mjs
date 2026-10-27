@@ -69,6 +69,70 @@ const pages = {
   "/encrypted.html": `<title>Encrypted Player</title><video></video>${player("/media/hls/master.m3u8")}<script>
     setTimeout(() => document.querySelector("video").dispatchEvent(new Event("encrypted")), 300);
   </script>`,
+  // A player that feeds Media Source Extensions itself.
+  "/mse.html": `<title>Hidden Stream Player</title><video muted controls></video><script>
+    const ms = new MediaSource();
+    const video = document.querySelector("video");
+    video.src = URL.createObjectURL(ms);
+    const get = (p) => fetch("/media/dash/" + p).then((r) => r.arrayBuffer());
+    const append = (sb, data) => new Promise((r) => { sb.addEventListener("updateend", r, { once: true }); sb.appendBuffer(data); });
+    ms.addEventListener("sourceopen", async () => {
+      const v = ms.addSourceBuffer('video/mp4; codecs="avc1.64001e"');
+      const a = ms.addSourceBuffer('audio/mp4; codecs="mp4a.40.2"');
+      await append(v, await get("init-0.m4s"));
+      await append(a, await get("init-2.m4s"));
+      for (const n of [1, 2, 3]) await append(v, await get("chunk-0-0000" + n + ".m4s"));
+      for (const n of [1, 2, 3, 4]) await append(a, await get("chunk-2-0000" + n + ".m4s"));
+      ms.endOfStream();
+    });
+  </script>`,
+  // Like BBC, Facebook and vkvideo together: a probe MediaSource that ends at
+  // once, then a player that switches quality after the first segment and
+  // sends a second audio init segment.
+  "/mse-switch.html": `<title>Switching Player</title><video muted></video><script>
+    const video = document.querySelector("video");
+    const get = (p) => fetch("/media/dash/" + p).then((r) => r.arrayBuffer());
+    const append = (sb, data) => new Promise((r) => { sb.addEventListener("updateend", r, { once: true }); sb.appendBuffer(data); });
+    const open = () => { const ms = new MediaSource(); video.src = URL.createObjectURL(ms); return new Promise((r) => ms.addEventListener("sourceopen", () => r(ms), { once: true })); };
+    (async () => {
+      const probe = await open();
+      const p = probe.addSourceBuffer('video/mp4; codecs="avc1.64001e"');
+      try { await append(p, new Uint8Array(100)); } catch {}
+      if (probe.readyState === "open") probe.endOfStream();
+      await new Promise((r) => setTimeout(r, 1000));
+      const ms = await open();
+      const v = ms.addSourceBuffer('video/mp4; codecs="avc1.64001e"');
+      const a = ms.addSourceBuffer('audio/mp4; codecs="mp4a.40.2"');
+      await append(v, await get("init-1.m4s"));
+      await append(v, await get("chunk-1-00001.m4s"));
+      await append(a, await get("init-2.m4s"));
+      await append(a, await get("chunk-2-00001.m4s"));
+      await append(a, await get("init-2.m4s"));
+      for (const n of [2, 3, 4]) await append(a, await get("chunk-2-0000" + n + ".m4s"));
+      await append(v, await get("init-0.m4s"));
+      for (const n of [2, 3]) await append(v, await get("chunk-0-0000" + n + ".m4s"));
+      ms.endOfStream();
+    })();
+  </script>`,
+  // Like Facebook: Media Source runs in a worker when the browser allows it.
+  "/mse-worker.html": `<title>Worker Player</title><video muted></video><script>
+    const video = document.querySelector("video");
+    const player = async (ms, init) => {
+      const sb = ms.addSourceBuffer('video/mp4; codecs="avc1.64001e"');
+      sb.appendBuffer(await (await fetch(init)).arrayBuffer());
+    };
+    const init = location.origin + "/media/dash/init-0.m4s";
+    if (MediaSource.canConstructInDedicatedWorker) {
+      const code = "const ms = new MediaSource(); postMessage(ms.handle, [ms.handle]);" +
+        "ms.addEventListener('sourceopen', async () => (" + player + ")(ms, " + JSON.stringify(init) + "));";
+      const worker = new Worker(URL.createObjectURL(new Blob([code], { type: "text/javascript" })));
+      worker.onmessage = (e) => (video.srcObject = e.data);
+    } else {
+      const ms = new MediaSource();
+      video.src = URL.createObjectURL(ms);
+      ms.addEventListener("sourceopen", () => player(ms, init));
+    }
+  </script>`,
   "/declared.html": `<title>Morning Bulletin | Fixture News</title>
     <meta property="og:title" content="Morning Bulletin">
     <meta property="og:video" content="/embed/7"><meta property="og:video:type" content="text/html">

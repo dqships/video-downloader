@@ -186,7 +186,7 @@ function onWorker(msg: FromWorker): void {
     a.href = msg.blobUrl;
     a.download = entry.filename!;
     a.click();
-  } else {
+  } else if (msg.type === "error") {
     entry.state = msg.message === "Cancelled" ? "idle" : "failed";
     entry.error = friendly(msg.message);
   }

@@ -14,6 +14,21 @@ function isLikelyDashSegment(item: MediaItem): boolean {
   return item.type === "http" && (item.sizeBytes ?? 0) < DASH_SEGMENT_BYTES;
 }
 
+/**
+ * The same manifest from another CDN (players fail over between hosts that
+ * serve identical paths, as BBC does).
+ */
+function isMirror(a: MediaItem, b: MediaItem): boolean {
+  if (a.type !== b.type || (a.type !== "hls" && a.type !== "dash")) return false;
+  try {
+    const [ua, ub] = [new URL(a.url), new URL(b.url)];
+    // A bare "/master.m3u8" says too little to call two streams the same.
+    return ua.host !== ub.host && ua.pathname === ub.pathname && ua.pathname.split("/").filter(Boolean).length > 1;
+  } catch {
+    return false;
+  }
+}
+
 /** Pure merge rules, kept apart from storage so they can be tested. */
 export function mergeMedia(list: MediaItem[], item: MediaItem): { list: MediaItem[]; changed: boolean } {
   const existing = list.findIndex((m) => m.id === item.id);
@@ -52,6 +67,14 @@ export function mergeMedia(list: MediaItem[], item: MediaItem): { list: MediaIte
     next[existing] = merged;
     return { list: next, changed: true };
   }
+
+  // A player recording is a last resort: never next to a stream we can fetch
+  // (one whose qualities are all WebM, which we can't save yet, doesn't count).
+  const isStream = (m: MediaItem) => (m.type === "hls" || m.type === "dash") && m.variants?.length !== 0;
+  if (item.type === "mse" && !item.recording && list.some(isStream)) return { list, changed: false };
+  if (isStream(item)) list = list.filter((m) => m.type !== "mse" || m.recording);
+
+  if (list.some((m) => isMirror(m, item))) return { list, changed: false };
 
   const hasDash = list.some((m) => m.type === "dash");
   if (hasDash && isLikelyDashSegment(item)) return { list, changed: false };

@@ -18,6 +18,7 @@ import { clearStaleRules } from "./replay";
 
 /** Single-page apps swap videos without a page load; look again once they settle. */
 const RESCAN_DELAY_MS = 1500;
+const PLAYER_GRACE_MS = 3000;
 const SNIFF_TYPES = ["xmlhttprequest", "media", "sub_frame", "other"] as chrome.webRequest.ResourceType[];
 const BADGE_COLOR = "#C8781E";
 
@@ -283,9 +284,64 @@ async function handle(cmd: Command, sender: chrome.runtime.MessageSender): Promi
       else pendingDrm.set(tabId, cmd.payload.keySystem);
       return { ok: true };
     }
+    case "page-mse": {
+      const tabId = sender.tab?.id;
+      if (tabId === undefined || sender.frameId === undefined) return { ok: false, error: "Not from a tab" };
+      const frameUrl = sender.url ?? sender.tab?.url ?? "";
+      const id = playerId(tabId, sender.frameId, frameUrl);
+      // Record reloaded this page: answer at once, the player is waiting to start.
+      const armed = await downloads.claimArmed(tabId, sender.frameId, id, sender.tab?.url ?? frameUrl);
+      void listPlayer(tabId, sender.frameId, frameUrl, cmd.payload.mime, !armed);
+      return armed ? { ok: true, jobId: armed.jobId } : { ok: true };
+    }
+    case "capture-job": {
+      // Our own page (its host may be the dynamic id web-accessible pages get), not a content script.
+      const from = sender.url ? new URL(sender.url) : undefined;
+      if (sender.id !== chrome.runtime.id || from?.protocol !== "chrome-extension:" || from.pathname !== "/capture.html")
+        return { ok: false, error: "Not the capture page" };
+      const job = await downloads.claimCapture(cmd.payload.jobId);
+      return job ? { ok: true, filename: job.filename, saveAs: job.saveAs } : { ok: false, error: "No such recording" };
+    }
     case "clear-tab":
       registry.clear(cmd.payload.tabId);
       return { ok: true };
+  }
+}
+
+/**
+ * A player fed through Media Source Extensions. Listed only as a last resort:
+ * most such players load an HLS or DASH manifest we can download directly,
+ * and the registry drops this entry once one shows up.
+ */
+const playerId = (tabId: number, frameId: number, frameUrl: string) => hash53(`mse:${tabId}:${frameId}:${frameUrl}`);
+
+/** `grace` false: the player is being recorded, so it's listed at once and stays. */
+async function listPlayer(tabId: number, frameId: number, frameUrl: string, mime: string, grace: boolean): Promise<void> {
+  // Give the player's manifest a moment to be seen first (not when it's being recorded).
+  if (grace) await new Promise((r) => setTimeout(r, PLAYER_GRACE_MS));
+  await Promise.allSettled([...(handling.get(tabId) ?? [])]);
+  const tab = await chrome.tabs.get(tabId).catch(() => undefined);
+  if (!tab) return;
+  const audioOnly = mime.startsWith("audio/");
+  const added = await registry.add({
+    id: playerId(tabId, frameId, frameUrl),
+    type: "mse",
+    url: frameUrl,
+    tabId,
+    pageUrl: tab.url ?? frameUrl,
+    mime: audioOnly ? "audio/mp4" : "video/mp4",
+    ext: audioOnly ? "m4a" : "mp4",
+    supportsRanges: false,
+    sentHeaders: {},
+    hasDrm: false,
+    detectedAt: Date.now(),
+    sourceKind: "sniffer",
+    frameId,
+    recording: !grace || undefined,
+  });
+  if (added && !metaRequested.has(tabId)) {
+    metaRequested.add(tabId);
+    void readPageMeta(tabId);
   }
 }
 
