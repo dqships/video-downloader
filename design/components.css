@@ -239,6 +239,7 @@
 .vz-frame-body {
   min-width: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-1);
 }
 

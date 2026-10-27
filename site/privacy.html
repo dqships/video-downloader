@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vidzilla privacy policy</title>
+    <meta name="description" content="What the Vidzilla Chrome extension reads, what it keeps, and what it never sends." />
+    <link rel="icon" href="../brand/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../design/tokens.css" />
+    <link rel="stylesheet" href="../design/components.css" />
+    <link rel="stylesheet" href="site.css" />
+    <script>
+      try {
+        const t = localStorage.getItem("vz-theme");
+        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <header class="top">
+      <a class="top-logo" href="index.html" aria-label="Vidzilla home">
+        <svg class="top-mark" aria-hidden="true"><use href="../brand/symbols.svg#vz-mark" /></svg>
+        <svg class="top-word" aria-hidden="true"><use href="../brand/symbols.svg#vz-wordmark" /></svg>
+      </a>
+    </header>
+
+    <main class="prose">
+      <h1 class="section-title">Privacy policy</h1>
+      <p class="vz-edge">Effective 27 October 2026</p>
+
+      <p>
+        Vidzilla is a Chrome extension that finds the video and audio a page plays and saves it to your computer. It has
+        no servers and no accounts. It doesn't collect, sell or share your personal information, and it contains no
+        analytics or advertising code.
+      </p>
+
+      <h2 class="prose-head">What Vidzilla reads</h2>
+      <p>
+        To find media, Vidzilla looks at the network requests Chrome makes in your tabs: their addresses and content
+        types. For requests that turn out to be video or audio, it also notes the cookie, referrer and origin headers
+        the page sent, so that saving the file works the same way playing it did. It reads the page's title to name the
+        file.
+      </p>
+
+      <h2 class="prose-head">Where that information stays</h2>
+      <p>
+        On your computer. The list of media found in each tab is kept in Chrome's session storage for the extension and
+        is cleared when the tab closes or Chrome quits. Your settings, such as the filename pattern, are kept in Chrome's
+        local storage for the extension. Files you save go to your Downloads folder, fetched directly from the site that
+        served them.
+      </p>
+
+      <h2 class="prose-head">What Vidzilla sends</h2>
+      <p>
+        Nothing to us or anyone else. The only requests Vidzilla makes are to the sites that host the media you choose
+        to save, the same requests the page itself made.
+      </p>
+
+      <h2 class="prose-head">Why it asks for its permissions</h2>
+      <dl class="prose-list">
+        <dt>Read and change data on all websites</dt>
+        <dd>Video can come from any site, so Vidzilla watches requests in every tab and replays a page's headers when you save.</dd>
+        <dt>Manage your downloads</dt>
+        <dd>To save the finished file to your Downloads folder.</dd>
+        <dt>Tabs and navigation</dt>
+        <dd>To keep each tab's list of media separate and clear it when you leave the page.</dd>
+        <dt>Storage</dt>
+        <dd>To keep the media list, your settings and in-progress downloads on your device.</dd>
+      </dl>
+
+      <h2 class="prose-head">Protected video</h2>
+      <p>Vidzilla does not save video protected by DRM and does not try to get around it.</p>
+
+      <h2 class="prose-head">Changes and contact</h2>
+      <p>
+        If this policy changes, the new version will be posted here with a new effective date. Questions go through the
+        support link on Vidzilla's Chrome Web Store listing.
+      </p>
+    </main>
+
+    <footer class="foot">
+      <p class="foot-links"><a href="index.html">Back to Vidzilla</a></p>
+    </footer>
+  </body>
+</html>

@@ -2,10 +2,23 @@
 // The demo drives the same frame markup and classes as the extension popup
 // (design/components.css), with a simulated download instead of a real one.
 
+import { release, statusLabel } from "./release.js";
+
 const ICONS = "../design/icons.svg";
 const icon = (name) => `<svg aria-hidden="true"><use href="${ICONS}#i-${name}"/></svg>`;
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
+/* Release state: store links and format status come from release.js. ---- */
+
+function setupRelease() {
+  for (const a of document.querySelectorAll("[data-store-link]")) a.href = release.storeUrl;
+  for (const frame of document.querySelectorAll(".reel-frame[data-format]")) {
+    const status = release.formats[frame.dataset.format] ?? "coming";
+    frame.querySelector("[data-status]").textContent = statusLabel[status];
+    frame.classList.toggle("is-now", status === "ready");
+  }
+}
 
 /* Theme ------------------------------------------------------------------ */
 
@@ -177,9 +190,15 @@ const MEDIA = [
     id: "hls",
     name: "Night stomp over the harbour (stream).mp4",
     badge: "HLS",
-    meta: "4 qualities, up to 1080p · cdn.harbourcam.example",
+    meta: "2:41 · cdn.harbourcam.example",
     url: "https://cdn.harbourcam.example/v/night-stomp/master.m3u8",
-    note: "Stream downloads arrive in the next update.",
+    qualities: [
+      ["1080p · 4.0 Mbps", 81],
+      ["720p · 2.1 Mbps", 42],
+      ["480p · 1.1 Mbps", 22],
+      ["360p · 0.6 Mbps", 12],
+    ],
+    note: release.formats.hls === "ready" ? null : "Stream downloads arrive in the next update.",
   },
   {
     id: "drm",
@@ -298,6 +317,18 @@ function setupDemo() {
     name.title = item.name;
     frame.querySelector(".vz-badge").textContent = item.badge;
     frame.querySelector(".meta-text").textContent = item.meta;
+    let total = item.totalMb;
+    if (item.qualities && !item.note) {
+      // Quality picker, as the popup shows it for HLS and DASH streams.
+      const wrap = document.createElement("span");
+      wrap.className = "vz-select";
+      wrap.innerHTML = `<select aria-label="Quality"></select>${icon("chevron.down")}`;
+      const select = wrap.querySelector("select");
+      for (const [label, mb] of item.qualities) select.add(new Option(label, String(mb)));
+      total = item.qualities[0][1];
+      select.addEventListener("change", () => (total = Number(select.value)));
+      frame.querySelector(".vz-badge").after(wrap);
+    }
     const thumbEl = frame.querySelector(".vz-thumb");
     if (thumb && !item.drm) thumbEl.style.backgroundImage = `url(${thumb})`;
     else thumbEl.innerHTML = icon("film");
@@ -361,10 +392,10 @@ function setupDemo() {
       perf.style.setProperty("--vz-perf-value", "0%");
       // Ranges arrive in uneven bursts, like a real connection.
       timer = setInterval(() => {
-        received = Math.min(item.totalMb, received + 6 + Math.random() * 14);
-        perf.style.setProperty("--vz-perf-value", `${(received / item.totalMb) * 100}%`);
-        note.textContent = `Downloading ${Math.round(received)} MB of ${item.totalMb} MB`;
-        if (received >= item.totalMb) {
+        received = Math.min(total, received + total / 12 + Math.random() * (total / 8));
+        perf.style.setProperty("--vz-perf-value", `${(received / total) * 100}%`);
+        note.textContent = `Downloading ${Math.round(received)} MB of ${total} MB`;
+        if (received >= total) {
           stop();
           note.classList.add("is-done");
           note.textContent = `Saved as ${filename}`;
@@ -399,6 +430,7 @@ function setupDemo() {
   render();
 }
 
+setupRelease();
 setupTheme();
 if (document.fonts?.ready) document.fonts.ready.then(setupDemo);
 else setupDemo();
