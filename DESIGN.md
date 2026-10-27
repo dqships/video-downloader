@@ -206,10 +206,20 @@ One page, two shells. `popup.html` is the popup; the build writes
   them in both pages.
 - **Strip**: the only part that scrolls. The head and foot never move, so every
   control stays in view however many videos a page has.
-- **Foot** (`.vz-popup-foot`): the tail of the roll. Quiet small buttons
-  `folder` **Downloads** (opens the Downloads folder) and `clock`
-  **Saved files** (the options page's history), then a `trash` icon button
-  that clears the list for this tab.
+- **Foot** (`.vz-popup-foot`): the tail of the roll, a grid of two equal
+  columns and a narrow one. First row: quiet small buttons `folder`
+  **Downloads** (opens the Downloads folder) and `clock` **Saved files** (the
+  options page's history), then a `trash` icon button that clears the list for
+  this tab. Second row: `star` **Rate** (opens Vidzilla's review page on the
+  Chrome Web Store) and `square.and.arrow.up` **Share** (copies the store
+  link, then reads "Copied" for a moment).
+- **Ask** (`.vz-ask`): a title card spliced into the roll between the strip
+  and the foot, shown when a rating or share ask is due (rules in
+  `src/shared/asks.ts`). Film in both modes, its own sprocket rail with holes
+  that show the page through them, amber edge print counting the files saved,
+  a `.vz-ask-title`, one `.vz-ask-text` sentence and `.vz-ask-actions`: a
+  primary small button and quiet small ones. It is always skippable ("Not
+  now"), never blocks the strip, and waits behind the settings view.
 - **Sizing**: the popup is `--size-popup-width` wide and at most
   `--size-popup-max-height` tall. Never size it with `vw` or `vh`: Chrome opens
   a popup tiny and grows it to fit the page, so viewport units collapse it and
@@ -228,7 +238,8 @@ Symbol they stand in for (`arrow.down.circle`, `doc.on.doc`, `checkmark`,
 `xmark`, `lock`, `film`, `waveform`, `play.fill`, `pause.fill`,
 `arrow.up.right`, `chevron.right`, `chevron.down`, `sun.max`, `moon`, `folder`,
 `exclamationmark.triangle`, `gearshape`, `clock`, `trash`, `stop.fill`, `record.circle`,
-`sidebar.right`, `rectangle.inset.topright.filled`). Icons use `currentColor`. Add a new icon by drawing
+`sidebar.right`, `rectangle.inset.topright.filled`, `star`,
+`square.and.arrow.up`). Icons use `currentColor`. Add a new icon by drawing
 it to the same rules; never mix in another library, and never use a sparkles
 icon. Import them as text (esbuild `loader: { ".svg": "text" }`) or inline them.
 

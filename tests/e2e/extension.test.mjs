@@ -157,7 +157,7 @@ test("popup keeps its width when Chrome opens it small, with head and foot contr
   await popup.locator(".vz-frame").first().waitFor();
   assert.equal(await popup.evaluate(() => document.body.getBoundingClientRect().width), 380);
   await popup.setViewportSize({ width: 380, height: 600 });
-  for (const id of ["#switch-mode", "#toggle-settings", "#open-folder", "#open-history", "#clear-list"]) {
+  for (const id of ["#switch-mode", "#toggle-settings", "#open-folder", "#open-history", "#clear-list", "#rate", "#share"]) {
     assert.ok(await popup.locator(id).isVisible(), `${id} visible`);
   }
   await popup.close();
@@ -604,6 +604,68 @@ test("settings change the saved name, and saved files are listed in history", as
 
   await sw.evaluate(() => chrome.storage.local.remove("settings"));
   await options.close();
+  await page.close();
+});
+
+test("asks for a rating after a few saves, then to share, and the foot offers both again", async () => {
+  const asks = () => sw.evaluate(async () => (await chrome.storage.local.get("asks")).asks);
+  // Two files saved before this one; the third brings the first review ask.
+  await sw.evaluate(() => chrome.storage.local.set({ asks: { saved: 2, reviewAsks: 0, reviewAt: 3, reviewDone: false, shareAt: 6, shareDone: false } }));
+  const { tabId, page } = await visit("/page.html");
+  const { job } = await downloadFromPopup(tabId);
+  assert.equal(job.state, "complete", job.error);
+  await waitFor(async () => (await asks())?.due === "review", "review ask due");
+
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}&narrow`);
+  const ask = popup.locator("#ask");
+  await ask.waitFor();
+  assert.equal(await popup.locator("#ask-title").textContent(), "Would you rate Vidzilla?");
+  assert.match(await popup.locator("#ask-edge").textContent(), /^3 files saved$/);
+  const labels = async () => (await popup.locator("#ask-actions button").allTextContents()).map((t) => t.trim());
+  assert.deepEqual(await labels(), ["Rate Vidzilla", "Not now"], "no I already did the first time");
+  assert.ok(await popup.locator("#open-folder").isVisible(), "the foot stays in view");
+  assert.ok(await popup.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  // Settings cover it; closing them brings it back.
+  await popup.click("#toggle-settings");
+  assert.equal(await ask.isVisible(), false);
+  await popup.click("#toggle-settings");
+  assert.ok(await ask.isVisible());
+
+  // Not now: back a few saves later, now with I already did.
+  await popup.locator("#ask-actions button", { hasText: "Not now" }).click();
+  await ask.waitFor({ state: "hidden" });
+  await sw.evaluate(() =>
+    chrome.storage.local.get("asks").then(({ asks }) => chrome.storage.local.set({ asks: { ...asks, due: "review", reviewAsks: 2 } })),
+  );
+  await ask.waitFor();
+  assert.deepEqual(await labels(), ["Rate Vidzilla", "Not now", "I already did"]);
+  await popup.locator("#ask-actions button", { hasText: "I already did" }).click();
+  await ask.waitFor({ state: "hidden" });
+  assert.equal((await asks()).reviewDone, true);
+
+  // The share ask, dismissed once and for good.
+  await sw.evaluate(() =>
+    chrome.storage.local.get("asks").then(({ asks }) => chrome.storage.local.set({ asks: { ...asks, due: "share" } })),
+  );
+  await ask.waitFor();
+  assert.equal(await popup.locator("#ask-title").textContent(), "Know someone who saves videos?");
+  assert.deepEqual(await labels(), ["Copy link", "Not now"]);
+  await popup.locator("#ask-actions button", { hasText: "Not now" }).click();
+  await ask.waitFor({ state: "hidden" });
+  assert.equal((await asks()).shareDone, true);
+
+  // The foot keeps both buttons; Rate opens the store's review page.
+  assert.ok(await popup.locator("#share").isVisible());
+  const opened = context.waitForEvent("page");
+  await popup.click("#rate");
+  const store = await opened;
+  await waitFor(() => store.url() !== "about:blank" && store.url(), "review tab");
+  // The store may add the listing's name to the address.
+  assert.match(store.url(), new RegExp(`^https://chromewebstore\\.google\\.com/detail/(.+/)?${extensionId}/reviews$`));
+  await store.close();
+  await popup.close();
+  await sw.evaluate(() => chrome.storage.local.remove("asks"));
   await page.close();
 });
 

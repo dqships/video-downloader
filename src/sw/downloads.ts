@@ -10,6 +10,7 @@ import { loadSettings } from "../shared/settings";
 import { dataUrl, singleVariantMaster } from "../shared/hls";
 import type { DownloadJob, MediaItem, StreamVariant, TabMedia } from "../shared/types";
 import type { FromWorker, ToOffscreenEnvelope, ToWorker } from "../shared/worker-protocol";
+import { noteSaved } from "./asks";
 import { planDash } from "./dash-probe";
 import { variantUrls } from "./hls-probe";
 import { installReplay, removeReplay, replayScopes } from "./replay";
@@ -336,6 +337,7 @@ export class Downloads {
         recorded: job.recording,
         savedAt: Date.now(),
       }).catch(() => {});
+      void noteSaved().catch(() => {});
       void toWorker({ type: "cleanup", jobId: job.jobId });
     } else if (state === "interrupted") {
       await this.fail(job, delta.error?.current === "USER_CANCELED" ? "Cancelled" : (delta.error?.current ?? "Saving failed"));

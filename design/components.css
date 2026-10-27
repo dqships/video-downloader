@@ -382,17 +382,87 @@
   color: var(--color-text-muted);
 }
 
-/* The popup's foot: page-wide actions under the strip, like the tail of a roll. */
+/* The popup's foot: page-wide actions under the strip, like the tail of a roll.
+ * Two equal columns of quiet buttons and a narrow one for an icon button:
+ * Downloads, Saved files and clear on the first row, Rate and Share under them. */
 .vz-popup-foot {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: var(--space-2);
   margin-top: var(--space-3);
 }
 
 .vz-popup-foot .vz-btn {
-  flex: 1 1 0;
   min-width: 0;
+}
+
+/* The ask: a title card spliced into the roll between the strip and the
+ * foot, asking for a rating or a share. Film in both modes, with sprocket
+ * holes that show the lightbox through them. Always skippable.
+ * <aside class="vz-ask"><div class="vz-rail">…</div><div class="vz-ask-body">
+ *   <p class="vz-edge">…</p><h2 class="vz-ask-title">…</h2>
+ *   <p class="vz-ask-text">…</p><div class="vz-ask-actions">…</div></div></aside> */
+
+.vz-ask {
+  /* Controls inside read as light on film. */
+  --color-text: var(--color-film-text);
+  --color-text-muted: var(--color-film-muted);
+  --color-border: var(--color-film-muted);
+  --color-accent: var(--color-film-edge);
+  display: grid;
+  grid-template-columns: var(--size-rail) minmax(0, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--color-film);
+  color: var(--color-text);
+  overflow: hidden;
+  animation: vz-frame-in var(--duration-base) var(--ease-spring) both;
+}
+
+.vz-ask[hidden] {
+  display: none;
+}
+
+.vz-ask .vz-rail {
+  margin: 0;
+  background: transparent;
+}
+
+.vz-ask .vz-rail span {
+  background: var(--color-bg);
+}
+
+.vz-ask-body {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4) var(--space-4) 0;
+}
+
+.vz-ask-body .vz-edge {
+  margin: 0;
+}
+
+.vz-ask-title {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: var(--text-md-lh);
+  font-weight: var(--weight-heavy);
+  font-stretch: var(--stretch-wide);
+  letter-spacing: var(--tracking-tight);
+}
+
+.vz-ask-text {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.vz-ask-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 /* Text button: an inline action inside a sentence, such as "Show in folder". */

@@ -16,6 +16,8 @@ import lock from "../../design/icons/lock.svg";
 import rectangleInsetTopright from "../../design/icons/rectangle.inset.topright.filled.svg";
 import recordCircle from "../../design/icons/record.circle.svg";
 import sidebarRight from "../../design/icons/sidebar.right.svg";
+import squareAndArrowUp from "../../design/icons/square.and.arrow.up.svg";
+import star from "../../design/icons/star.svg";
 import stopFill from "../../design/icons/stop.fill.svg";
 import waveform from "../../design/icons/waveform.svg";
 import xmark from "../../design/icons/xmark.svg";
@@ -38,5 +40,7 @@ export const icons = {
   popup: rectangleInsetTopright,
   trash,
   external: arrowUpRight,
+  star,
+  share: squareAndArrowUp,
   waveform,
 };
