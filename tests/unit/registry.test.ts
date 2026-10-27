@@ -48,3 +48,25 @@ describe("mergeMedia", () => {
     expect(mergeMedia(list, item({ id: "small2", sizeBytes: MB })).changed).toBe(false);
   });
 });
+
+describe("mergeMedia with HLS masters", () => {
+  const master = () =>
+    item({ id: "master", type: "hls", url: "https://cdn.x/master.m3u8", childUrls: ["https://cdn.x/360p.m3u8", "https://cdn.x/audio.m3u8"] });
+  const child = () => item({ id: "child", type: "hls", url: "https://cdn.x/360p.m3u8" });
+
+  it("hides a quality playlist that arrives after its master", () => {
+    const { list } = mergeMedia([master()], child());
+    expect(list.map((m) => m.id)).toEqual(["master"]);
+  });
+
+  it("removes a quality playlist that arrived before its master", () => {
+    const { list } = mergeMedia([child()], master());
+    expect(list.map((m) => m.id)).toEqual(["master"]);
+  });
+
+  it("keeps an unrelated media playlist", () => {
+    const other = item({ id: "other", type: "hls", url: "https://cdn.y/index.m3u8" });
+    const { list } = mergeMedia([master()], other);
+    expect(list.map((m) => m.id)).toEqual(["master", "other"]);
+  });
+});

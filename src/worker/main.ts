@@ -4,6 +4,7 @@
 /// <reference lib="webworker" />
 import type { FromWorker, ToWorker } from "../shared/worker-protocol";
 import { fetchFile } from "./fetch-file";
+import { remuxHls } from "./remux-hls";
 
 declare const self: DedicatedWorkerGlobalScope;
 
@@ -22,20 +23,30 @@ async function purgeOpfs(): Promise<void> {
   }
 }
 
-async function fetchJob(msg: Extract<ToWorker, { type: "fetch-file" }>): Promise<void> {
+type JobMessage = Extract<ToWorker, { type: "fetch-file" | "fetch-hls" }>;
+
+async function runJob(msg: JobMessage): Promise<void> {
   const ctrl = new AbortController();
   running.set(msg.jobId, ctrl);
   try {
     const root = await opfs();
     const file = await root.getFileHandle(partName(msg.jobId), { create: true });
-    const bytes = await fetchFile({
-      url: msg.url,
-      file,
-      expectedBytes: msg.expectedBytes,
-      supportsRanges: msg.supportsRanges,
-      signal: ctrl.signal,
-      onProgress: (b, total) => post({ type: "progress", jobId: msg.jobId, bytes: b, totalBytes: total }),
-    });
+    const bytes =
+      msg.type === "fetch-hls"
+        ? await remuxHls({
+            url: msg.url,
+            file,
+            signal: ctrl.signal,
+            onProgress: (b, fraction) => post({ type: "progress", jobId: msg.jobId, bytes: b, fraction }),
+          })
+        : await fetchFile({
+            url: msg.url,
+            file,
+            expectedBytes: msg.expectedBytes,
+            supportsRanges: msg.supportsRanges,
+            signal: ctrl.signal,
+            onProgress: (b, total) => post({ type: "progress", jobId: msg.jobId, bytes: b, totalBytes: total }),
+          });
     if (bytes < 1024) throw new Error("The server sent an empty file");
     const blobUrl = URL.createObjectURL(await file.getFile());
     blobUrls.set(msg.jobId, blobUrl);
@@ -63,7 +74,8 @@ self.onmessage = async (e: MessageEvent<ToWorker>) => {
   const msg = e.data;
   switch (msg.type) {
     case "fetch-file":
-      void fetchJob(msg);
+    case "fetch-hls":
+      void runJob(msg);
       break;
     case "cancel":
       running.get(msg.jobId)?.abort(new Error("Cancelled"));

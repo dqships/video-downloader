@@ -24,6 +24,16 @@ export function urlDirectory(url: string): string {
   return `${u.origin}${dir}`;
 }
 
+/**
+ * One URL per directory a job touches. Streams can spread segments over many
+ * directories; past a few dozen, scope to whole origins instead.
+ */
+export function replayScopes(urls: string[], maxDirs = 50): string[] {
+  const dirs = [...new Set(urls.map(urlDirectory))];
+  if (dirs.length <= maxDirs) return dirs;
+  return [...new Set(urls.map((u) => `${new URL(u).origin}/`))];
+}
+
 /** urlFilter treats * ^ | specially; percent-encode them in literal URLs. */
 function escapeUrlFilter(s: string): string {
   return s.replace(/\*/g, "%2A").replace(/\^/g, "%5E").replace(/\|/g, "%7C");

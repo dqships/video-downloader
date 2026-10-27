@@ -8,6 +8,7 @@ import type { FromOffscreenEnvelope } from "../shared/worker-protocol";
 import { classify } from "./classify";
 import { Downloads } from "./downloads";
 import { HeaderCache, replayableHeaders } from "./headers";
+import { probeHls } from "./hls-probe";
 import { Registry } from "./registry";
 import { clearStaleRules } from "./replay";
 
@@ -50,6 +51,11 @@ async function onResponse(details: chrome.webRequest.OnResponseStartedDetails): 
 
   const tab = await chrome.tabs.get(details.tabId).catch(() => undefined);
   if (!tab) return;
+  const sentHeaders = headerCache.get(details.requestId) ?? {};
+  const known = await registry.get(details.tabId);
+  // Quality playlists of a listed master, and repeat sightings, need no probe.
+  if (known?.media.some((m) => m.childUrls?.includes(details.url) || (found.type === "hls" && m.url === details.url))) return;
+  const streamDetails = found.type === "hls" ? await probeHls(details.url, sentHeaders) : {};
   const item: MediaItem = {
     id: hash53(details.url),
     type: found.type,
@@ -61,10 +67,11 @@ async function onResponse(details: chrome.webRequest.OnResponseStartedDetails): 
     sizeBytes: found.sizeBytes,
     supportsRanges: found.supportsRanges,
     serverFilename: found.serverFilename,
-    sentHeaders: headerCache.get(details.requestId) ?? {},
+    sentHeaders,
     hasDrm: false,
     detectedAt: Date.now(),
     sourceKind: "sniffer",
+    ...streamDetails,
   };
   const added = await registry.add(item);
   if (added && !metaRequested.has(details.tabId)) {
@@ -134,7 +141,7 @@ async function handle(cmd: Command): Promise<CommandResult> {
     case "download": {
       const found = await registry.findMedia(cmd.payload.tabId, cmd.payload.mediaId);
       if (!found) return { ok: false, error: "That video is no longer on this page. Reload and try again." };
-      const jobId = await downloads.start(found.tab, found.item, cmd.payload.filename);
+      const jobId = await downloads.start(found.tab, found.item, cmd.payload.filename, cmd.payload.variantId);
       return { ok: true, jobId };
     }
     case "cancel":

@@ -2,6 +2,7 @@
 // by esbuild so they inherit currentColor.
 
 import arrowDownCircle from "../../design/icons/arrow.down.circle.svg";
+import chevronDown from "../../design/icons/chevron.down.svg";
 import checkmark from "../../design/icons/checkmark.svg";
 import docOnDoc from "../../design/icons/doc.on.doc.svg";
 import exclamation from "../../design/icons/exclamationmark.triangle.svg";
@@ -14,6 +15,7 @@ export const icons = {
   download: arrowDownCircle,
   copy: docOnDoc,
   check: checkmark,
+  chevronDown,
   close: xmark,
   lock,
   warning: exclamation,

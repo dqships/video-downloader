@@ -37,7 +37,7 @@ export function markPaths({ a = 12, g = 5 } = {}) {
 
 const word = JSON.parse(readFileSync(new URL("../brand/source/wordmark-outline.json", import.meta.url)));
 // Wordmark: Archivo, width 125, weight 800, tracking -0.03em, outlined.
-const WORD = { d: word.d, x: 0, y: -725, w: Math.ceil(word.width), h: 737 };
+const WORD = { d: word.d.replace(/-?\d+\.\d+/g, (n) => String(+(+n).toFixed(1))), x: 0, y: -725, w: Math.ceil(word.width), h: 737 };
 
 const svg = (viewBox, body, title) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" role="img" aria-label="${title}"><title>${title}</title>${body}</svg>\n`;
@@ -56,6 +56,16 @@ function lockup(markColor, wordColor) {
     `<g transform="translate(0 ${WORD.y}) scale(${r(s)}) translate(${-m.box.x} ${-m.box.y})"><path fill="${markColor}" d="${m.v}${m.drop}"/></g>` +
     `<path fill="${wordColor}" transform="translate(${r(mw + gap)} 0)" d="${WORD.d}"/>`;
   return svg(`0 ${WORD.y} ${Math.ceil(mw + gap + WORD.w)} ${WORD.h}`, body, "Vidzilla");
+}
+
+function symbols() {
+  const m = markPaths();
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg">` +
+    `<symbol id="vz-mark" viewBox="${m.box.x} ${m.box.y} ${m.box.w} ${m.box.h}"><path fill="currentColor" d="${m.v}"/><path class="vz-mark-drop" fill="currentColor" d="${m.drop}"/></symbol>` +
+    `<symbol id="vz-wordmark" viewBox="${WORD.x} ${WORD.y} ${WORD.w} ${WORD.h}"><path fill="currentColor" d="${WORD.d}"/></symbol>` +
+    `</svg>\n`
+  );
 }
 
 function appIcon(size, { tile = FILM, color = VERMILION_DARK } = {}) {
@@ -99,6 +109,8 @@ const files = {
   "lockup-dark.svg": lockup(VERMILION_DARK, PAPER),
   "app-icon.svg": appIcon(128),
   "favicon.svg": appIcon(32),
+  // Symbols for inline use: <svg><use href="brand/symbols.svg#vz-mark"/></svg>, coloured with `color`.
+  "symbols.svg": symbols(),
 };
 for (const [name, body] of Object.entries(files)) writeFileSync(new URL(name, out), body);
 
