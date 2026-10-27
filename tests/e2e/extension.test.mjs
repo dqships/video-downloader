@@ -51,7 +51,7 @@ async function visit(path, minMedia = 1) {
 async function downloadFromPopup(tabId) {
   const popup = await context.newPage();
   await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
-  await popup.locator(".frame .download").first().click();
+  await popup.locator(".vz-frame .download").first().click();
   const job = await waitFor(
     () =>
       sw.evaluate(async () => {
@@ -100,8 +100,8 @@ test("popup lists the media and the download saves a playable file", async () =>
   const { tabId, page } = await visit("/page.html");
   const popup = await context.newPage();
   await popup.goto(`chrome-extension://${extensionId}/popup.html?tabId=${tabId}`);
-  await popup.locator(".frame").first().waitFor();
-  assert.equal(await popup.locator(".frame .name").first().inputValue(), "Test Clip Fixture Site.mp4");
+  await popup.locator(".vz-frame").first().waitFor();
+  assert.equal(await popup.locator(".vz-frame .vz-frame-name").first().inputValue(), "Test Clip Fixture Site.mp4");
   await popup.close();
 
   const { job, item } = await downloadFromPopup(tabId);

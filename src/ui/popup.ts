@@ -81,7 +81,7 @@ function createFrame(item: MediaItem): HTMLElement {
   frame.querySelector(".copy")!.innerHTML = icons.copy;
   frame.querySelector(".download")!.innerHTML = icons.download;
 
-  const name = frame.querySelector<HTMLInputElement>(".name")!;
+  const name = frame.querySelector<HTMLInputElement>(".vz-frame-name")!;
   name.addEventListener("input", () => edited.set(item.id, name.value));
 
   frame.querySelector(".copy")!.addEventListener("click", async (e) => {
@@ -109,7 +109,7 @@ function createFrame(item: MediaItem): HTMLElement {
 }
 
 function updateFrame(frame: HTMLElement, item: MediaItem): void {
-  const thumb = frame.querySelector<HTMLElement>(".thumb")!;
+  const thumb = frame.querySelector<HTMLElement>(".vz-thumb")!;
   if (tab?.thumbnail) {
     thumb.style.backgroundImage = `url(${JSON.stringify(tab.thumbnail)})`;
     thumb.innerHTML = "";
@@ -118,33 +118,33 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
     thumb.innerHTML = item.mime.startsWith("audio/") ? icons.waveform : icons.film;
   }
 
-  const name = frame.querySelector<HTMLInputElement>(".name")!;
+  const name = frame.querySelector<HTMLInputElement>(".vz-frame-name")!;
   if (!edited.has(item.id) && document.activeElement !== name) name.value = defaultName(item);
   name.title = name.value;
 
-  const meta = frame.querySelector(".meta")!;
+  const meta = frame.querySelector(".vz-frame-meta")!;
   const badge = document.createElement("span");
-  badge.className = "badge";
+  badge.className = "vz-badge";
   badge.textContent = typeLabel(item);
   const details = [formatBytes(item.sizeBytes), new URL(item.url).hostname].filter(Boolean).join(" · ");
   meta.replaceChildren(badge, details);
 
-  const note = frame.querySelector<HTMLElement>(".note")!;
+  const note = frame.querySelector<HTMLElement>(".vz-frame-note")!;
   const download = frame.querySelector<HTMLButtonElement>(".download")!;
-  const progress = frame.querySelector<HTMLElement>(".progress")!;
-  const bar = progress.querySelector<HTMLElement>("span")!;
+  const progress = frame.querySelector<HTMLElement>(".vz-perf")!;
   const job = latestJob(item.id);
   const isRunning = job?.state === "running";
   if (download.dataset.mode !== (isRunning ? "cancel" : "download")) {
     download.dataset.mode = isRunning ? "cancel" : "download";
     download.innerHTML = isRunning ? icons.close : icons.download;
     download.title = isRunning ? "Cancel" : "Download";
-    download.classList.toggle("primary", !isRunning);
+    download.classList.toggle("vz-icon-btn--primary", !isRunning);
   }
-  frame.classList.toggle("fogged", item.hasDrm);
-  note.className = "note";
+  frame.classList.toggle("is-fogged", item.hasDrm);
+  note.className = "vz-frame-note";
   note.hidden = false;
   progress.hidden = true;
+  frame.classList.remove("has-progress");
   download.disabled = false;
 
   if (item.hasDrm) {
@@ -154,23 +154,24 @@ function updateFrame(frame: HTMLElement, item: MediaItem): void {
     download.disabled = true;
     note.textContent = "Stream downloads arrive in the next update.";
   } else if (pendingErrors.has(item.id)) {
-    note.classList.add("error");
+    note.classList.add("is-error");
     note.textContent = pendingErrors.get(item.id)!;
   } else if (job?.state === "running") {
     progress.hidden = false;
+    frame.classList.add("has-progress");
     const pct = job.totalBytes ? Math.min(100, (job.bytesReceived / job.totalBytes) * 100) : 0;
-    bar.style.width = `${pct}%`;
+    progress.style.setProperty("--vz-perf-value", `${pct}%`);
     if (job.phase === "saving") note.textContent = "Saving to your Downloads folder";
     else
       note.textContent = job.totalBytes
         ? `Downloading ${formatBytes(job.bytesReceived)} of ${formatBytes(job.totalBytes)}`
         : `Downloading ${formatBytes(job.bytesReceived)}`;
   } else if (job?.state === "complete") {
-    note.classList.add("done");
+    note.classList.add("is-done");
     note.textContent = `Saved as ${job.filename}`;
     note.title = job.savedPath ?? job.filename;
   } else if (job?.state === "failed") {
-    note.classList.add("error");
+    note.classList.add("is-error");
     note.textContent = `Download failed: ${job.error ?? "unknown error"}`;
   } else {
     note.hidden = true;
