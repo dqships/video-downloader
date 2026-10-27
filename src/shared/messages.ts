@@ -7,6 +7,8 @@ export type Command =
   /** Ends a live recording and saves it. */
   | { kind: "stop"; payload: { jobId: string } }
   | { kind: "clear-tab"; payload: { tabId: number } }
+  /** From Settings: ask the website again whether this install paid to remove ads. */
+  | { kind: "check-license" }
   /** From the content script: the page gave a media element DRM keys. */
   | { kind: "page-drm"; payload: { keySystem: string } }
   /** From the content script: the page's player is fed through Media Source Extensions. */
@@ -26,6 +28,10 @@ export const storageKeys = {
   ads: "ads",
   /** The ad list last fetched from the website, with when. */
   adFeed: "adFeed",
+  /** The ad-free license as the website last answered (shared/license.ts). */
+  license: "license",
+  /** This install's random ID, in chrome.storage.sync. */
+  installId: "installId",
 } as const;
 
 export function sendCommand(cmd: Command): Promise<CommandResult> {

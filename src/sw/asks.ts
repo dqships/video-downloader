@@ -5,9 +5,12 @@
 
 import { afterSave, updateAsks } from "../shared/asks";
 import { noteSavedForAds } from "./ads";
+import { refreshLicenseIfStale } from "./license";
 
 export async function noteSaved(): Promise<void> {
   const state = await updateAsks(afterSave);
+  // A paid upgrade, or a yearly plan running out, should count before any ad.
+  await refreshLicenseIfStale().catch(() => {});
   const adDue = await noteSavedForAds(Boolean(state.due)).catch(() => false);
   if (!state.due && !adDue) return;
   const open = await chrome.runtime.getContexts({

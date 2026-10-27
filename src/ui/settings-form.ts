@@ -5,6 +5,7 @@
 import { storageKeys } from "../shared/messages";
 import { buildFilename } from "../shared/naming";
 import { defaultSettings, loadSettings, type Settings } from "../shared/settings";
+import { bindAdsSetting } from "./ads-setting";
 
 export function bindSettingsForm(root: ParentNode): void {
   const form = root.querySelector<HTMLFormElement>(".vz-settings-form")!;
@@ -64,4 +65,5 @@ export function bindSettingsForm(root: ParentNode): void {
     if (area === "local" && storageKeys.settings in changes) void loadSettings().then(fill);
   });
   void loadSettings().then(fill);
+  bindAdsSetting(root);
 }

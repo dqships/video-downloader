@@ -10,6 +10,7 @@ export const pages = [
   { path: "/", file: "index" },
   { path: "/about", file: "about" },
   { path: "/pricing", file: "pricing" },
+  { path: "/upgrade", file: "upgrade" },
   { path: "/contact", file: "contact" },
   { path: "/support", file: "support" },
   { path: "/privacy", file: "privacy" },
@@ -30,7 +31,8 @@ Vidzilla is a free Chrome extension that finds the video playing on a page and s
 
 - [Vidzilla home](${origin}/): what Vidzilla saves and how it works
 - [About](${origin}/about): who makes Vidzilla and why
-- [Pricing](${origin}/pricing): Vidzilla is free
+- [Pricing](${origin}/pricing): Vidzilla is free, with an optional ad-free upgrade
+- [Remove the ads](${origin}/upgrade): $0.99 a year or $9 once
 - [Contact](${origin}/contact): bug reports and questions
 - [Support](${origin}/support): answers and fixes for common problems
 - [Privacy policy](${origin}/privacy): what the extension reads and keeps

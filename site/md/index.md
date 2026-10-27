@@ -42,7 +42,7 @@ Three steps and about a minute, from the Chrome Web Store to your first saved vi
 ## More
 
 - [About Vidzilla]({{origin}}/about)
-- [Pricing]({{origin}}/pricing): free
+- [Pricing]({{origin}}/pricing): free, with an optional ad-free upgrade
 - [Contact]({{origin}}/contact)
 - [Privacy policy]({{origin}}/privacy)
 - [Source code on GitHub]({{repoUrl}})
