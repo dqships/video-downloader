@@ -62,11 +62,13 @@ function sendFile(req, res, file) {
   }
 }
 
-export function startServer(port = 0) {
+/** `cors` lets other origins read every response, like a CDN that shares its files. */
+export function startServer(port = 0, { cors = false } = {}) {
   /** Every request to /protected/, with the Referer it carried. */
   const protectedLog = [];
   const server = createServer((req, res) => {
     const url = new URL(req.url, "http://localhost");
+    if (cors) res.setHeader("Access-Control-Allow-Origin", "*");
     if (pages[url.pathname]) {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }).end(`<!doctype html>${pages[url.pathname]}`);
       return;

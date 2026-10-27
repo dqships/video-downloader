@@ -30,6 +30,7 @@
         <svg class="top-word" aria-hidden="true"><use href="../brand/symbols.svg#vz-wordmark" /></svg>
       </a>
       <nav class="top-nav" aria-label="Sections">
+        <a href="#paste">Paste a link</a>
         <a href="#demo">Try it</a>
         <a href="#formats">Formats</a>
         <a href="#how">How it works</a>
@@ -61,6 +62,50 @@
           <a class="vz-btn vz-btn--quiet" href="#demo">Try it on this page</a>
         </div>
         <p class="hero-edge vz-edge">Chrome 116+ · No account · No tracking</p>
+      </section>
+
+      <!-- Paste a link: saves a video file or an .m3u8 stream right on this page,
+           with the extension's download worker. Frames mirror the popup's. -->
+      <section id="paste" class="paste" aria-labelledby="paste-title">
+        <h2 id="paste-title" class="section-title">Or paste a link</h2>
+        <p class="section-lede">
+          Have a link to a video file or an .m3u8 stream? Save it here, without installing anything.
+        </p>
+        <form class="paste-form" data-paste>
+          <label class="paste-label" for="paste-url">Video link</label>
+          <input
+            id="paste-url"
+            class="vz-input paste-input"
+            type="text"
+            inputmode="url"
+            name="url"
+            placeholder="https://example.com/clip.m3u8"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            required
+          />
+          <button class="vz-btn" type="submit">Find video</button>
+        </form>
+        <p class="paste-edge vz-edge">MP4 · WEBM · MOV · M4A · MP3 · M3U8 · Runs in your browser</p>
+        <p class="paste-note" data-paste-note role="status" hidden></p>
+        <div class="vz-strip paste-strip" data-paste-strip aria-live="polite" hidden></div>
+        <template id="paste-frame">
+          <article class="vz-frame">
+            <div class="vz-rail" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="vz-thumb"></div>
+            <div class="vz-frame-body">
+              <input class="vz-input vz-frame-name" type="text" spellcheck="false" aria-label="File name" />
+              <p class="vz-frame-meta"><span class="vz-badge"></span><span class="vz-select" hidden><select aria-label="Quality"></select></span><span class="meta-text"></span></p>
+              <p class="vz-frame-note" hidden></p>
+            </div>
+            <div class="vz-frame-actions">
+              <button class="vz-icon-btn copy" type="button" title="Copy link" aria-label="Copy link"></button>
+              <button class="vz-icon-btn vz-icon-btn--primary download" type="button" title="Download"></button>
+            </div>
+            <div class="vz-perf" hidden></div>
+          </article>
+        </template>
       </section>
 
       <!-- Demo: a page playing a video, and the real popup UI catching it. -->
@@ -293,5 +338,6 @@
     </footer>
 
     <script type="module" src="site.js"></script>
+    <script type="module" src="paste.js"></script>
   </body>
 </html>
