@@ -107,9 +107,10 @@ export function pageCandidates(scan: PageScan): PageCandidate[] {
   }
 
   // Open Graph: og:video (or :url / :secure_url) followed by its own og:video:type.
+  // Only JSON-LD names a video itself; page-wide tags (og:title) describe the
+  // page, may still be a placeholder while a single-page app loads, and are
+  // read for the tab anyway.
   const meta = scan.metas.map((m) => ({ key: m.key.toLowerCase(), value: m.value }));
-  const title = meta.find((m) => m.key === "og:title")?.value;
-  const image = absolute(meta.find((m) => m.key === "og:image")?.value, base);
   for (let i = 0; i < meta.length; i++) {
     const { key, value } = meta[i]!;
     if (key !== "og:video" && key !== "og:video:url" && key !== "og:video:secure_url" && key !== "twitter:player:stream") continue;
@@ -124,12 +125,12 @@ export function pageCandidates(scan: PageScan): PageCandidate[] {
     }
     if (mime && NOT_MEDIA_TYPES.test(mime)) continue;
     const url = absolute(value, base);
-    if (url) add({ url, title, thumbnail: image, mime });
+    if (url) add({ url, mime });
   }
 
   for (const src of scan.videoSrcs) {
     const url = absolute(src.url, base);
-    if (url) add({ url, title, thumbnail: image, mime: src.type?.toLowerCase() || undefined });
+    if (url) add({ url, mime: src.type?.toLowerCase() || undefined });
   }
   return [...found.values()];
 }
