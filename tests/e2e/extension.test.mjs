@@ -167,6 +167,22 @@ test("lists an HLS master as one stream with its length", async () => {
   await page.close();
 });
 
+test("skips .m3u8 and .mpd URLs that answer with something else", async () => {
+  const { tab, page } = await visit("/ad-manifest.html");
+  // Give the probes of the two ad URLs time to finish before checking.
+  await new Promise((r) => setTimeout(r, 1500));
+  const media = await sw.evaluate(async (key) => (await chrome.storage.session.get(key))[key].media, `tab:${tab.tabId}`);
+  assert.deepEqual(media.map((m) => new URL(m.url).pathname), ["/media/hls/master.m3u8"]);
+  await page.close();
+});
+
+test("reads a playlist the server turned away once", async () => {
+  const { tab, page } = await visit("/flaky.html");
+  assert.equal(tab.media[0].durationSec, 2);
+  assert.equal(tab.media[0].isLive, false);
+  await page.close();
+});
+
 test("downloads a plain HLS stream as MP4", async () => {
   await downloadStream("/hls.html");
 });
@@ -213,6 +229,11 @@ test("downloads DASH and saves the picked quality", async () => {
   assert.equal(tab.media[0].type, "dash");
   assert.equal(tab.media[0].durationSec, 6);
   assert.equal(file.video.height, 180);
+});
+
+test("downloads DASH whose length names one segment too many", async () => {
+  const { file } = await downloadStream("/dash-tail.html");
+  assert.equal(file.video.height, 360);
 });
 
 test("downloads DASH with a segment timeline", async () => {

@@ -108,6 +108,8 @@ async function list(input: {
   if (known?.media.some((m) => m.childUrls?.includes(url) || (isStream && m.url === url))) return;
   const streamDetails =
     found.type === "hls" ? await probeHls(url, sentHeaders) : found.type === "dash" ? await probeDash(url, sentHeaders) : {};
+  // The URL looked like a stream but the server sent something else.
+  if (streamDetails === null) return;
   await Promise.allSettled(input.earlier);
   const now = await registry.get(tabId);
   if (now?.media.some((m) => m.childUrls?.includes(url))) return;
