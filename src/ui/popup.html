@@ -20,10 +20,21 @@
       <button class="vz-icon-btn" id="toggle-settings" type="button" aria-controls="settings-view" aria-expanded="false"></button>
     </header>
     <main id="strip" class="vz-strip" aria-live="polite"></main>
+    <aside id="ask" class="vz-ask" aria-labelledby="ask-title" aria-live="polite" hidden>
+      <div class="vz-rail" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <div class="vz-ask-body">
+        <p class="vz-edge" id="ask-edge"></p>
+        <h2 class="vz-ask-title" id="ask-title"></h2>
+        <p class="vz-ask-text" id="ask-text"></p>
+        <div class="vz-ask-actions" id="ask-actions"></div>
+      </div>
+    </aside>
     <footer class="vz-popup-foot">
       <button class="vz-btn vz-btn--quiet vz-btn--small" id="open-folder" type="button"></button>
       <button class="vz-btn vz-btn--quiet vz-btn--small" id="open-history" type="button"></button>
       <button class="vz-icon-btn" id="clear-list" type="button" title="Clear this list" aria-label="Clear this list"></button>
+      <button class="vz-btn vz-btn--quiet vz-btn--small" id="rate" type="button"></button>
+      <button class="vz-btn vz-btn--quiet vz-btn--small" id="share" type="button"></button>
     </footer>
     <section id="settings-view" class="vz-popup-settings" aria-labelledby="settings-title" hidden>
       <div class="vz-section-head">

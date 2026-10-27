@@ -21,6 +21,7 @@ export const storageKeys = {
   jobs: "jobs",
   settings: "settings",
   history: "history",
+  asks: "asks",
 } as const;
 
 export function sendCommand(cmd: Command): Promise<CommandResult> {
