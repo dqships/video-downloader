@@ -256,6 +256,14 @@
   color: var(--color-text-muted);
 }
 
+.vz-frame-meta > * {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .vz-frame-note {
   margin: 0;
   display: flex;
@@ -319,4 +327,77 @@
 
 .vz-frame.has-progress {
   padding-bottom: var(--space-5);
+}
+
+/* Popup shell: shared by the extension popup and the site's demo. ------- */
+
+.vz-popup {
+  width: 100%;
+  max-width: var(--size-popup-width);
+  padding: var(--space-4);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm-lh);
+}
+
+.vz-popup-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  margin-bottom: var(--space-3);
+}
+
+.vz-popup-mark {
+  width: var(--size-icon);
+  height: var(--size-icon);
+  flex: none;
+  color: var(--color-primary);
+}
+
+.vz-popup-title {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: var(--text-md-lh);
+  font-weight: var(--weight-heavy);
+  font-stretch: var(--stretch-wide);
+  letter-spacing: var(--tracking-tight);
+}
+
+.vz-popup-host {
+  min-width: 0;
+  margin: 0 0 0 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+.vz-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.vz-empty svg {
+  width: var(--size-hit);
+  height: var(--size-hit);
+  color: var(--color-accent);
+}
+
+.vz-empty-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-md);
+  line-height: var(--text-md-lh);
+  font-weight: var(--weight-bold);
+}
+
+.vz-empty p {
+  margin: 0;
 }
