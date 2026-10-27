@@ -1,0 +1,465 @@
+/*
+ * Vidzilla shared components. Used as-is by the extension popup and the
+ * website, so the two always match. Tokens only; see DESIGN.md.
+ */
+
+/* Buttons ---------------------------------------------------------------- */
+
+.vz-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--size-control);
+  padding: 0 var(--space-5);
+  border: var(--size-hairline) solid var(--color-primary);
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font: inherit;
+  font-size: var(--text-md);
+  line-height: var(--text-md-lh);
+  font-weight: var(--weight-bold);
+  font-stretch: var(--stretch-wide);
+  letter-spacing: var(--tracking-normal);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform var(--duration-fast) var(--ease-spring),
+    background-color var(--duration-fast) var(--ease-spring),
+    border-color var(--duration-fast) var(--ease-spring);
+}
+
+.vz-btn:hover {
+  background: color-mix(in oklab, var(--color-primary), var(--color-text) 14%);
+  border-color: color-mix(in oklab, var(--color-primary), var(--color-text) 14%);
+}
+
+.vz-btn:active {
+  transform: scale(0.97);
+}
+
+.vz-btn:focus-visible,
+.vz-icon-btn:focus-visible,
+.vz-input:focus-visible {
+  outline: var(--size-focus) solid var(--color-primary);
+  outline-offset: var(--size-focus);
+}
+
+.vz-btn--quiet {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.vz-btn--quiet:hover {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+.vz-btn--small {
+  min-height: var(--size-hit);
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm-lh);
+}
+
+.vz-btn svg {
+  width: var(--size-icon);
+  height: var(--size-icon);
+  flex: none;
+}
+
+.vz-icon-btn {
+  width: var(--size-hit);
+  height: var(--size-hit);
+  display: grid;
+  place-items: center;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-spring),
+    transform var(--duration-fast) var(--ease-spring);
+}
+
+.vz-icon-btn:hover {
+  background: var(--color-primary-soft);
+}
+
+.vz-icon-btn:active {
+  transform: scale(0.92);
+}
+
+.vz-icon-btn--primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.vz-icon-btn--primary:hover {
+  background: color-mix(in oklab, var(--color-primary), var(--color-text) 14%);
+}
+
+.vz-icon-btn:disabled,
+.vz-btn:disabled {
+  cursor: default;
+  opacity: var(--opacity-disabled);
+  transform: none;
+}
+
+.vz-icon-btn svg {
+  width: var(--size-icon);
+  height: var(--size-icon);
+}
+
+/* Inputs: a grease-pencil underline, never a box. ------------------------ */
+
+.vz-input {
+  width: 100%;
+  min-width: 0;
+  padding: 0 0 var(--space-1);
+  border: 0;
+  border-bottom: var(--size-hairline) solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-overflow: ellipsis;
+  transition: border-color var(--duration-fast) var(--ease-spring);
+}
+
+.vz-input:hover {
+  border-bottom-color: var(--color-text-muted);
+}
+
+.vz-input:focus {
+  outline: none;
+  border-bottom-color: var(--color-primary);
+}
+
+/* Edge print: the condensed caps printed along the edge of film stock. --- */
+
+.vz-edge {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs-lh);
+  font-weight: var(--weight-bold);
+  font-stretch: var(--stretch-condensed);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-accent);
+}
+
+.vz-badge {
+  display: inline-block;
+  padding: 0 var(--space-1);
+  border: var(--size-hairline) solid currentColor;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  line-height: var(--text-xs-lh);
+  font-weight: var(--weight-bold);
+  font-stretch: var(--stretch-condensed);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* The strip: a run of film holding one frame per detected video. -------- */
+
+.vz-strip {
+  background: var(--color-surface);
+  border: var(--size-hairline) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-strip);
+  overflow: hidden;
+}
+
+.vz-frame {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--size-rail) var(--size-thumb-w) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+  font-size: var(--text-sm);
+  line-height: var(--text-sm-lh);
+  font-variant-numeric: tabular-nums;
+  animation: vz-frame-in var(--duration-base) var(--ease-spring) both;
+}
+
+.vz-frame + .vz-frame {
+  border-top: var(--size-hairline) solid var(--color-border);
+}
+
+@keyframes vz-frame-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2));
+  }
+}
+
+.vz-rail {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  margin: calc(-1 * var(--space-3)) 0;
+  background: var(--color-surface-sunken);
+}
+
+.vz-rail span {
+  width: var(--size-sprocket);
+  height: var(--size-sprocket);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.vz-thumb {
+  width: var(--size-thumb-w);
+  height: var(--size-thumb-h);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-film) center / cover no-repeat;
+  color: var(--color-film-edge);
+}
+
+.vz-thumb svg {
+  width: var(--size-icon);
+  height: var(--size-icon);
+}
+
+.vz-frame-body {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1);
+}
+
+.vz-frame-name {
+  font-weight: var(--weight-medium);
+  border-bottom-color: transparent;
+}
+
+.vz-frame-meta {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.vz-frame-meta > * {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vz-frame-note {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+}
+
+.vz-frame-note svg {
+  width: var(--text-sm-lh);
+  height: var(--text-sm-lh);
+  flex: none;
+}
+
+.vz-frame-note.is-error {
+  color: var(--color-danger);
+}
+
+.vz-frame-note.is-done {
+  color: var(--color-success);
+}
+
+.vz-frame-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* Protected (DRM) media: the frame is fogged, like light-struck film. */
+.vz-frame.is-fogged .vz-thumb,
+.vz-frame.is-fogged .vz-frame-name,
+.vz-frame.is-fogged .vz-frame-meta {
+  opacity: var(--opacity-fogged);
+}
+
+/* Progress: perforations that fill with safelight as the file arrives. -- */
+
+.vz-perf {
+  --vz-perf-value: 0%;
+  position: relative;
+  height: var(--size-perf);
+  background: var(--color-surface-sunken);
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 var(--size-perf), transparent var(--size-perf) calc(var(--size-perf) + var(--size-perf-gap)));
+  mask: repeating-linear-gradient(90deg, #000 0 var(--size-perf), transparent var(--size-perf) calc(var(--size-perf) + var(--size-perf-gap)));
+}
+
+.vz-perf::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--vz-perf-value);
+  background: var(--color-primary);
+  transition: width var(--duration-base) var(--ease-spring);
+}
+
+.vz-frame .vz-perf {
+  position: absolute;
+  inset: auto var(--space-3) 0 calc(var(--size-rail) + var(--space-3));
+  height: var(--size-sprocket);
+  bottom: var(--space-1);
+}
+
+.vz-frame.has-progress {
+  padding-bottom: var(--space-5);
+}
+
+/* Popup shell: shared by the extension popup and the site's demo. ------- */
+
+.vz-popup {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--size-popup-width);
+  padding: var(--space-4);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm-lh);
+}
+
+.vz-popup-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  margin-bottom: var(--space-3);
+}
+
+.vz-popup-mark {
+  width: var(--size-icon);
+  height: var(--size-icon);
+  flex: none;
+  color: var(--color-primary);
+}
+
+.vz-popup-title {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: var(--text-md-lh);
+  font-weight: var(--weight-heavy);
+  font-stretch: var(--stretch-wide);
+  letter-spacing: var(--tracking-tight);
+}
+
+.vz-popup-host {
+  min-width: 0;
+  margin: 0 0 0 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+.vz-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.vz-empty svg {
+  width: var(--size-hit);
+  height: var(--size-hit);
+  color: var(--color-accent);
+}
+
+.vz-empty-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-md);
+  line-height: var(--text-md-lh);
+  font-weight: var(--weight-bold);
+}
+
+.vz-empty p {
+  margin: 0;
+}
+
+/* Select: a native <select> styled as edge print, for picking a quality.
+ * Markup: <span class="vz-select"><select>…</select><svg><use href="…#i-chevron.down"/></svg></span>
+ * Option labels read like "1080p · 4.0 Mbps". ---------------------------- */
+
+.vz-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--color-text);
+}
+
+.vz-select select {
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 calc(var(--text-xs-lh) + var(--space-1)) 0 var(--space-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: var(--size-hairline) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-xs);
+  line-height: var(--text-xs-lh);
+  font-weight: var(--weight-bold);
+  font-stretch: var(--stretch-condensed);
+  letter-spacing: var(--tracking-caps);
+  font-variant-numeric: tabular-nums;
+  appearance: none;
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-spring);
+}
+
+.vz-select select:hover {
+  border-color: var(--color-text-muted);
+}
+
+.vz-select select:focus-visible {
+  outline: var(--size-focus) solid var(--color-primary);
+  outline-offset: var(--size-hairline);
+  border-color: var(--color-primary);
+}
+
+.vz-select select:disabled {
+  cursor: default;
+  opacity: var(--opacity-disabled);
+}
+
+.vz-select svg {
+  position: absolute;
+  right: var(--size-hairline);
+  width: var(--text-xs-lh);
+  height: var(--text-xs-lh);
+  pointer-events: none;
+  color: var(--color-text-muted);
+}
