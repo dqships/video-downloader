@@ -7,12 +7,40 @@
       "name": "WebToMarkdown",
       "line": "Copy any web page as clean Markdown, ready for notes, docs or an AI chat.",
       "cta": "Get WebToMarkdown",
-      "url": "https://chromewebstore.google.com/detail/gaglchmlnkelnokjkilcbkggfdembeem",
+      "url": "https://chromewebstore.google.com/detail/webtomarkdown/gaglchmlnkelnokjkilcbkggfdembeem",
       "active": true
     },
-    { "id": "guppy-fitness", "name": "Guppy Fitness", "line": "", "cta": "Get Guppy Fitness", "url": "", "active": false },
-    { "id": "guppy-vegan", "name": "Guppy Vegan", "line": "", "cta": "Get Guppy Vegan", "url": "", "active": false },
-    { "id": "bloomin", "name": "Bloomin", "line": "", "cta": "Get Bloomin", "url": "", "active": false },
-    { "id": "sortdock", "name": "SortDock", "line": "", "cta": "Get SortDock", "url": "", "active": false }
+    {
+      "id": "sortdock",
+      "name": "SortDock",
+      "line": "A small Mac app that keeps your Downloads folder tidy, moving each file where it belongs.",
+      "cta": "See SortDock",
+      "url": "https://sortdock.vercel.app",
+      "active": true
+    },
+    {
+      "id": "guppy-fitness",
+      "name": "Guppy Fitness",
+      "line": "Build a workout or import one from a video, log every set in seconds, and watch your training add up.",
+      "cta": "Try Guppy Fitness",
+      "url": "https://guppyfitness.com",
+      "active": true
+    },
+    {
+      "id": "guppy-vegan",
+      "name": "Guppy Vegan",
+      "line": "Three plant-based meals a day, picked for you from 115 recipes. Free, with no account.",
+      "cta": "Try Guppy Vegan",
+      "url": "https://vegan.guppyfitness.com",
+      "active": true
+    },
+    {
+      "id": "bloomin",
+      "name": "Bloomin",
+      "line": "Lock your savings toward a goal so you can't dip into them early. The waitlist is open.",
+      "cta": "Join the waitlist",
+      "url": "https://bloominapp.com",
+      "active": true
+    }
   ]
 }
