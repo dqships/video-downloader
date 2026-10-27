@@ -15,6 +15,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import * as esbuild from "esbuild";
 import { notFoundMarkdown, origin, pages, repoUrl, supportEmail } from "../site/pages.mjs";
 import { release } from "../site/release.js";
+import { bundleEntries } from "./site-inputs.mjs";
 
 const root = new URL("../", import.meta.url);
 const out = process.argv[2] ? pathToFileURL(`${process.argv[2].replace(/\/$/, "")}/`) : new URL("site-dist/", root);
@@ -205,10 +206,7 @@ ${pages.map((p) => `- [${label[p.file]}](${origin}/${p.file}.md): ${describe(p.f
 );
 
 await esbuild.build({
-  entryPoints: {
-    paste: fileURLToPath(new URL("src/web/paste.ts", root)),
-    worker: fileURLToPath(new URL("src/worker/main.ts", root)),
-  },
+  entryPoints: Object.fromEntries(Object.entries(bundleEntries).map(([name, file]) => [name, fileURLToPath(new URL(file, root))])),
   outdir: fileURLToPath(out),
   bundle: true,
   format: "esm",
