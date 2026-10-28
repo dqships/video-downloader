@@ -17,7 +17,7 @@ export const pages = [
   { path: "/terms", file: "terms" },
 ];
 
-export const repoUrl = "https://github.com/dqships/video-downloader";
+export const repoUrl = "https://github.com/dqships/vidzilla";
 
 // The 404 body for agents that ask for markdown. The middleware returns it
 // as is, and the build writes it to 404.md.

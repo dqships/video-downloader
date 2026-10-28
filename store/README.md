@@ -4,8 +4,8 @@ Everything needed to publish the extension on the Chrome Web Store and put
 the website on Vercel. You need Node 22.12 or later and pnpm 10.
 
 ```sh
-git clone https://github.com/dqships/video-downloader.git
-cd video-downloader
+git clone https://github.com/dqships/vidzilla.git
+cd vidzilla
 pnpm install
 pnpm package        # builds and writes release/vidzilla-<version>.zip (1.0.2 now)
 ```
@@ -25,7 +25,7 @@ and the test fixtures from `pnpm fixtures`).
 
 Do this first: the store listing needs the privacy policy's address.
 
-1. On vercel.com, **Add New → Project**, and import the `video-downloader`
+1. On vercel.com, **Add New → Project**, and import the `vidzilla`
    repository.
 2. Leave the settings as Vercel reads them from `vercel.json` (Framework:
    Other, build `pnpm site`, output `site-dist`) and press **Deploy**.
