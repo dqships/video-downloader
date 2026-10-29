@@ -93,10 +93,10 @@ vidzilla.followusai.com, and after a purchase checks there once a day whether
 this copy still pays to remove them. Nothing about you or your downloads is sent.
 
 Free, with an occasional ad
-Every few downloads, after the file is saved, Vidzilla shows a short ad for
-another app by the same maker, in its own popup. It never interrupts a
-download and never appears on the pages you visit. Settings > Ads turns them
-off for $0.99 a year or $9 once.
+Every few downloads, before the download starts, Vidzilla shows a short ad
+for another app by the same maker, in its own popup, then the download goes
+ahead. It never appears on the pages you visit. Settings > Ads turns them off
+with a small subscription or one payment.
 
 Not supported
 • Video protected by DRM (Netflix, Disney+, Prime Video, Spotify and similar).

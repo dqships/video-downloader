@@ -7,12 +7,17 @@
 // from site/pages.mjs. The build fails if a page breaks the launch rules
 // (title and description length, one h1) or if an inline script isn't
 // allowed by the Content-Security-Policy in vercel.json.
+// Prices come from Stripe when the build has the key (Vercel's production
+// builds), so a price changed in Vercel's settings shows after a redeploy;
+// pages write them as {{price.subscription}} and the like (api/_prices.js).
 // Usage: node scripts/build-site.mjs [outDir]   (default site-dist/)
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import * as esbuild from "esbuild";
+import { DEFAULT_OFFER, describeOffer, offerFor } from "../api/_prices.js";
+import { stripeClient } from "../api/_stripe.js";
 import { notFoundMarkdown, origin, pages, repoUrl, supportEmail } from "../site/pages.mjs";
 import { release } from "../site/release.js";
 import { bundleEntries } from "./site-inputs.mjs";
@@ -29,7 +34,19 @@ mkdirSync(out, { recursive: true });
 const partials = Object.fromEntries(
   readdirSync(new URL("site/partials/", root)).map((f) => [f.replace(/\.html$/, ""), read(`site/partials/${f}`).trimEnd()]),
 );
-const fill = (text) => text.replaceAll("{{origin}}", origin).replaceAll("{{supportEmail}}", supportEmail).replaceAll("{{repoUrl}}", repoUrl).replaceAll("{{storeUrl}}", release.storeUrl);
+async function sitePrices() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return describeOffer(DEFAULT_OFFER);
+  try {
+    return describeOffer(await offerFor(stripeClient(key), process.env));
+  } catch (err) {
+    console.warn(`Couldn't read the prices from Stripe, using the defaults: ${err.message}`);
+    return describeOffer(DEFAULT_OFFER);
+  }
+}
+const prices = await sitePrices();
+const fillPrices = (text) => text.replace(/\{\{price\.(\w+)\}\}/g, (all, name) => prices[name] ?? all);
+const fill = (text) => fillPrices(text).replaceAll("{{origin}}", origin).replaceAll("{{supportEmail}}", supportEmail).replaceAll("{{repoUrl}}", repoUrl).replaceAll("{{storeUrl}}", release.storeUrl);
 const escape = (text) => text.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
 const pageUrl = (path) => origin + path;
 
@@ -136,9 +153,10 @@ function buildPage(file, page) {
   check(description && description.length >= 120 && description.length <= 160, `description must be 120–160 characters (${description?.length})`);
   check((html.match(/<h1[\s>]/g) ?? []).length === 1, "needs exactly one <h1>");
 
-  html = html.replace("<!-- vz:meta -->", meta(page, title, description));
+  html = fillPrices(html).replace("<!-- vz:meta -->", meta(page, title, description));
   for (const [name, text] of Object.entries(partials)) html = html.replace(`    <!-- vz:${name} -->`, text);
   check(!html.includes("<!-- vz:"), "has an unknown <!-- vz: --> marker");
+  check(!html.includes("{{price."), "has an unknown {{price.}} marker");
 
   for (const [, script] of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) {
     const hash = `'sha256-${createHash("sha256").update(script).digest("base64")}'`;
@@ -192,7 +210,7 @@ writeFileSync(
   new URL("llms.txt", out),
   `# Vidzilla
 
-> Vidzilla is a free Chrome extension that finds the video playing on a page and saves it to your computer as a file, at the quality the site sent. It saves direct video files, HLS (.m3u8) and DASH (.mpd) streams, audio on its own, subtitles and live streams, and leaves DRM-protected video alone. Everything runs in the browser, with no account and no tracking. It shows a short ad for the maker's other apps every few downloads, which $0.99 a year or $9 once removes.
+> Vidzilla is a free Chrome extension that finds the video playing on a page and saves it to your computer as a file, at the quality the site sent. It saves direct video files, HLS (.m3u8) and DASH (.mpd) streams, audio on its own, subtitles and live streams, and leaves DRM-protected video alone. Everything runs in the browser, with no account and no tracking. It shows a short ad for the maker's other apps before some downloads, which ${prices.subscription} or ${prices.lifetime} removes.
 
 Every page below is also served as markdown: request its URL with \`Accept: text/markdown\`, or add \`.md\` as linked here.
 

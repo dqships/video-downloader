@@ -11,6 +11,8 @@ export type Command =
   | { kind: "scan-tab"; payload: { tabId: number } }
   /** From Settings: ask the website again whether this install paid to remove ads. */
   | { kind: "check-license" }
+  /** About to start a download: queues a house ad first when one is due. Answers `ad: true` then. */
+  | { kind: "ad-gate" }
   /** From the content script: the page gave a media element DRM keys. */
   | { kind: "page-drm"; payload: { keySystem: string } }
   /** From the content script: the page's player is fed through Media Source Extensions. */
@@ -18,7 +20,7 @@ export type Command =
   /** From the capture page: claim a player recording (once) and learn where to save it. */
   | { kind: "capture-job"; payload: { jobId: string } };
 
-export type CommandResult = { ok: true; jobId?: string; filename?: string; saveAs?: boolean } | { ok: false; error: string };
+export type CommandResult = { ok: true; jobId?: string; filename?: string; saveAs?: boolean; ad?: boolean } | { ok: false; error: string };
 
 export const storageKeys = {
   tab: (tabId: number) => `tab:${tabId}`,
@@ -36,6 +38,10 @@ export const storageKeys = {
   installId: "installId",
   /** When a copy on this Chrome profile last saw a paid license (ms), in chrome.storage.sync. */
   paidAt: "paidAt",
+  /** The checkout that confirmed this profile's purchase, in chrome.storage.sync: sent with each check. */
+  paidSession: "paidSession",
+  /** What removing the ads costs this install, as the website last said (shared/license.ts). */
+  prices: "prices",
 } as const;
 
 export function sendCommand(cmd: Command): Promise<CommandResult> {

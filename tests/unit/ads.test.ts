@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { adAfterSave, adClosed, adWatched, defaultSchedule, emptyAdState, parseFeed, type AdFeed, type AdState } from "../../src/shared/ads";
+import { adBeforeDownload, adClosed, adWatched, countSave, defaultSchedule, emptyAdState, parseFeed, type AdFeed, type AdState } from "../../src/shared/ads";
 
 const ad = (id: string) => ({ id, name: id.toUpperCase(), line: `What ${id} does.`, cta: `Get ${id}`, url: `https://example.com/${id}` });
 const feed: AdFeed = { schedule: defaultSchedule, upgradeUrl: "", ads: [ad("one"), ad("two")] };
@@ -8,17 +8,18 @@ const HOUR = 3_600_000;
 /** A real clock time: shownAt 0 means "never shown". */
 const T0 = 1_700_000_000_000;
 
-/** Saves `n` times, closing any ad that comes up after watching it in full. */
-function saves(n: number, start: AdState = emptyAdState, now = 0): { state: AdState; adsAt: number[] } {
+/** Downloads `n` times, watching any ad that comes up first in full. Returns which downloads had one. */
+function downloads(n: number, start: AdState = emptyAdState, now = 0): { state: AdState; adsAt: number[] } {
   let state = start;
   const adsAt: number[] = [];
   for (let i = 1; i <= n; i++) {
     const t = T0 + now + i * 24 * HOUR;
-    state = adAfterSave(state, feed, t, false);
+    state = adBeforeDownload(state, feed, t);
     if (state.due) {
-      adsAt.push(state.saved);
+      adsAt.push(state.saved + 1);
       state = adClosed(adWatched(state, 15_000), t);
     }
+    state = countSave(state);
   }
   return { state, adsAt };
 }
@@ -61,40 +62,40 @@ describe("parseFeed", () => {
 });
 
 describe("ad schedule", () => {
-  it("shows the first ad on the 5th save, then every 4th", () => {
-    expect(saves(18).adsAt).toEqual([5, 9, 13, 17]);
+  it("shows the first ad before the 6th download (after 5 saves), then before every 4th", () => {
+    expect(downloads(18).adsAt).toEqual([6, 10, 14, 18]);
   });
 
   it("rotates through the ads", () => {
-    let state = adAfterSave({ ...emptyAdState, saved: 4 }, feed, T0, false);
+    let state = adBeforeDownload({ ...emptyAdState, saved: 5 }, feed, T0);
     expect(state.due?.ad.id).toBe("one");
     state = adClosed(adWatched(state, 15_000), T0);
-    state = { ...state, sinceAd: 3 };
-    state = adAfterSave(state, feed, T0 + 10 * HOUR, false);
+    state = { ...state, sinceAd: 4 };
+    state = adBeforeDownload(state, feed, T0 + 10 * HOUR);
     expect(state.due?.ad.id).toBe("two");
   });
 
   it("waits at least minHours between ads", () => {
-    let state = adClosed(adWatched(adAfterSave({ ...emptyAdState, saved: 4 }, feed, T0, false), 15_000), T0);
-    for (let i = 0; i < 10; i++) state = adAfterSave(state, feed, T0 + HOUR, false);
+    let state = adClosed(adWatched(adBeforeDownload({ ...emptyAdState, saved: 5 }, feed, T0), 15_000), T0);
+    for (let i = 0; i < 10; i++) state = countSave(adBeforeDownload(state, feed, T0 + HOUR));
     expect(state.due).toBeUndefined();
-    state = adAfterSave(state, feed, T0 + 6 * HOUR, false);
+    state = adBeforeDownload(state, feed, T0 + 6 * HOUR);
     expect(state.due).toBeDefined();
   });
 
-  it("never queues an ad on a save that brings up the review or share prompt, and drops a waiting one", () => {
-    const waiting = adAfterSave({ ...emptyAdState, saved: 4 }, feed, 0, false);
-    expect(waiting.due).toBeDefined();
-    const withAsk = adAfterSave(waiting, feed, HOUR, true);
-    expect(withAsk.due).toBeUndefined();
-    expect(adAfterSave({ ...emptyAdState, saved: 4 }, feed, 0, true).due).toBeUndefined();
+  it("marks the save an ad came before, so no ask follows it", () => {
+    let state = adClosed(adWatched(adBeforeDownload({ ...emptyAdState, saved: 5 }, feed, T0), 15_000), T0);
+    expect(state.adThisSave).toBe(true);
+    state = countSave(state);
+    expect(state.adThisSave).toBe(false);
+    expect(state.sinceAd).toBe(1);
   });
 
-  it("keeps an unwatched ad waiting across saves, with the time it has left", () => {
-    let state = adAfterSave({ ...emptyAdState, saved: 4 }, feed, 0, false);
+  it("keeps an unfinished ad, with the time it has left, for the next download", () => {
+    let state = adBeforeDownload({ ...emptyAdState, saved: 5 }, feed, 0);
     state = adWatched(state, 6_000);
-    expect(adClosed(state, 0)).toBe(state); // can't close early
-    state = adAfterSave(state, feed, HOUR, false);
+    expect(adClosed(state, 0)).toBe(state); // can't move on early
+    state = adBeforeDownload(state, feed, HOUR);
     expect(state.due?.remainingMs).toBe(9_000);
     state = adClosed(adWatched(state, 9_000), HOUR);
     expect(state.due).toBeUndefined();
@@ -102,7 +103,9 @@ describe("ad schedule", () => {
   });
 
   it("shows nothing once ads are removed, or with an empty list", () => {
-    expect(saves(20, { ...emptyAdState, adFree: true }).adsAt).toEqual([]);
-    expect(adAfterSave({ ...emptyAdState, saved: 9 }, { ...feed, ads: [] }, 0, false).due).toBeUndefined();
+    expect(downloads(20, { ...emptyAdState, adFree: true }).adsAt).toEqual([]);
+    expect(adBeforeDownload({ ...emptyAdState, saved: 9 }, { ...feed, ads: [] }, 0).due).toBeUndefined();
+    const waiting = adBeforeDownload({ ...emptyAdState, saved: 5 }, feed, 0);
+    expect(adBeforeDownload({ ...waiting, adFree: true }, feed, 0).due).toBeUndefined();
   });
 });

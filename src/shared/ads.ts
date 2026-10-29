@@ -1,4 +1,5 @@
-// House ads: short ads for the maker's other apps, shown after some saves.
+// House ads: short ads for the maker's other apps, shown before some downloads
+// start: the download waits until the ad has run, then goes ahead.
 // The list is data published on the website (site/ads.json), so new ads go
 // live without an extension release. It holds text, links and an optional
 // image address, never code: everything is checked here and rendered with
@@ -22,7 +23,7 @@ export interface Ad {
 }
 
 export interface AdSchedule {
-  /** Saves before the first ad ever shows. */
+  /** Saves before the first ad ever shows (it comes before the next download). */
   firstAfter: number;
   /** Saves between one ad and the next. */
   every: number;
@@ -50,6 +51,8 @@ export interface AdState {
   next: number;
   /** The ad waiting to be watched, with the time it still has to run. */
   due?: { ad: Ad; remainingMs: number };
+  /** An ad ran before the download now under way (so no ask comes after it). */
+  adThisSave?: boolean;
   /** Paid to remove ads. */
   adFree: boolean;
 }
@@ -118,23 +121,26 @@ export function parseFeed(json: unknown): AdFeed {
 }
 
 /**
- * One completed save. `askDue` is true when the review or share prompt is
- * showing for this save: then no ad is queued, and one already waiting is
- * dropped, so a save never brings up two prompts.
+ * A download is about to start: queues an ad first when the schedule says
+ * one is due (enough saves since the last ad, and enough hours). An ad left
+ * unfinished, its popup closed early, comes back with the time it had left.
  */
-export function adAfterSave(state: AdState, feed: AdFeed, now: number, askDue: boolean): AdState {
-  const next: AdState = { ...state, saved: state.saved + 1, sinceAd: state.sinceAd + 1 };
-  if (state.adFree) return { ...next, due: undefined };
-  if (askDue) return { ...next, due: undefined };
-  if (state.due) return next;
+export function adBeforeDownload(state: AdState, feed: AdFeed, now: number): AdState {
+  if (state.adFree) return state.due ? { ...state, due: undefined } : state;
+  if (state.due) return state;
   const { schedule, ads } = feed;
-  if (ads.length === 0) return next;
+  if (ads.length === 0) return state;
   const firstAd = state.shownAt === 0;
-  const enough = firstAd ? next.saved >= schedule.firstAfter : next.sinceAd >= schedule.every;
+  const enough = firstAd ? state.saved >= schedule.firstAfter : state.sinceAd >= schedule.every;
   const rested = firstAd || now - state.shownAt >= schedule.minHours * 3_600_000;
-  if (!enough || !rested) return next;
+  if (!enough || !rested) return state;
   const ad = ads[state.next % ads.length]!;
-  return { ...next, due: { ad, remainingMs: schedule.seconds * 1000 } };
+  return { ...state, due: { ad, remainingMs: schedule.seconds * 1000 } };
+}
+
+/** A download finished: one more save toward the next ad. */
+export function countSave(state: AdState): AdState {
+  return { ...state, saved: state.saved + 1, sinceAd: state.sinceAd + 1, adThisSave: false };
 }
 
 /** Time spent looking at the ad counts down; closing the popup pauses it. */
@@ -143,8 +149,8 @@ export function adWatched(state: AdState, elapsedMs: number): AdState {
   return { ...state, due: { ...state.due, remainingMs: Math.max(0, state.due.remainingMs - elapsedMs) } };
 }
 
-/** Closing is only possible once the countdown has run out. */
+/** Moving on (to the download) is only possible once the countdown has run out. */
 export function adClosed(state: AdState, now: number): AdState {
   if (!state.due || state.due.remainingMs > 0) return state;
-  return { ...state, due: undefined, shownAt: now, sinceAd: 0, next: state.next + 1 };
+  return { ...state, due: undefined, shownAt: now, sinceAd: 0, next: state.next + 1, adThisSave: true };
 }

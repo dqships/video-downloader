@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Remove the ads from Vidzilla: $0.99 a year or $9</title>
+    <title>Remove the ads from Vidzilla: subscribe or pay once</title>
     <meta
       name="description"
-      content="Vidzilla shows a short ad for one of our other apps every few downloads. Turn the ads off for $0.99 a year or $9 once, paid securely through Stripe."
+      content="Vidzilla shows a short ad for one of our other apps every few downloads. Turn them off with a small subscription or one payment, made securely through Stripe."
     />
     <!-- vz:meta -->
     <!-- vz:assets -->
@@ -16,11 +16,11 @@
 
     <main id="main" class="prose">
       <h1 class="section-title">Remove the ads</h1>
-      <p class="vz-edge">$0.99 a year · or $9 once</p>
+      <p class="vz-edge"><span data-price="subscription">{{price.subscription}}</span> · or <span data-price="lifetime">{{price.lifetime}}</span></p>
 
       <p>
         Every few downloads, Vidzilla shows a short ad for one of our other apps. Every feature stays free either way.
-        Pay once or yearly and the ads stop in Vidzilla on this Chrome profile, and on any other computer where you're
+        Subscribe or pay once and the ads stop in Vidzilla on this Chrome profile, and on any other computer where you're
         signed in to the same profile.
       </p>
 
@@ -31,14 +31,14 @@
 
       <ol class="plans">
         <li class="plan">
-          <p class="plan-name">Yearly <span class="vz-edge">$0.99 a year</span></p>
-          <p class="plan-text">Renews once a year. Cancel any time from Manage in Vidzilla's Settings or the link in your receipt.</p>
-          <button class="vz-btn vz-btn--small plan-buy" type="button" data-plan="yearly" disabled>Pay $0.99 a year</button>
+          <p class="plan-name"><span data-price="subscriptionName">{{price.subscriptionName}}</span> <span class="vz-edge" data-price="subscription">{{price.subscription}}</span></p>
+          <p class="plan-text">Renews <span data-price="renews">{{price.renews}}</span>. Cancel any time from Manage in Vidzilla's Settings or the link in your receipt.</p>
+          <button class="vz-btn vz-btn--small plan-buy" type="button" data-plan="subscription" disabled>Pay <span data-price="subscription">{{price.subscription}}</span></button>
         </li>
         <li class="plan">
-          <p class="plan-name">Lifetime <span class="vz-edge">$9 once</span></p>
+          <p class="plan-name">Lifetime <span class="vz-edge" data-price="lifetime">{{price.lifetime}}</span></p>
           <p class="plan-text">Pay once. No renewals, no ads for as long as Vidzilla exists.</p>
-          <button class="vz-btn vz-btn--small plan-buy" type="button" data-plan="lifetime" disabled>Pay $9 once</button>
+          <button class="vz-btn vz-btn--small plan-buy" type="button" data-plan="lifetime" disabled>Pay <span data-price="lifetime">{{price.lifetime}}</span></button>
         </li>
       </ol>
       <p class="upgrade-status" id="upgrade-status" aria-live="polite"></p>

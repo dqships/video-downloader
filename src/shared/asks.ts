@@ -51,6 +51,14 @@ export function afterSave(state: AskState): AskState {
   return next;
 }
 
+/**
+ * A download finished right after a house ad: counted, but no new ask comes
+ * up on it (one prompt per download). A new ask waits for the next save.
+ */
+export function quietSave(state: AskState): AskState {
+  return { ...state, saved: state.saved + 1 };
+}
+
 export type AskAnswer =
   /** Opened the review page (from the ask or from Settings). */
   | "rate"
