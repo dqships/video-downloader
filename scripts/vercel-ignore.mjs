@@ -1,6 +1,7 @@
 // Vercel's Ignored Build Step (ignoreCommand in vercel.json): skips the
 // deployment when no file the website is built from changed since the last
 // deployment of this branch (scripts/site-inputs.mjs lists them).
+// Previews on agent branches (claude/, codex/) always skip.
 // Exit 0 skips the deployment, exit 1 builds it. Anything unexpected builds.
 // A branch's first deployment has no previous one, so it compares with main.
 // Usage: node scripts/vercel-ignore.mjs [baseCommit]   (to try it locally)
@@ -13,6 +14,15 @@ const build = (why) => {
   console.log(`Deploying: ${why}`);
   process.exit(1);
 };
+
+// Agent branches are checked locally and deploy once they merge to main,
+// so their previews would only add a second copy of every change to function storage.
+const branch = process.env.VERCEL_GIT_COMMIT_REF ?? "";
+const agentBranchPrefixes = ["claude/", "codex/"];
+if (process.env.VERCEL_ENV === "preview" && agentBranchPrefixes.some((prefix) => branch.startsWith(prefix))) {
+  console.log(`Skipping: no previews for agent branch ${branch}.`);
+  process.exit(0);
+}
 
 let base = process.argv[2] || process.env.VERCEL_GIT_PREVIOUS_SHA;
 const firstDeployment = !base;
