@@ -996,6 +996,63 @@ code {
   grid-row: 1 / span 2;
 }
 
+.plan-offer {
+  grid-column: 1;
+  margin: 0;
+  color: var(--color-primary);
+  font-weight: var(--weight-bold);
+}
+
+/* A running offer: a frame of film edge print around the claimed count. --- */
+
+.offer {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: var(--size-hairline) solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-soft);
+}
+
+/* Only finished rounds: a record, not a call to act. */
+.offer--ended {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.offer > p {
+  margin: 0;
+}
+
+.offer-title:empty,
+.offer-status:empty,
+.offer-past:empty,
+#offer-edge:empty {
+  display: none;
+}
+
+.offer-title {
+  font-size: var(--text-md);
+  line-height: var(--text-md-lh);
+  font-weight: var(--weight-bold);
+  font-stretch: var(--stretch-wide);
+  color: var(--color-text);
+}
+
+.offer-status {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.offer-past {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-muted);
+}
+
 .upgrade-note,
 .upgrade-status:not(:empty) {
   margin: 0;
