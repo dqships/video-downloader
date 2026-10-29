@@ -133,6 +133,10 @@ up; ads keep working either way.
   pages pick it up. Settings and the upgrade page follow within 6 hours and
   10 minutes; no extension release. Existing subscribers keep the price they
   signed up at.
+- **Dropping one price:** delete its ID from `STRIPE_PRICE_SUBSCRIPTIONS`
+  and redeploy; installs split evenly across the prices left. Removing or
+  reordering IDs moves installs between groups, so some people see a
+  different price than before; swapping an ID in place moves nobody.
 - **Ending the test:** set `STRIPE_PRICE_SUBSCRIPTIONS` to the winner alone
   and redeploy; everyone then sees that price.
 - **Reading the test:** in Stripe, Payments or Subscriptions, filter or
