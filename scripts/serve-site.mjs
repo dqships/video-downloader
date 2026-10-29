@@ -1,6 +1,6 @@
 // Serves site-dist/ the way Vercel will: vercel.json's clean URLs and headers,
-// the routing middleware (markdown negotiation), and 404.html with a 404
-// status. Not Vercel itself, but close enough to check the site before a deploy.
+// the routing middleware (markdown negotiation), 404.html with a 404 status,
+// and empty stand-ins for Vercel's own /_vercel/ scripts. Not Vercel itself, but close enough to check the site before a deploy.
 // Usage: node scripts/build-site.mjs && node scripts/serve-site.mjs [port]
 import { readFileSync, statSync } from "node:fs";
 import { createServer } from "node:http";
@@ -69,6 +69,11 @@ async function handle(dist, req, res) {
       path = new URL(rewrite).pathname;
       extra = Object.fromEntries([...response.headers].filter(([k]) => k !== "x-middleware-rewrite"));
     }
+  }
+
+  // Vercel serves its own /_vercel/ scripts (Web Analytics); here they're empty, so pages load cleanly.
+  if (/^\/_vercel\/[\w-]+\/script\.js$/.test(path)) {
+    return void res.writeHead(200, merge({ "Content-Type": TYPES[".js"] }, headers)).end("");
   }
 
   const found = file(dist, path);
