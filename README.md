@@ -165,7 +165,9 @@ extension's reload button.
   `api/`, the Vercel and package config, and the extension modules the
   paste box bundles, found by following imports) skips the deployment, and
   Vercel marks it ignored. It compares with the branch's last deployment, or
-  with `main` on a branch's first. Redeploying a commit always builds. If
+  with `main` on a branch's first. Redeploying a commit always builds.
+  Previews on `claude/` and `codex/` branches always skip: check agent work
+  locally, and it deploys once it merges to `main`. If
   the site build starts reading a new file, add it to `sitePaths`; a unit test
   fails when a bundled file isn't covered. Try it with
   `node scripts/vercel-ignore.mjs <commit>`.
