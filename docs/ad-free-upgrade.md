@@ -65,7 +65,8 @@ chrome.storage.sync)
 | --- | --- |
 | Start a checkout | `api/checkout.js` (`POST {plan, id}` → `{url}`) |
 | License check | `api/license.js` (`GET ?id=&session=` → `{adFree, plan, until}`) |
-| Prices | `api/prices.js` (`GET ?id=` → this install's prices as text), `api/_prices.js` (tests: `tests/unit/prices-api.test.ts`) |
+| Prices | `api/prices.js` (`GET ?id=` → this install's prices and the launch offer as text), `api/_prices.js` (tests: `tests/unit/prices-api.test.ts`) |
+| Launch offers | `api/_promos.js` (tests: `tests/unit/promos.test.ts`) |
 | Customer portal | `api/portal.js` (`POST {id}` → `{url}`), for Manage on a subscription |
 | Shared Stripe code | `api/_stripe.js` (tests: `tests/unit/license-api.test.ts`) |
 | Upgrade and thanks pages | `site/upgrade.html`, `site/upgrade-thanks.html`, `site/upgrade.js` |
@@ -93,6 +94,7 @@ and nothing else:
 | Charges | Read |
 | Subscriptions | Read |
 | Prices, Products, Customers | Read |
+| Coupons, Promotion codes | Read (for launch offers, `api/_promos.js`) |
 | Customer portal | Write (for Manage, `api/portal.js`) |
 
 The customer portal must be turned on in live mode: Stripe dashboard,
@@ -107,6 +109,7 @@ Vercel (project `vidzilla`, Production):
 | `STRIPE_PRICE_SUBSCRIPTIONS` | the subscription prices under test, in group order: `price_1UVCY5DyfH6JDnExHp32eh4D,price_1UVw1zDyfH6JDnEx6vg7rnpw,price_1UVw2LDyfH6JDnExXYV5n9bw` |
 | `STRIPE_PRICE_YEARLY` | `price_1UVCY5DyfH6JDnExHp32eh4D`, used only when `STRIPE_PRICE_SUBSCRIPTIONS` is empty |
 | `STRIPE_PRICE_LIFETIME` | `price_1UVCYWDyfH6JDnExJGS2PSsl` |
+| `STRIPE_PROMO_CODES` | optional: launch offer codes, oldest first, such as `LAUNCH100,LAUNCH50` (see below) |
 
 Without them the API answers 503 and the upgrade page says checkout isn't set
 up; ads keep working either way.
@@ -144,10 +147,36 @@ up; ads keep working either way.
   each group has (about a third each). The figure to compare is revenue per
   install over the same period, since a cheaper price may sell more often.
 
+## Launch offers
+
+A launch offer is a promotion code that checkout applies for the buyer and
+the upgrade page advertises, with how many people have claimed it.
+
+1. In Stripe, make a coupon (Product catalog, Coupons). Its **name** is the
+   offer's label on the page ("Launch offer"), and its **duration** sets
+   the wording: Forever reads "for as long as you stay subscribed", Once
+   reads "your first year" (or week, or 3 months, by the buyer's price), and
+   a number of months reads as the billing periods it covers. Lifetime gets
+   the discount once whatever the duration.
+2. On the coupon, **Add promotion code**, with a code (`LAUNCH100`), and
+   under its options a limit on redemptions and an expiry date if wanted.
+3. In Vercel, add the code to the end of `STRIPE_PROMO_CODES` and redeploy.
+
+The last code in the list that is still running (active, under its limit,
+before its end date) is applied to every checkout; the page shows its
+headline ("Your first year free."), "63 of 100 claimed · ends 30
+November", and each plan's price with it. Codes before it that were used
+stay listed as finished rounds ("Launch offer: 100 people got Vidzilla
+ad-free for free."). When the running code runs out or expires, checkout
+goes back to full price with the code box, and the page shows only the
+finished rounds; no deploy needed. The counts are Stripe's
+`times_redeemed`, read at most once a minute. If the key can't read
+promotion codes, offers are left out and checkout works as before.
+
 ## Coupons
 
-Checkout has `allow_promotion_codes` on, so Stripe's page shows an "Add
-promotion code" field. A coupon is the discount; customers type a
+Without a running launch offer, checkout has `allow_promotion_codes` on, so
+Stripe's page shows an "Add promotion code" field. A coupon is the discount; customers type a
 **promotion code** made from it (Stripe dashboard, Product catalog, Coupons,
 open the coupon, **Add promotion code**). A 100% off code works on lifetime
 too: the kept checkout above keeps it counted.

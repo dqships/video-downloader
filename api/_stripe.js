@@ -49,15 +49,17 @@ export function stripeClient(secretKey, fetchImpl = fetch) {
 /**
  * The Checkout Session that sells one of the two plans to one install, at
  * the prices of its test group (see _prices.js). The group goes on the
- * payment too, so sales can be compared per group in Stripe. Customers can
- * enter a promotion code made from a Stripe coupon.
+ * payment too, so sales can be compared per group in Stripe. With an offer
+ * running (see _promos.js) its promotion code is applied for the buyer;
+ * otherwise they can enter one made from a Stripe coupon. Stripe allows one
+ * or the other, not both.
  */
-export function checkoutParams(plan, installId, offer) {
+export function checkoutParams(plan, installId, offer, promoId) {
   const tags = { install_id: installId, variant: offer.variant };
   const common = {
     client_reference_id: installId,
     metadata: { ...tags, plan },
-    allow_promotion_codes: true,
+    ...(promoId ? { discounts: { 0: { promotion_code: promoId } } } : { allow_promotion_codes: true }),
     success_url: `${ORIGIN}/upgrade-thanks?id=${installId}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${ORIGIN}/upgrade?id=${installId}`,
   };
