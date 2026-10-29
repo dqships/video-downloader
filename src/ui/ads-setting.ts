@@ -1,8 +1,9 @@
 // The Ads row in Settings: whether ads are on, the way to remove them (or, on
-// a yearly plan, Stripe's customer portal to cancel it or change the card),
-// and a check for a purchase made on another computer.
+// a subscription, Stripe's customer portal to cancel it or change the card),
+// and a check for a purchase made on another computer. The prices come from
+// the website, so a price changed there (or under test) shows here too.
 
-import { PORTAL_URL, UPGRADE_URL, getInstallId, isAdFree, loadLicense, upgradeLink, type License } from "../shared/license";
+import { PORTAL_URL, UPGRADE_URL, getInstallId, isAdFree, loadLicense, loadPrices, refreshPrices, upgradeLink, type License, type Prices } from "../shared/license";
 import { sendCommand, storageKeys } from "../shared/messages";
 
 const DATE = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" });
@@ -13,11 +14,15 @@ export function bindAdsSetting(root: ParentNode): void {
   const check = root.querySelector<HTMLButtonElement>(".vz-ads-check");
   if (!status || !action || !check) return;
 
-  let yearly = false;
-  const render = (license: License): void => {
+  let subscribed = false;
+  let prices: Prices | undefined;
+  let license: License | undefined;
+  const render = (): void => {
+    if (!license) return;
     const paid = isAdFree(license, Date.now());
-    yearly = paid && Boolean(license.until);
-    if (!paid) status.textContent = "A short ad for one of our other apps every few downloads. Remove them for $0.99 a year or $9 once.";
+    subscribed = paid && Boolean(license.until);
+    const remove = prices ? `Remove them for ${prices.subscription} or ${prices.lifetime}.` : "Remove them with a small subscription or one payment.";
+    if (!paid) status.textContent = `A short ad for one of our other apps before some downloads. ${remove}`;
     else if (license.until) status.textContent = `Off until ${DATE.format(license.until)}. Thanks for supporting Vidzilla.`;
     else status.textContent = "Off for good. Thanks for supporting Vidzilla.";
     action.textContent = paid ? "Manage" : "Remove ads";
@@ -27,7 +32,7 @@ export function bindAdsSetting(root: ParentNode): void {
   };
 
   action.addEventListener("click", async () => {
-    if (!yearly) {
+    if (!subscribed) {
       await chrome.tabs.create({ url: await upgradeLink(UPGRADE_URL) });
       return;
     }
@@ -57,8 +62,12 @@ export function bindAdsSetting(root: ParentNode): void {
     check.textContent = "Check again";
     check.disabled = false;
   });
+  const show = async (): Promise<void> => {
+    [license, prices] = await Promise.all([loadLicense(), loadPrices()]);
+    render();
+  };
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && storageKeys.license in changes) void loadLicense().then(render);
+    if (area === "local" && (storageKeys.license in changes || storageKeys.prices in changes)) void show();
   });
-  void loadLicense().then(render);
+  void show().then(() => refreshPrices());
 }

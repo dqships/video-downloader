@@ -16,6 +16,7 @@ import { enrich } from "./sites";
 import { Registry } from "./registry";
 import { clearStaleRules } from "./replay";
 import { refreshLicense, refreshLicenseIfStale, watchThanksPage } from "./license";
+import { gateDownload } from "./ads";
 import { watchSidePanelSetting } from "./side-panel";
 
 /** Single-page apps swap videos without a page load; look again once they settle. */
@@ -343,6 +344,10 @@ async function handle(cmd: Command, sender: chrome.runtime.MessageSender): Promi
     case "check-license":
       await refreshLicense();
       return { ok: true };
+    case "ad-gate":
+      // A paid upgrade, or a subscription running out, should count before any ad.
+      await refreshLicenseIfStale().catch(() => {});
+      return { ok: true, ad: await gateDownload() };
   }
 }
 

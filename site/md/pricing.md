@@ -7,7 +7,7 @@ There is one version of Vidzilla and it costs nothing. You get every feature the
 | Plan | Price | What you get |
 | --- | --- | --- |
 | Vidzilla | $0, forever | Every feature below, with a short ad every few downloads |
-| Without ads | $0.99 a year, or $9 once | The same, with the ads turned off. Buy it from Vidzilla's Settings, under Ads ([how it works]({{origin}}/upgrade)) |
+| Without ads | {{price.subscription}}, or {{price.lifetime}} | The same, with the ads turned off. Buy it from Vidzilla's Settings, under Ads ([how it works]({{origin}}/upgrade)) |
 
 ## What's included
 

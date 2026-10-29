@@ -8,7 +8,7 @@ import { buildFilename, savedExt } from "../shared/naming";
 import { defaultSettings, loadSettings, type Settings } from "../shared/settings";
 import type { DownloadJob, MediaItem, StreamVariant, TabMedia } from "../shared/types";
 import { setOpenMode } from "../shared/open-mode";
-import { bindAd } from "./ads-view";
+import { bindAd, type AdGate } from "./ads-view";
 import { bindAsk, bindAskButtons } from "./asks-view";
 import { bindHistory } from "./history-view";
 import { icons } from "./icons";
@@ -24,6 +24,8 @@ let settings: Settings = defaultSettings;
 let tabId = -1;
 let tab: TabMedia | undefined;
 let jobs: Record<string, DownloadJob> = {};
+/** House ads before downloads (ads-view.ts); set once the page is bound. */
+let ad: AdGate | undefined;
 const frames = new Map<string, HTMLElement>();
 /** Names the user typed, by media id; they win over the template. */
 const edited = new Map<string, string>();
@@ -127,12 +129,16 @@ function createFrame(item: MediaItem): HTMLElement {
       await sendCommand({ kind: job.recording ? "stop" : "cancel", payload: { jobId: job.jobId } });
       return;
     }
-    const res = await sendCommand({
-      kind: "download",
-      payload: { tabId, mediaId: item.id, filename: edited.get(item.id), variantId: chosenVariant.get(item.id), subtitleId: chosenSubtitle.get(item.id) || undefined },
-    });
-    if (!res.ok) pendingErrors.set(item.id, res.error);
-    render();
+    const start = async (): Promise<void> => {
+      const res = await sendCommand({
+        kind: "download",
+        payload: { tabId, mediaId: item.id, filename: edited.get(item.id), variantId: chosenVariant.get(item.id), subtitleId: chosenSubtitle.get(item.id) || undefined },
+      });
+      if (!res.ok) pendingErrors.set(item.id, res.error);
+      render();
+    };
+    // A house ad may come first; the download starts when it's done.
+    await (ad ? ad.gate(start) : start());
   });
   return frame;
 }
@@ -415,7 +421,7 @@ function setupControls(): void {
   bindHistory(document);
   bindAskButtons(document);
   bindAsk(document);
-  bindAd(document);
+  ad = bindAd(document);
 
   const mode = document.querySelector<HTMLButtonElement>("#switch-mode")!;
   [mode.innerHTML, mode.title] = isPanel ? [icons.popup, "Switch to the popup"] : [icons.sidePanel, "Switch to the side panel"];

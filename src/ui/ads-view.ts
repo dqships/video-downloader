@@ -1,19 +1,25 @@
-// The house ad in the popup and side panel. When the service worker has
-// queued one (shared/ads.ts), it takes the place of the strip and foot and
-// counts down; Close appears when the time is up. The countdown only runs
-// while the ad is on screen: closing the popup or opening settings pauses
-// it, and the time left is kept in storage so it picks up where it stopped.
+// The house ad in the popup and side panel. A download button goes through
+// gate(): when the service worker says an ad is due (shared/ads.ts), the ad
+// takes the place of the strip and foot and counts down, and Continue starts
+// the download once the time is up. The countdown only runs while the ad is
+// on screen: closing the popup or opening settings pauses it, and the time
+// left is kept in storage, so the next download picks up where it stopped.
 // Everything shown comes from the ad list as text, never as HTML.
 
 import { adClosed, adWatched, emptyAdState, type AdFeed, type AdState } from "../shared/ads";
 import { upgradeLink } from "../shared/license";
-import { storageKeys } from "../shared/messages";
+import { sendCommand, storageKeys } from "../shared/messages";
+
+export interface AdGate {
+  /** Runs `start` now, or after an ad when one is due. */
+  gate(start: () => Promise<void>): Promise<void>;
+}
 
 const TICK_MS = 250;
 /** How often the time watched is written back to storage. */
 const SAVE_MS = 1000;
 
-export function bindAd(doc: Document): void {
+export function bindAd(doc: Document): AdGate {
   const section = doc.querySelector<HTMLElement>("#ad")!;
   const views = [...doc.querySelectorAll<HTMLElement>("#settings-view, #saved-view")];
   const icon = section.querySelector<HTMLElement>(".vz-ad-icon")!;
@@ -33,8 +39,10 @@ export function bindAd(doc: Document): void {
   let lastTick = 0;
   let sinceSave = 0;
   let timer: ReturnType<typeof setInterval> | undefined;
+  /** The download waiting for the ad. */
+  let pending: (() => Promise<void>) | undefined;
 
-  const visible = () => Boolean(state.due) && !state.adFree && views.every((v) => v.hidden);
+  const visible = () => Boolean(state.due) && Boolean(pending) && !state.adFree && views.every((v) => v.hidden);
   const remaining = () => Math.max(0, (state.due?.remainingMs ?? 0) - unsaved);
 
   async function save(): Promise<void> {
@@ -62,7 +70,7 @@ export function bindAd(doc: Document): void {
     perf.style.setProperty("--vz-perf-value", `${done * 100}%`);
     perf.setAttribute("aria-valuenow", String(Math.round(done * 100)));
     close.disabled = left > 0;
-    close.textContent = left > 0 ? `Close in ${seconds}` : "Close";
+    close.textContent = left > 0 ? `Continue in ${seconds}` : "Continue";
   }
 
   function tick(): void {
@@ -114,8 +122,14 @@ export function bindAd(doc: Document): void {
 
   close.addEventListener("click", async () => {
     await save();
-    const stored = await read();
-    await chrome.storage.local.set({ [storageKeys.ads]: adClosed(stored, Date.now()) });
+    const done = adClosed(await read(), Date.now());
+    if (done.due) return;
+    const start = pending;
+    pending = undefined;
+    state = done;
+    render();
+    await chrome.storage.local.set({ [storageKeys.ads]: done });
+    await start?.();
   });
 
   // Settings and saved files swap the strip out; the ad steps aside with it and comes back after.
@@ -135,4 +149,14 @@ export function bindAd(doc: Document): void {
     state = s;
     render();
   });
+
+  return {
+    async gate(start) {
+      const res = await sendCommand({ kind: "ad-gate" }).catch(() => undefined);
+      if (!res?.ok || !res.ad) return start();
+      pending = start;
+      state = await read();
+      render();
+    },
+  };
 }

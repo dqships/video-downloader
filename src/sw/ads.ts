@@ -1,7 +1,8 @@
-// House ads, service worker side: keeps the ad list fresh and queues an ad
-// after a save when the schedule says so. The popup shows it (ui/ads-view.ts).
+// House ads, service worker side: keeps the ad list fresh, queues an ad
+// before a download when the schedule says so, and counts saves. The popup
+// shows the ad and starts the download after it (ui/ads-view.ts).
 
-import { ADS_FEED_URL, adAfterSave, emptyAdState, parseFeed, type AdFeed, type AdState } from "../shared/ads";
+import { ADS_FEED_URL, adBeforeDownload, countSave, emptyAdState, parseFeed, type AdFeed, type AdState } from "../shared/ads";
 import { storageKeys } from "../shared/messages";
 
 /** How long a fetched ad list is used before it's fetched again. */
@@ -38,14 +39,17 @@ export async function loadAdState(): Promise<AdState> {
   return { ...emptyAdState, ...stored };
 }
 
-/**
- * Counts one completed save. `askDue` says the review or share prompt is up
- * for this save, in which case no ad comes with it. Returns whether an ad is
- * now waiting to be shown.
- */
-export async function noteSavedForAds(askDue: boolean): Promise<boolean> {
+/** A download is about to start. Returns whether an ad must run first. */
+export async function gateDownload(): Promise<boolean> {
   const [state, feed] = await Promise.all([loadAdState(), loadFeed()]);
-  const next = adAfterSave(state, feed, Date.now(), askDue);
-  await chrome.storage.local.set({ [storageKeys.ads]: next });
+  const next = adBeforeDownload(state, feed, Date.now());
+  if (next !== state) await chrome.storage.local.set({ [storageKeys.ads]: next });
   return Boolean(next.due);
+}
+
+/** Counts one completed save. Returns whether an ad ran before it. */
+export async function countSaveForAds(): Promise<boolean> {
+  const state = await loadAdState();
+  await chrome.storage.local.set({ [storageKeys.ads]: countSave(state) });
+  return Boolean(state.adThisSave);
 }

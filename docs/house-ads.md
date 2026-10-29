@@ -1,6 +1,6 @@
 # House ads
 
-Vidzilla shows short ads for the maker's other apps after some downloads. The
+Vidzilla shows short ads for the maker's other apps before some downloads. The
 list lives on the website as data, so ads can be added, changed or switched
 off without a new extension release.
 
@@ -59,11 +59,11 @@ Ads take turns in the order they're listed.
 | `firstAfter` | 5 | Completed downloads before the first ad ever | 1–100 |
 | `every` | 4 | Completed downloads from one ad to the next | 2–100 |
 | `minHours` | 6 | Hours that must pass between two ads, however many downloads | 0–720 |
-| `seconds` | 15 | How long the ad stays up before Close appears | 0–15 |
+| `seconds` | 15 | How long the ad stays up before Continue can be pressed | 0–15 |
 
-So by default: the first ad comes after the 5th download (the review prompt
-comes on the 3rd and the share prompt on the 6th), then at most one ad
-every 4 downloads and never more than one in 6 hours. Someone saving a couple
+So by default: the first ad comes before the 6th download, once 5 have
+finished (the review prompt comes on the 3rd and the share prompt on the
+6th), then at most one ad every 4 downloads and never more than one in 6 hours. Someone saving a couple
 of videos a day sees about one ad every two days; a heavy user sees at most
 four a day.
 
@@ -76,17 +76,19 @@ it with the install's ID. Empty hides the link. See
 
 ## How an ad behaves
 
-- It shows after a download finishes, never before or during one, so it never
-  delays a file.
+- It shows when the person presses Download and an ad is due, before the
+  download starts (decided 29 October 2026; it used to show after the file
+  saved). The popup asks the service worker (`{kind: "ad-gate"}`), which
+  decides from the schedule.
 - It takes the place of the video list in the popup or side panel, labelled
-  "Ad" with "From the maker of Vidzilla", for 15 seconds. Then a Close button
-  appears.
+  "Ad" with "From the maker of Vidzilla", for 15 seconds. Then the button
+  reads Continue, and pressing it closes the ad and starts the download.
 - The countdown only runs while the ad is on screen. Closing the popup pauses
-  it, and the ad comes back with the time it had left the next time the popup
-  opens.
+  it and starts nothing; the ad comes back with the time it had left the next
+  time the person presses Download.
 - Settings stay reachable while an ad is up; the countdown pauses while they are open.
-- One prompt per download: if the review or share prompt comes up for a
-  download, no ad comes with it, and an ad that was still waiting is dropped.
+- One prompt per download: a download that had an ad before it gets no
+  review or share prompt when it saves; that prompt waits for a later one.
 
 ## Chrome Web Store rules this follows
 
@@ -102,7 +104,7 @@ requirements for Manifest V3"), checked 27 October 2026:
 - Ads "may not simulate or impersonate system notifications": the ad is never
   a Chrome notification.
 - "Forcing the user to click on ads ... is prohibited": the ad only asks the
-  user to wait; Close never requires clicking the ad.
+  user to wait; Continue never requires clicking the ad.
 - Remote data is allowed, remote code is not: `ads.json` is text and links.
 - None of the policies mention timed or unskippable ads. The 15-second wait is
   the part a reviewer could still judge as disruptive under the quality

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { isAdFree, nextPaidAt, noLicense, parseLicense, shouldCheck } from "../../src/shared/license";
+import { isAdFree, nextPaidAt, noLicense, parseLicense, parsePrices, shouldCheck } from "../../src/shared/license";
 
 describe("ad-free license", () => {
   it("reads the website's answer and ignores anything else", () => {
     expect(parseLicense({ adFree: true, plan: "lifetime", until: null }, 5)).toEqual({ adFree: true, plan: "lifetime", until: null, checkedAt: 5 });
-    expect(parseLicense({ adFree: true, plan: "yearly", until: 99 }, 5)).toEqual({ adFree: true, plan: "yearly", until: 99, checkedAt: 5 });
+    expect(parseLicense({ adFree: true, plan: "subscription", until: 99 }, 5)).toEqual({ adFree: true, plan: "subscription", until: 99, checkedAt: 5 });
+    // What the website said before subscriptions could be weekly or quarterly.
+    expect(parseLicense({ adFree: true, plan: "yearly", until: 99 }, 5)).toEqual({ adFree: true, plan: "subscription", until: 99, checkedAt: 5 });
     expect(parseLicense({ adFree: false }, 5)).toEqual({ adFree: false, checkedAt: 5 });
     expect(parseLicense({ error: "Couldn't check right now" }, 5)).toBeUndefined();
     expect(parseLicense(null, 5)).toBeUndefined();
@@ -45,5 +47,14 @@ describe("when a copy checks on its own", () => {
     expect(nextPaidAt(3, false, 3 + DAY - 1)).toBe(3);
     expect(nextPaidAt(3, false, 3 + DAY)).toBeUndefined();
     expect(nextPaidAt(undefined, false, 7)).toBeUndefined();
+  });
+});
+
+describe("prices from the website", () => {
+  it("reads the two prices and ignores anything else", () => {
+    expect(parsePrices({ subscription: "$0.99 a week", lifetime: "$9 once", variant: "b" }, 7)).toEqual({ subscription: "$0.99 a week", lifetime: "$9 once", fetchedAt: 7 });
+    expect(parsePrices({ error: "Couldn't look up the prices" }, 7)).toBeUndefined();
+    expect(parsePrices({ subscription: "x".repeat(41), lifetime: "$9 once" }, 7)).toBeUndefined();
+    expect(parsePrices(null, 7)).toBeUndefined();
   });
 });

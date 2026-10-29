@@ -46,28 +46,35 @@ export function stripeClient(secretKey, fetchImpl = fetch) {
   };
 }
 
-/** The Checkout Session that sells one of the two plans to one install. */
-export function checkoutParams(plan, installId, prices) {
+/**
+ * The Checkout Session that sells one of the two plans to one install, at
+ * the prices of its test group (see _prices.js). The group goes on the
+ * payment too, so sales can be compared per group in Stripe. Customers can
+ * enter a promotion code made from a Stripe coupon.
+ */
+export function checkoutParams(plan, installId, offer) {
+  const tags = { install_id: installId, variant: offer.variant };
   const common = {
     client_reference_id: installId,
-    metadata: { install_id: installId, plan },
+    metadata: { ...tags, plan },
+    allow_promotion_codes: true,
     success_url: `${ORIGIN}/upgrade-thanks?id=${installId}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${ORIGIN}/upgrade?id=${installId}`,
   };
-  if (plan === "yearly") {
+  if (plan === "subscription") {
     return {
       ...common,
       mode: "subscription",
-      line_items: { 0: { quantity: 1, price: prices.yearly } },
-      subscription_data: { metadata: { install_id: installId } },
+      line_items: { 0: { quantity: 1, price: offer.priceIds.subscription } },
+      subscription_data: { metadata: tags },
     };
   }
   return {
     ...common,
     mode: "payment",
     customer_creation: "always",
-    line_items: { 0: { quantity: 1, price: prices.lifetime } },
-    payment_intent_data: { metadata: { install_id: installId } },
+    line_items: { 0: { quantity: 1, price: offer.priceIds.lifetime } },
+    payment_intent_data: { metadata: tags },
   };
 }
 
@@ -84,17 +91,24 @@ const NONE = { adFree: false };
 /**
  * Has this install paid? With the session ID from the thanks page, the answer
  * comes from that checkout directly (search lags behind by up to a minute).
- * Otherwise Stripe is searched for a live subscription or a paid, unrefunded
- * one-time payment carrying the install ID.
+ * The extension keeps that ID and sends it with every later check too, which
+ * is the only record of a one-time purchase a 100% off coupon made free (no
+ * payment exists to search for). Otherwise Stripe is searched for a live
+ * subscription or a paid, unrefunded one-time payment carrying the install ID.
  */
 export async function checkLicense(stripe, installId, sessionId) {
   if (sessionId) {
-    const session = await stripe("GET", `/v1/checkout/sessions/${sessionId}`, { expand: ["subscription"] });
+    const session = await stripe("GET", `/v1/checkout/sessions/${sessionId}`, { expand: ["subscription", "payment_intent.latest_charge"] });
     if (session.client_reference_id === installId && session.status === "complete" && session.payment_status !== "unpaid") {
-      if (session.mode === "subscription" && session.subscription) {
-        return { adFree: true, plan: "yearly", until: periodEnd(session.subscription) };
+      const sub = session.subscription;
+      if (session.mode === "subscription" && sub && LIVE_SUBSCRIPTION.has(sub.status)) {
+        return { adFree: true, plan: "subscription", until: periodEnd(sub) };
       }
-      if (session.mode === "payment") return { adFree: true, plan: "lifetime", until: null };
+      if (session.mode === "payment") {
+        const free = session.payment_status === "no_payment_required";
+        const charge = session.payment_intent?.latest_charge;
+        if (free || (session.payment_intent?.status === "succeeded" && !charge?.refunded)) return { adFree: true, plan: "lifetime", until: null };
+      }
     }
   }
 
@@ -109,13 +123,13 @@ export async function checkLicense(stripe, installId, sessionId) {
   const live = subs.data.filter((s) => LIVE_SUBSCRIPTION.has(s.status));
   if (live.length) {
     const until = Math.max(...live.map((s) => periodEnd(s) ?? 0));
-    return { adFree: true, plan: "yearly", until: until || null };
+    return { adFree: true, plan: "subscription", until: until || null };
   }
   return NONE;
 }
 
 /**
- * A Stripe customer portal session for this install's yearly plan, where the
+ * A Stripe customer portal session for this install's subscription, where the
  * buyer can cancel it or change the card. The install ID finds the customer
  * through the subscription's metadata; undefined when it has no plan.
  */
@@ -130,9 +144,9 @@ export async function portalSession(stripe, installId) {
   return session.url;
 }
 
-export function json(body, status = 200) {
+export function json(body, status = 200, cache = "no-store") {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
+    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": cache },
   });
 }

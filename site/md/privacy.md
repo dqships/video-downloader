@@ -19,7 +19,7 @@ On your computer. The list of media found in each tab is kept in Chrome's sessio
 Nothing about you or what you save. Most of Vidzilla's requests go to the sites that host the media you choose to save, the same requests the page itself made. Two small ones go to our website, vidzilla.followusai.com:
 
 - **The list of ads**: every few hours it downloads ads.json, the text and links of the current ads. Seeing or clicking an ad isn't reported anywhere.
-- **The ad-free check**: when you buy, when you press Check again, and once a day after you've paid, it sends your copy's install ID, a random code made when Vidzilla was installed and synced with your Chrome profile, and gets back whether that ID paid to remove ads. On a yearly plan, Manage in Settings sends the same ID to open Stripe's billing page, where you can cancel or change your card. It asks Stripe and answers yes or no, and keeps no records of its own.
+- **The ad-free check**: when you buy, when you press Check again, and once a day after you've paid, it sends your copy's install ID, a random code made when Vidzilla was installed and synced with your Chrome profile, and gets back whether that ID paid to remove ads. On a subscription, Manage in Settings sends the same ID to open Stripe's billing page, where you can cancel or change your card. Opening Settings also asks, at most every few hours, what removing the ads costs this copy, sending the same ID. It asks Stripe and answers yes or no, and keeps no records of its own.
 
 These requests carry no cookies and nothing about you or your downloads. Like any web request they reach our host, Vercel, from your IP address, which we don't use to identify you.
 

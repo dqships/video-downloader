@@ -18,20 +18,24 @@ function fake(routes: Record<string, unknown>) {
 const empty = { data: [] };
 
 describe("checkout", () => {
-  it("sells the yearly plan as a subscription tagged with the install ID", () => {
-    const p = checkoutParams("yearly", ID, { yearly: "price_y", lifetime: "price_l" });
+  const offer = { variant: "b", priceIds: { subscription: "price_s", lifetime: "price_l" } };
+
+  it("sells the subscription at the install's group price, tagged with the install ID and group", () => {
+    const p = checkoutParams("subscription", ID, offer);
     expect(p.mode).toBe("subscription");
-    expect(p.line_items[0]).toEqual({ quantity: 1, price: "price_y" });
-    expect(p.subscription_data.metadata.install_id).toBe(ID);
+    expect(p.line_items[0]).toEqual({ quantity: 1, price: "price_s" });
+    expect(p.subscription_data.metadata).toEqual({ install_id: ID, variant: "b" });
     expect(p.client_reference_id).toBe(ID);
+    expect(p.allow_promotion_codes).toBe(true);
     expect(p.success_url).toContain("{CHECKOUT_SESSION_ID}");
   });
 
-  it("sells lifetime as a one-time payment tagged with the install ID", () => {
-    const p = checkoutParams("lifetime", ID, { yearly: "price_y", lifetime: "price_l" });
+  it("sells lifetime as a one-time payment tagged with the install ID and group", () => {
+    const p = checkoutParams("lifetime", ID, offer);
     expect(p.mode).toBe("payment");
     expect(p.line_items[0].price).toBe("price_l");
-    expect(p.payment_intent_data.metadata.install_id).toBe(ID);
+    expect(p.payment_intent_data.metadata).toEqual({ install_id: ID, variant: "b" });
+    expect(p.allow_promotion_codes).toBe(true);
   });
 
   it("form-encodes nested params the way Stripe reads them", () => {
@@ -62,12 +66,12 @@ describe("license", () => {
     expect(await checkLicense(stripe, ID)).toEqual({ adFree: false });
   });
 
-  it("is ad-free until the end of a live yearly subscription, not after it lapses", async () => {
+  it("is ad-free until the end of a live subscription, not after it lapses", async () => {
     const live = fake({
       "/v1/payment_intents/search": empty,
       "/v1/subscriptions/search": { data: [{ status: "active", current_period_end: 1_900_000_000 }] },
     });
-    expect(await checkLicense(live.stripe, ID)).toEqual({ adFree: true, plan: "yearly", until: 1_900_000_000_000 });
+    expect(await checkLicense(live.stripe, ID)).toEqual({ adFree: true, plan: "subscription", until: 1_900_000_000_000 });
     const lapsed = fake({
       "/v1/payment_intents/search": empty,
       "/v1/subscriptions/search": { data: [{ status: "canceled", current_period_end: 1_700_000_000 }] },
@@ -84,7 +88,13 @@ describe("license", () => {
 
   it("trusts the thanks page's checkout only when it belongs to this install", async () => {
     const paid = fake({
-      [`/v1/checkout/sessions/cs_live_abcdefghijkl`]: { client_reference_id: ID, status: "complete", payment_status: "paid", mode: "payment" },
+      [`/v1/checkout/sessions/cs_live_abcdefghijkl`]: {
+        client_reference_id: ID,
+        status: "complete",
+        payment_status: "paid",
+        mode: "payment",
+        payment_intent: { status: "succeeded", latest_charge: { refunded: false } },
+      },
     });
     expect(await checkLicense(paid.stripe, ID, "cs_live_abcdefghijkl")).toEqual({ adFree: true, plan: "lifetime", until: null });
     const other = fake({
@@ -93,6 +103,34 @@ describe("license", () => {
       "/v1/subscriptions/search": empty,
     });
     expect(await checkLicense(other.stripe, ID, "cs_live_abcdefghijkl")).toEqual({ adFree: false });
+  });
+
+  it("keeps a one-time purchase a 100% off coupon made free, through its checkout", async () => {
+    const { stripe } = fake({
+      [`/v1/checkout/sessions/cs_live_abcdefghijkl`]: { client_reference_id: ID, status: "complete", payment_status: "no_payment_required", mode: "payment", payment_intent: null },
+    });
+    expect(await checkLicense(stripe, ID, "cs_live_abcdefghijkl")).toEqual({ adFree: true, plan: "lifetime", until: null });
+  });
+
+  it("doesn't let a refunded or lapsed checkout keep the ads off", async () => {
+    const refunded = fake({
+      [`/v1/checkout/sessions/cs_live_abcdefghijkl`]: {
+        client_reference_id: ID,
+        status: "complete",
+        payment_status: "paid",
+        mode: "payment",
+        payment_intent: { status: "succeeded", latest_charge: { refunded: true } },
+      },
+      "/v1/payment_intents/search": empty,
+      "/v1/subscriptions/search": empty,
+    });
+    expect(await checkLicense(refunded.stripe, ID, "cs_live_abcdefghijkl")).toEqual({ adFree: false });
+    const lapsed = fake({
+      [`/v1/checkout/sessions/cs_live_abcdefghijkl`]: { client_reference_id: ID, status: "complete", payment_status: "paid", mode: "subscription", subscription: { status: "canceled" } },
+      "/v1/payment_intents/search": empty,
+      "/v1/subscriptions/search": empty,
+    });
+    expect(await checkLicense(lapsed.stripe, ID, "cs_live_abcdefghijkl")).toEqual({ adFree: false });
   });
 
   it("calls Stripe with the key, a pinned version and form encoding", async () => {
@@ -108,7 +146,7 @@ describe("license", () => {
 });
 
 describe("customer portal", () => {
-  it("opens the portal for the customer of this install's live yearly plan", async () => {
+  it("opens the portal for the customer of this install's live subscription", async () => {
     const { stripe, calls } = fake({
       "/v1/subscriptions/search": {
         data: [
@@ -123,7 +161,7 @@ describe("customer portal", () => {
     expect(calls[1]).toMatchObject({ method: "POST", params: { customer: "cus_live", return_url: "https://vidzilla.followusai.com" } });
   });
 
-  it("has nothing to open for an install without a yearly plan", async () => {
+  it("has nothing to open for an install without a subscription", async () => {
     const { stripe, calls } = fake({ "/v1/subscriptions/search": empty });
     expect(await portalSession(stripe, ID)).toBeUndefined();
     expect(calls).toHaveLength(1);
