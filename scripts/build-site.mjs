@@ -86,6 +86,7 @@ function structuredData(page, title, description) {
         browserRequirements: "Requires Google Chrome 116 or later",
         isAccessibleForFree: true,
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+        installUrl: release.storeUrl,
         publisher: { "@id": org },
       },
       {
