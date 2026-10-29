@@ -3,8 +3,7 @@
 
 export const release = {
   // The Chrome Web Store listing. Every "Add to Chrome" button uses it.
-  // TODO: replace with the listing URL once Vidzilla is published.
-  storeUrl: "https://chromewebstore.google.com/",
+  storeUrl: "https://chromewebstore.google.com/detail/bmffjglgaejcnbjckhmppkbdcfgdnold",
 
   // Format support, shown on the formats reel and in the demo.
   // "ready" | "next" | "coming". Set a format to "ready" when it ships.
