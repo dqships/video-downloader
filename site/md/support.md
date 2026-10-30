@@ -20,7 +20,7 @@ Google Chrome 116 or later, on Windows, macOS, Linux and ChromeOS.
 
 ### Does it cost anything?
 
-No. Vidzilla is [free]({{origin}}/pricing), with no account and no limits. It shows a short ad every few downloads, which you can [turn off]({{origin}}/upgrade) for {{price.subscription}} or {{price.lifetime}}.
+No. Vidzilla is [free]({{origin}}/pricing), with no account and no limits. It shows a short ad every few downloads, which you can [turn off]({{origin}}/upgrade) for a small subscription or {{price.lifetime}}.
 
 ## When something doesn't work
 

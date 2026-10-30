@@ -22,7 +22,7 @@ Vidzilla is free and needs no account. It shows a short ad for our other apps ev
 
 ## Removing the ads
 
-You can pay to turn the ads off: with a subscription that renews until you cancel, or with one payment of {{price.lifetimeAmount}}. The upgrade page and the checkout show the price, and how often a subscription renews, before you pay; we sometimes try different subscription prices, and the one you see is the one you pay. Payments are taken by Stripe. The upgrade covers the copy of Vidzilla it was bought from and the same Chrome profile on your other computers; it removes ads only and unlocks nothing else, since every feature is free. Cancel the subscription any time from Manage in Vidzilla's Settings or the link in your receipt; it stays ad-free until the paid period ends. "Once" means for as long as we offer Vidzilla. If you're not happy, write to us within 30 days of a payment for a full refund.
+You can pay to turn the ads off: with a subscription that renews until you cancel, or with one payment of {{price.lifetimeAmount}}. The upgrade page and the checkout show the price, and how often a subscription renews, before you pay; we sometimes try different prices and offers, and the one you see is the one you pay. Payments are taken by Stripe. The upgrade covers the copy of Vidzilla it was bought from and the same Chrome profile on your other computers; it removes ads only and unlocks nothing else, since every feature is free. Cancel the subscription any time from Manage in Vidzilla's Settings or the link in your receipt; it stays ad-free until the paid period ends. "Once" means for as long as we offer Vidzilla. If you're not happy, write to us within 30 days of a payment for a full refund.
 
 ## Privacy
 
