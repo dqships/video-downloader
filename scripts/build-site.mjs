@@ -210,7 +210,7 @@ writeFileSync(
   new URL("llms.txt", out),
   `# Vidzilla
 
-> Vidzilla is a free Chrome extension that finds the video playing on a page and saves it to your computer as a file, at the quality the site sent. It saves direct video files, HLS (.m3u8) and DASH (.mpd) streams, audio on its own, subtitles and live streams, and leaves DRM-protected video alone. Everything runs in the browser, with no account and no tracking. It shows a short ad for the maker's other apps before some downloads, which ${prices.subscription} or ${prices.lifetime} removes.
+> Vidzilla is a free Chrome extension that finds the video playing on a page and saves it to your computer as a file, at the quality the site sent. It saves direct video files, HLS (.m3u8) and DASH (.mpd) streams, audio on its own, subtitles and live streams, and leaves DRM-protected video alone. Everything runs in the browser, with no account and no tracking. It shows a short ad for the maker's other apps before some downloads, which a small subscription or ${prices.lifetime} removes.
 
 Every page below is also served as markdown: request its URL with \`Accept: text/markdown\`, or add \`.md\` as linked here.
 

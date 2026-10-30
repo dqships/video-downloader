@@ -16,7 +16,7 @@
 
     <main id="main" class="prose">
       <h1 class="section-title">Remove the ads</h1>
-      <p class="vz-edge"><span data-price="subscription">{{price.subscription}}</span> · or <span data-price="lifetime">{{price.lifetime}}</span></p>
+      <p class="vz-edge"><span data-price="subscription">A small subscription</span> · or <span data-price="lifetime">{{price.lifetime}}</span></p>
 
       <p>
         Every few downloads, Vidzilla shows a short ad for one of our other apps. Every feature stays free either way.
@@ -38,16 +38,16 @@
 
       <ol class="plans">
         <li class="plan">
-          <p class="plan-name"><span data-price="subscriptionName">{{price.subscriptionName}}</span> <span class="vz-edge" data-price="subscription">{{price.subscription}}</span></p>
-          <p class="plan-text">Renews <span data-price="renews">{{price.renews}}</span>. Cancel any time from Manage in Vidzilla's Settings or the link in your receipt.</p>
+          <p class="plan-name"><span data-price="subscriptionName">Subscription</span> <span class="vz-edge" data-price="subscription"></span></p>
+          <p class="plan-text">Renews <span data-price="renews">until you cancel</span>. Cancel any time from Manage in Vidzilla's Settings or the link in your receipt.</p>
           <p class="plan-offer" data-offer="subscriptionLine" hidden></p>
-          <button class="vz-btn vz-btn--small plan-buy" type="button" data-plan="subscription" disabled>Pay <span data-price="subscription">{{price.subscription}}</span></button>
+          <button class="vz-btn vz-btn--small plan-buy" type="button" data-plan="subscription" disabled>Subscribe</button>
         </li>
         <li class="plan">
           <p class="plan-name">Lifetime <span class="vz-edge" data-price="lifetime">{{price.lifetime}}</span></p>
           <p class="plan-text">Pay once. No renewals, no ads for as long as Vidzilla exists.</p>
           <p class="plan-offer" data-offer="lifetimeLine" hidden></p>
-          <button class="vz-btn vz-btn--small plan-buy" type="button" data-plan="lifetime" disabled>Pay <span data-price="lifetime">{{price.lifetime}}</span></button>
+          <button class="vz-btn vz-btn--small plan-buy" type="button" data-plan="lifetime" disabled>Pay {{price.lifetime}}</button>
         </li>
       </ol>
       <p class="upgrade-status" id="upgrade-status" aria-live="polite"></p>

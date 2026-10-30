@@ -1,6 +1,6 @@
 # Remove the ads
 
-{{price.subscription}} · or {{price.lifetime}}
+A small subscription or {{price.lifetime}}
 
 Every few downloads, Vidzilla shows a short ad for one of our other apps. Every feature stays free either way. Subscribe or pay once and the ads stop in Vidzilla on this Chrome profile, and on any other computer where you're signed in to the same profile.
 
@@ -8,7 +8,7 @@ To buy, open this page from Vidzilla (Settings, Ads, **Remove ads**), so the pur
 
 | Plan | Price | What you get |
 | --- | --- | --- |
-| {{price.subscriptionName}} | {{price.subscription}} | No ads. Renews {{price.renews}}; cancel any time from Manage in Vidzilla's Settings or the link in your receipt. |
+| Subscription | Shown when you open this page from Vidzilla | No ads. Renews until you cancel, from Manage in Vidzilla's Settings or the link in your receipt. |
 | Lifetime | {{price.lifetime}} | No ads for as long as Vidzilla exists. No renewals. |
 
 ## How paying works

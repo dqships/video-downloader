@@ -1,7 +1,7 @@
 // Vidzilla website: the ad-free upgrade. On /upgrade the buttons start a
 // Stripe Checkout for the install ID the extension put in the address, and
-// the prices shown switch to that install's (the page is built with the
-// first test group's; see api/_prices.js); on
+// the page shows that install's prices (it's built without any, since they
+// differ by test group; see api/_prices.js); on
 // /upgrade-thanks the page confirms the purchase. The extension learns about
 // it on its own (it watches for the thanks page and asks the license API).
 
@@ -54,6 +54,10 @@ async function showPrices() {
     for (const el of document.querySelectorAll("[data-price]")) {
       const text = prices[el.dataset.price];
       if (typeof text === "string") el.textContent = text;
+    }
+    for (const button of document.querySelectorAll(".plan-buy")) {
+      const text = prices[button.dataset.plan];
+      if (typeof text === "string") button.textContent = `Pay ${text}`;
     }
     showOffer(prices.promo ?? null, Array.isArray(prices.pastPromos) ? prices.pastPromos : []);
   } catch {
