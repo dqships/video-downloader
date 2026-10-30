@@ -107,7 +107,10 @@ export async function checkLicense(stripe, installId, sessionId) {
         return { adFree: true, plan: "subscription", until: periodEnd(sub) };
       }
       if (session.mode === "payment") {
-        const free = session.payment_status === "no_payment_required";
+        // A 100% off code leaves nothing to pay, so there's no PaymentIntent:
+        // Stripe marks such a session "paid" with a total of 0 (or, in some
+        // versions, "no_payment_required").
+        const free = session.payment_status === "no_payment_required" || (session.amount_total === 0 && !session.payment_intent);
         const charge = session.payment_intent?.latest_charge;
         if (free || (session.payment_intent?.status === "succeeded" && !charge?.refunded)) return { adFree: true, plan: "lifetime", until: null };
       }
