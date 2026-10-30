@@ -69,7 +69,7 @@ chrome.storage.sync)
 | Launch offers | `api/_promos.js` (tests: `tests/unit/promos.test.ts`) |
 | Customer portal | `api/portal.js` (`POST {id}` → `{url}`), for Manage on a subscription |
 | Shared Stripe code | `api/_stripe.js` (tests: `tests/unit/license-api.test.ts`) |
-| Upgrade and thanks pages | `site/upgrade.html`, `site/upgrade-thanks.html`, `site/upgrade.js` |
+| Upgrade and thanks pages | `site/upgrade.html`, `site/upgrade-thanks.html`, `site/upgrade.js`, offer frame `site/offer.js` (also on `site/pricing.html`) |
 | Extension | `src/shared/license.ts`, `src/sw/license.ts`, Settings row `src/ui/ads-setting.ts`, "Remove ads" in the ad |
 
 ## Settings it needs
@@ -172,6 +172,14 @@ goes back to full price with the code box, and the page shows only the
 finished rounds; no deploy needed. The counts are Stripe's
 `times_redeemed`, read at most once a minute. If the key can't read
 promotion codes, offers are left out and checkout works as before.
+
+The public pricing page (`/pricing`) shows the same offer for people who
+find Vidzilla through the website. It doesn't know their test group, so its
+wording names no subscription price or period ("Free for as long as you
+stay subscribed.", "Your first billing period free.", "Your first 3 months
+free.") and only the lifetime price, which is the same for everyone. It
+tells them to add Vidzilla and choose Remove ads in its Settings, where the
+code is applied. `GET /api/prices` returns this wording as `publicPromo`.
 
 ## Coupons
 

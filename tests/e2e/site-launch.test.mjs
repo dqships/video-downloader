@@ -156,6 +156,8 @@ test("old .html addresses redirect on the same site", async () => {
 
 test("pages load with no console errors or CSP violations", async () => {
   const page = await browser.newPage();
+  // The pricing page asks for a running offer; the local server has no API.
+  await page.route("**/api/prices*", (route) => route.fulfill({ json: { promo: null, publicPromo: null, pastPromos: [] } }));
   const errors = [];
   page.on("console", (m) => m.type() === "error" && errors.push(`${page.url()}: ${m.text()}`));
   page.on("pageerror", (e) => errors.push(`${page.url()}: ${e.message}`));
@@ -169,5 +171,37 @@ test("pages load with no console errors or CSP violations", async () => {
   await page.waitForLoadState("networkidle");
   assert.equal(await page.evaluate(() => getComputedStyle(document.body).fontFamily.includes("Archivo")), true);
   assert.deepEqual(errors.filter((e) => !e.includes("/deep/missing/page: Failed to load resource")), []);
+  await page.close();
+});
+
+test("the pricing page shows a running launch offer without a subscription price", async () => {
+  const page = await browser.newPage();
+  const publicPromo = {
+    label: "Launch offer",
+    code: "LAUNCH100",
+    headline: "Free for as long as you stay subscribed.",
+    claimed: "2 of 50 claimed",
+    endsAt: Date.UTC(2026, 10, 30),
+    lifetimeLine: "Lifetime: free with this offer, normally $9.",
+  };
+  const prices = { promo: null, publicPromo, pastPromos: [] };
+  await page.route("**/api/prices*", (route) => route.fulfill({ json: prices }));
+  await page.goto(`${site.origin}/pricing`);
+  const offer = page.locator("#offer");
+  await offer.waitFor();
+  assert.equal(await page.locator("#offer-edge").textContent(), "Launch offer · code LAUNCH100, applied at checkout");
+  assert.equal(await page.locator("#offer-title").textContent(), publicPromo.headline);
+  assert.equal(await page.locator("#offer-status").textContent(), "2 of 50 claimed · ends 30 November");
+  assert.equal(await page.locator("#offer-lifetime").textContent(), publicPromo.lifetimeLine);
+  assert.match(await offer.textContent(), /Remove ads/);
+
+  // Once it's over, only the finished round shows.
+  prices.publicPromo = null;
+  prices.pastPromos = ["Launch offer: 50 people got Vidzilla ad-free for free."];
+  await page.reload();
+  await page.locator("#offer.offer--ended").waitFor();
+  assert.equal(await page.locator("#offer-title").isVisible(), false);
+  assert.equal(await page.locator("#offer [data-offer-running]").first().isVisible(), false);
+  assert.equal(await page.locator("#offer-past").textContent(), prices.pastPromos[0]);
   await page.close();
 });

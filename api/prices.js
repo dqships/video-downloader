@@ -1,9 +1,10 @@
 // GET /api/prices[?id=<installId>]
 // What removing the ads costs: for an install, at its test group's prices;
 // without one, the first group's (what the public pages show). With it, the
-// offer running now and the finished ones (see _promos.js).
+// offer running now and the finished ones (see _promos.js), worded both for
+// this install and for the public pricing page.
 import { describeOffer, offerFor } from "./_prices.js";
-import { describePastPromo, describePromo, promosFor } from "./_promos.js";
+import { describePastPromo, describePromo, describePublicPromo, promosFor } from "./_promos.js";
 import { isInstallId, json, stripeClient } from "./_stripe.js";
 
 export async function GET(request) {
@@ -19,6 +20,8 @@ export async function GET(request) {
         subscriptionPrice: offer.subscription,
         lifetimePrice: offer.lifetime,
         promo: promos.current ? describePromo(promos.current, offer) : null,
+        // For the pricing page, which has no install ID: no subscription price in it.
+        publicPromo: promos.current ? describePublicPromo(promos.current, offer) : null,
         pastPromos: promos.past.map(describePastPromo),
       },
       200,

@@ -5,6 +5,7 @@
 // /upgrade-thanks the page confirms the purchase. The extension learns about
 // it on its own (it watches for the thanks page and asks the license API).
 
+import { showOffer } from "./offer.js";
 import { setupTheme } from "./theme.js";
 
 setupTheme();
@@ -13,36 +14,19 @@ const params = new URLSearchParams(location.search);
 const id = params.get("id") ?? "";
 const validId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id);
 const DATE = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" });
-const DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long" });
 
-/**
- * The offer running now (its code is applied at checkout) and the rounds
- * before it, with how many people they reached. See api/_promos.js.
- */
-function showOffer(promo, past) {
-  const box = document.getElementById("offer");
-  const list = document.getElementById("offer-past");
-  list.replaceChildren(
-    ...past
-      .filter((line) => typeof line === "string")
-      .map((line) => Object.assign(document.createElement("li"), { textContent: line })),
-  );
-  if (promo) {
-    document.getElementById("offer-edge").textContent = `${promo.label} · code ${promo.code}, applied for you`;
-    document.getElementById("offer-title").textContent = promo.headline;
-    const ends = typeof promo.endsAt === "number" ? `ends ${DAY.format(promo.endsAt)}` : "";
-    document.getElementById("offer-status").textContent = [promo.claimed, ends].filter(Boolean).join(" · ");
-    for (const el of document.querySelectorAll("[data-offer]")) {
-      el.textContent = promo[el.dataset.offer] ?? "";
-      el.hidden = !el.textContent;
-    }
-    for (const button of document.querySelectorAll(".plan-buy")) {
-      const label = promo[`${button.dataset.plan}Button`];
-      if (typeof label === "string") button.textContent = label;
-    }
+/** The offer frame, plus each plan's offer line and button label. */
+function showUpgradeOffer(promo, past) {
+  showOffer(promo, past, "applied for you");
+  if (!promo) return;
+  for (const el of document.querySelectorAll("[data-offer]")) {
+    el.textContent = promo[el.dataset.offer] ?? "";
+    el.hidden = !el.textContent;
   }
-  box.classList.toggle("offer--ended", !promo);
-  box.hidden = !promo && !list.children.length;
+  for (const button of document.querySelectorAll(".plan-buy")) {
+    const label = promo[`${button.dataset.plan}Button`];
+    if (typeof label === "string") button.textContent = label;
+  }
 }
 
 /** Shows this install's prices: the [data-price] spans name what they hold. */
@@ -59,7 +43,7 @@ async function showPrices() {
       const text = prices[button.dataset.plan];
       if (typeof text === "string") button.textContent = `Pay ${text}`;
     }
-    showOffer(prices.promo ?? null, Array.isArray(prices.pastPromos) ? prices.pastPromos : []);
+    showUpgradeOffer(prices.promo ?? null, Array.isArray(prices.pastPromos) ? prices.pastPromos : []);
   } catch {
     // The built-in prices stay.
   }

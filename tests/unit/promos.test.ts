@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 // @ts-expect-error plain JS Vercel function module
-import { clearPromoCache, describePastPromo, describePromo, promoCodes, promosFor, readPromo } from "../../api/_promos.js";
+import { clearPromoCache, describePastPromo, describePromo, describePublicPromo, promoCodes, promosFor, readPromo } from "../../api/_promos.js";
 // @ts-expect-error plain JS Vercel function module
 import { checkoutParams } from "../../api/_stripe.js";
 
@@ -111,6 +111,26 @@ describe("launch offers", () => {
     expect(describePromo(promo({}, { times_redeemed: 7 }), yearly).claimed).toBe("7 claimed");
     expect(describePromo(promo({}), yearly).claimed).toBe("");
     expect(describePastPromo(promo({ percent_off: 50, name: "" }, { times_redeemed: 1 }))).toBe("Code LAUNCH: 1 person got 50% off.");
+  });
+
+  it("words the public offer without naming a subscription price or period", () => {
+    expect(describePublicPromo(promo({}, { max_redemptions: 50, times_redeemed: 2 }), quarterly)).toEqual({
+      label: "Launch offer",
+      code: "LAUNCH",
+      headline: "Free for as long as you stay subscribed.",
+      claimed: "2 of 50 claimed",
+      endsAt: null,
+      lifetimeLine: "Lifetime: free with this offer, normally $9.",
+    });
+    expect(describePublicPromo(promo({ duration: "once" }), yearly).headline).toBe("Your first billing period free.");
+    expect(describePublicPromo(promo({ duration: "repeating", duration_in_months: 3 }), yearly).headline).toBe("Your first 3 months free.");
+    const half = describePublicPromo(promo({ percent_off: 50, duration: "forever" }), weekly);
+    expect(half.headline).toBe("50% off for as long as you stay subscribed.");
+    expect(half.lifetimeLine).toBe("Lifetime: $4.50 with this offer, normally $9.");
+    for (const o of [yearly, weekly, quarterly]) {
+      const words = Object.values(describePublicPromo(promo({ percent_off: 50, duration: "once" }), o)).join(" ");
+      expect(words).not.toMatch(/\$0\.99|\$7\b|\$3\.50|year|week|3 months/);
+    }
   });
 
   it("applies a running code at checkout instead of the code box", () => {
