@@ -50,6 +50,7 @@ describe("parseFeed", () => {
   it("clamps the schedule so a typo can't make ads constant or longer than 15 s", () => {
     const { schedule } = parseFeed({ schedule: { firstAfter: 0, every: 1, minHours: -5, seconds: 90 } });
     expect(schedule).toEqual({ firstAfter: 1, every: 2, minHours: 0, seconds: 15 });
+    expect(parseFeed({ schedule: { minHours: 0.0167, every: 2.4 } }).schedule).toMatchObject({ minHours: 0.0167, every: 2 });
     expect(parseFeed(null).schedule).toEqual(defaultSchedule);
   });
 
