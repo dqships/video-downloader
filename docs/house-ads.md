@@ -18,7 +18,7 @@ Manifest V3 rules require.
 
 ```json
 {
-  "schedule": { "firstAfter": 5, "every": 4, "minHours": 6, "seconds": 15 },
+  "schedule": { "firstAfter": 2, "every": 2, "minHours": 0.0167, "seconds": 15 },
   "upgradeUrl": "https://vidzilla.followusai.com/upgrade",
   "ads": [
     {
@@ -58,14 +58,19 @@ Ads take turns in the order they're listed.
 | --- | --- | --- | --- |
 | `firstAfter` | 5 | Completed downloads before the first ad ever | 1–100 |
 | `every` | 4 | Completed downloads from one ad to the next | 2–100 |
-| `minHours` | 6 | Hours that must pass between two ads, however many downloads | 0–720 |
+| `minHours` | 6 | Hours that must pass between two ads, however many downloads. Fractions work from 1.0.4 (0.0167 is one minute); 1.0.3 and earlier round to whole hours | 0–720 |
 | `seconds` | 15 | How long the ad stays up before Continue can be pressed | 0–15 |
 
-So by default: the first ad comes before the 6th download, once 5 have
-finished (the review prompt comes on the 3rd and the share prompt on the
-6th), then at most one ad every 4 downloads and never more than one in 6 hours. Someone saving a couple
-of videos a day sees about one ad every two days; a heavy user sees at most
+The defaults (used when the file has no schedule): the first ad comes
+before the 6th download, once 5 have finished (the review prompt comes on
+the 3rd and the share prompt on the 6th), then at most one ad every 4
+downloads and never more than one in 6 hours. Someone saving a couple of
+videos a day sees about one ad every two days; a heavy user sees at most
 four a day.
+
+The live file (DQ, 2026-10-30) is busier: the first ad before the 3rd
+download, then one before every other download, at least a minute apart.
+A prompt that falls on a download with an ad waits for the next one.
 
 ### Remove ads
 

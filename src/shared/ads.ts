@@ -27,7 +27,7 @@ export interface AdSchedule {
   firstAfter: number;
   /** Saves between one ad and the next. */
   every: number;
-  /** Hours that must pass between two ads, however many saves. */
+  /** Hours that must pass between two ads, however many saves (a fraction is fine: 0.0167 is a minute). */
   minHours: number;
   /** How long an ad stays up before it can be closed. */
   seconds: number;
@@ -81,7 +81,12 @@ function httpsUrl(value: unknown): string | undefined {
 }
 
 function count(value: unknown, fallback: number, min: number, max: number): number {
-  return typeof value === "number" && Number.isFinite(value) ? Math.min(max, Math.max(min, Math.round(value))) : fallback;
+  return Math.round(amount(value, fallback, min, max));
+}
+
+/** Like count, but keeps fractions: minHours 0.0167 is a minute. */
+function amount(value: unknown, fallback: number, min: number, max: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
 }
 
 /**
@@ -96,7 +101,7 @@ export function parseFeed(json: unknown): AdFeed {
   const schedule: AdSchedule = {
     firstAfter: count(s.firstAfter, defaultSchedule.firstAfter, 1, 100),
     every: count(s.every, defaultSchedule.every, 2, 100),
-    minHours: count(s.minHours, defaultSchedule.minHours, 0, 24 * 30),
+    minHours: amount(s.minHours, defaultSchedule.minHours, 0, 24 * 30),
     seconds: count(s.seconds, defaultSchedule.seconds, 0, 15),
   };
   const seen = new Set<string>();

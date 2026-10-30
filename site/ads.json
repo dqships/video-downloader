@@ -1,5 +1,5 @@
 {
-  "schedule": { "firstAfter": 5, "every": 4, "minHours": 6, "seconds": 15 },
+  "schedule": { "firstAfter": 2, "every": 2, "minHours": 0.0167, "seconds": 15 },
   "upgradeUrl": "https://vidzilla.followusai.com/upgrade",
   "ads": [
     {
