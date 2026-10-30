@@ -112,6 +112,12 @@ function term(promo, s) {
 
 const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
+/** "63 of 100 claimed", "100 available" before anyone has, or "63 claimed" with no cap. */
+function claimedLine(promo) {
+  if (promo.max !== null) return promo.redeemed ? `${promo.redeemed} of ${promo.max} claimed` : `${promo.max} available`;
+  return promo.redeemed ? `${promo.redeemed} claimed` : "";
+}
+
 /** The words for the offer running now, for one install's prices. */
 export function describePromo(promo, offer) {
   const s = offer.subscription;
@@ -134,20 +140,45 @@ export function describePromo(promo, offer) {
     subscriptionLine = `${free ? "Free" : money(subNow, s.currency)} for ${covers}, then ${regular}.`;
   }
 
-  let claimed = "";
-  if (promo.max !== null) claimed = promo.redeemed ? `${promo.redeemed} of ${promo.max} claimed` : `${promo.max} available`;
-  else if (promo.redeemed) claimed = `${promo.redeemed} claimed`;
-
   return {
     label: promo.name || "Offer",
     code: promo.code,
     headline,
-    claimed,
+    claimed: claimedLine(promo),
     endsAt: promo.endsAt,
     subscriptionLine,
     subscriptionButton: free ? "Get it free" : `Pay ${money(subNow, s.currency)} today`,
     lifetimeLine: lifeNow === 0 ? `Free with this offer, normally ${money(l.amount, l.currency)}.` : `${money(lifeNow, l.currency)} with this offer, normally ${money(l.amount, l.currency)}.`,
     lifetimeButton: lifeNow === 0 ? "Get it free" : `Pay ${money(lifeNow, l.currency)}`,
+  };
+}
+
+/**
+ * The offer for the public pricing page, which doesn't know the visitor's
+ * test group: nothing in it names a subscription price or billing period.
+ * The lifetime price is the same for everyone.
+ */
+export function describePublicPromo(promo, offer) {
+  const l = offer.lifetime;
+  const lifeNow = discounted(promo, l.amount, l.currency);
+  const free = promo.percentOff === 100;
+  const off = promo.percentOff !== null ? `${promo.percentOff}% off` : `${money(promo.amountOff ?? 0, promo.currency ?? "usd")} off`;
+  let covers = null;
+  if (promo.duration === "once" || (promo.duration === "repeating" && !promo.months)) covers = "your first billing period";
+  else if (promo.duration === "repeating") covers = `your first ${plural(promo.months, "month", "months")}`;
+  const headline = !covers
+    ? `${free ? "Free" : capitalize(off)} for as long as you stay subscribed.`
+    : free
+      ? `${capitalize(covers)} free.`
+      : `${capitalize(off)} ${covers}.`;
+  const normally = money(l.amount, l.currency);
+  return {
+    label: promo.name || "Offer",
+    code: promo.code,
+    headline,
+    claimed: claimedLine(promo),
+    endsAt: promo.endsAt,
+    lifetimeLine: lifeNow === 0 ? `Lifetime: free with this offer, normally ${normally}.` : `Lifetime: ${money(lifeNow, l.currency)} with this offer, normally ${normally}.`,
   };
 }
 
