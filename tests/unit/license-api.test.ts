@@ -110,6 +110,11 @@ describe("license", () => {
       [`/v1/checkout/sessions/cs_live_abcdefghijkl`]: { client_reference_id: ID, status: "complete", payment_status: "no_payment_required", mode: "payment", payment_intent: null },
     });
     expect(await checkLicense(stripe, ID, "cs_live_abcdefghijkl")).toEqual({ adFree: true, plan: "lifetime", until: null });
+    // What live Stripe actually returns for one: "paid", a total of 0 and no PaymentIntent.
+    const paidZero = fake({
+      [`/v1/checkout/sessions/cs_live_abcdefghijkl`]: { client_reference_id: ID, status: "complete", payment_status: "paid", amount_total: 0, mode: "payment", payment_intent: null },
+    });
+    expect(await checkLicense(paidZero.stripe, ID, "cs_live_abcdefghijkl")).toEqual({ adFree: true, plan: "lifetime", until: null });
   });
 
   it("doesn't let a refunded or lapsed checkout keep the ads off", async () => {
